@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Jehová Jireh Moto Repuestos</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo-container">
+                    <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh Moto Repuestos" class="login-logo-img">
+                </div>
+                <h1>Jehová Jireh</h1>
+                <p>Masatepe • Moto Repuestos</p>
+                <span class="sub-badge"><i class="ph-bold ph-shield-check"></i> Sistema de Gestión</span>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-error">
+                <i class="ph-bold ph-warning-circle"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form action="{{ url_for('login') }}" method="POST" class="login-form">
+                <div class="form-group">
+                    <label for="username">
+                        <i class="ph-bold ph-user"></i> Usuario
+                    </label>
+                    <input type="text" id="username" name="username" placeholder="Ingresa tu usuario (ej. admin)" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">
+                        <i class="ph-bold ph-lock-key"></i> Contraseña
+                    </label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span>Iniciar Sesión</span>
+                    <i class="ph-bold ph-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="demo-accounts">
+                <div class="demo-title">
+                    <i class="ph-bold ph-key"></i>
+                    <span>Cuentas Rápidas de Prueba (Haz Clic):</span>
+                </div>
+                <div class="demo-buttons">
+                    <button type="button" class="btn-demo" onclick="fillLogin('admin', '123')">
+                        <strong>👑 Admin (Gilda Pérez)</strong> (Acceso Total)
+                    </button>
+                    <button type="button" class="btn-demo" onclick="fillLogin('vendedor', '123')">
+                        <strong>🛒 Vendedor</strong> (POS y Ventas)
+                    </button>
+                    <button type="button" class="btn-demo" onclick="fillLogin('inventario', '123')">
+                        <strong>📦 Inventario</strong> (Stock/Compras)
+                    </button>
+                    <button type="button" class="btn-demo" onclick="fillLogin('contador', '123')">
+                        <strong>📊 Contador</strong> (Granada - Reportes)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function fillLogin(user, pass) {
+            document.getElementById('username').value = user;
+            document.getElementById('password').value = pass;
+        }
+    </script>
+</body>
+</html>

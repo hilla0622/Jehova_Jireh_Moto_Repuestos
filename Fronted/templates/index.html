@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jehová Jireh Moto Repuestos - Sistema de Gestión</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js para Gráficos y Análisis Estadístico -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo-wrapper">
+                    <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh" class="brand-logo-img">
+                </div>
+                <div class="brand-info">
+                    <h2>Jehová Jireh</h2>
+                    <span>Moto Repuestos</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#panel" class="nav-item active" data-tab="tab-panel">
+                    <i class="ph-bold ph-squares-four"></i>
+                    <span>Panel Principal</span>
+                </a>
+
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Encargado de Inventario', 'Contador'] %}
+                <a href="#inventario" class="nav-item" data-tab="tab-inventario">
+                    <i class="ph-bold ph-package"></i>
+                    <span>Inventario</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Contador'] %}
+                <a href="#ventas" class="nav-item" data-tab="tab-ventas">
+                    <i class="ph-bold ph-shopping-cart"></i>
+                    <span>Ventas / POS</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Contador'] %}
+                <a href="#compras" class="nav-item" data-tab="tab-compras">
+                    <i class="ph-bold ph-truck"></i>
+                    <span>Compras / Proveedores</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                <a href="#reportes" class="nav-item" data-tab="tab-reportes">
+                    <i class="ph-bold ph-chart-line-up"></i>
+                    <span>Reportes Contables</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol == 'Administrador' %}
+                <a href="#usuarios" class="nav-item" data-tab="tab-usuarios">
+                    <i class="ph-bold ph-users-three"></i>
+                    <span>Usuarios y Roles</span>
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">{{ usuario.nombre[:2].upper() }}</div>
+                    <div class="user-details">
+                        <span class="user-name">{{ usuario.nombre }}</span>
+                        <span class="user-role badge-role role-{{ usuario.rol.lower().replace(' ', '-') }}">
+                            {{ usuario.rol }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-search">
+                    <i class="ph-bold ph-magnifying-glass"></i>
+                    <input type="text" id="global-search" placeholder="Buscar repuesto, código de venta o proveedor...">
+                </div>
+                <div class="header-actions">
+                    <div class="user-pill">
+                        <i class="ph-bold ph-user-circle"></i>
+                        <span>{{ usuario.nombre }} ({{ usuario.rol }})</span>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary icon-btn-text" title="Cerrar Sesión">
+                        <i class="ph-bold ph-sign-out"></i>
+                        <span>Salir</span>
+                    </a>
+                </div>
+            </header>
+
+            <!-- Dashboard Content Area -->
+            <div class="content-body">
+                
+                <!-- TAB 1: PANEL PRINCIPAL -->
+                <section id="tab-panel" class="tab-content active">
+                    <div class="welcome-banner">
+                        <div class="banner-text">
+                            <h1>Bienvenido, {{ usuario.nombre }} 👋</h1>
+                            <p>Modo de acceso: <strong>{{ usuario.rol }}</strong>. Panel centralizado de operaciones de Jehová Jireh Moto Repuestos (Masatepe).</p>
+                        </div>
+                        <div class="banner-right">
+                            <div class="banner-status">
+                                <span class="status-indicator online"></span>
+                                <span>Servidor Operativo</span>
+                            </div>
+                            <div class="banner-logo-badge">
+                                <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh" class="banner-logo-img">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon orange">
+                                <i class="ph-bold ph-package"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Total Repuestos</span>
+                                <span class="stat-value" id="stat-total-productos">0</span>
+                                <span class="stat-subtext">Catálogo en sistema</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="ph-bold ph-currency-dollar"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Ventas Totales</span>
+                                <span class="stat-value" id="stat-total-ventas">$0.00</span>
+                                <span class="stat-subtext" id="stat-conteo-ventas">0 transacciones</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon red">
+                                <i class="ph-bold ph-warning-circle"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Stock Bajo Alerta</span>
+                                <span class="stat-value" id="stat-stock-bajo">0</span>
+                                <span class="stat-subtext">Requieren reabastecimiento</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="ph-bold ph-truck"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Proveedores Registrados</span>
+                                <span class="stat-value" id="stat-proveedores">0</span>
+                                <span class="stat-subtext">Proveedores activos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Section -->
+                    <div class="grid-2col margin-top">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-lightning"></i> Módulos Disponibles para tu Perfil</h3>
+                            </div>
+                            <div class="card-body quick-actions-list">
+                                {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                                <button class="action-tile" onclick="switchTab('tab-ventas')">
+                                    <i class="ph-bold ph-shopping-cart"></i>
+                                    <span>Punto de Venta (POS)</span>
+                                </button>
+                                {% endif %}
+
+                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Vendedor'] %}
+                                <button class="action-tile" onclick="switchTab('tab-inventario')">
+                                    <i class="ph-bold ph-package"></i>
+                                    <span>Consultar Inventario</span>
+                                </button>
+                                {% endif %}
+
+                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                <button class="action-tile" onclick="switchTab('tab-compras')">
+                                    <i class="ph-bold ph-arrow-down-left"></i>
+                                    <span>Ingreso de Compras</span>
+                                </button>
+                                {% endif %}
+
+                                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                                <button class="action-tile" onclick="switchTab('tab-reportes')">
+                                    <i class="ph-bold ph-chart-line-up"></i>
+                                    <span>Reportes y Contabilidad</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-clock-counter-clockwise"></i> Actividad Reciente de Ventas</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="recent-sales-list" class="recent-list">
+                                    <!-- Carga dinámica -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: INVENTARIO -->
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Encargado de Inventario', 'Contador'] %}
+                <section id="tab-inventario" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Gestión de Productos e Inventario</h2>
+                            <p>Administra repuestos, precios, existencias e historial de movimientos (Kardex).</p>
+                        </div>
+                        <div class="header-actions">
+                            {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                            <button class="btn btn-primary" onclick="openModal('modal-producto')">
+                                <i class="ph-bold ph-plus"></i> Nuevo Repuesto
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Sub-navegación de inventario -->
+                    <div class="subnav-pills">
+                        <button class="subnav-btn active" onclick="switchInventarioSubtab('existencias', this)">
+                            <i class="ph-bold ph-package"></i> Existencias Actuales
+                        </button>
+                        <button class="subnav-btn" onclick="switchInventarioSubtab('kardex', this)">
+                            <i class="ph-bold ph-clock-counter-clockwise"></i> Historial de Movimientos (Kardex)
+                        </button>
+                    </div>
+
+                    <!-- VISTA 1: Existencias -->
+                    <div id="subtab-existencias" class="subtab-view active">
+                        <div class="card">
+                            <div class="table-toolbar">
+                                <i class="ph-bold ph-magnifying-glass" style="margin-left: 0.5rem; color: var(--text-muted);"></i>
+                                <input type="text" id="filter-inventario" class="form-control" placeholder="Buscar repuesto por código, nombre o categoría...">
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre del Repuesto</th>
+                                            <th>Categoría</th>
+                                            <th>Precio Venta</th>
+                                            <th>Costo Compra</th>
+                                            <th>Existencias</th>
+                                            <th>Estado Stock</th>
+                                            {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                            <th>Acción</th>
+                                            {% endif %}
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-inventario">
+                                        <!-- Render dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VISTA 2: Kardex / Movimientos -->
+                    <div id="subtab-kardex" class="subtab-view">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-list-bullets"></i> Registro Cronológico de Entradas y Salidas (Kardex Automático)</h3>
+                                <input type="text" id="filter-movimientos" class="form-control" style="max-width: 300px;" placeholder="Filtrar movimientos...">
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th># ID</th>
+                                                <th>Fecha</th>
+                                                <th>Código / Repuesto</th>
+                                                <th>Tipo Movimiento</th>
+                                                <th>Cantidad</th>
+                                                <th>Motivo / Referencia</th>
+                                                <th>Usuario</th>
+                                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                                <th>Acción</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-movimientos">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 3: VENTAS (POS & HISTORIAL) -->
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Contador'] %}
+                <section id="tab-ventas" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Gestión de Ventas y Comprobantes</h2>
+                            <p>Procesa transacciones en tiempo real, genera facturas/comprobantes e inspecciona el historial de ventas.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sub-navegación de ventas -->
+                    <div class="subnav-pills">
+                        {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                        <button class="subnav-btn active" onclick="switchVentasSubtab('pos', this)">
+                            <i class="ph-bold ph-shopping-cart"></i> Caja / Punto de Venta (POS)
+                        </button>
+                        {% endif %}
+                        <button class="subnav-btn {% if usuario.rol == 'Contador' %}active{% endif %}" onclick="switchVentasSubtab('historial-ventas', this)">
+                            <i class="ph-bold ph-receipt"></i> Historial de Ventas Realizadas
+                        </button>
+                    </div>
+
+                    <!-- VISTA 1: POS -->
+                    {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                    <div id="subtab-pos" class="subtab-view active">
+                        <div class="pos-layout">
+                            <!-- Selector de Productos -->
+                            <div class="card pos-products-card">
+                                <div class="card-header">
+                                    <h3><i class="ph-bold ph-magnifying-glass"></i> Catálogo de Repuestos Disponibles</h3>
+                                    <input type="text" id="pos-search" class="form-control" placeholder="Buscar repuesto por código o nombre...">
+                                </div>
+                                <div class="card-body">
+                                    <div class="pos-products-grid" id="pos-products-grid">
+                                        <!-- Tarjetas de repuestos -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Carrito de Venta -->
+                            <div class="card pos-cart-card">
+                                <div class="card-header">
+                                    <h3><i class="ph-bold ph-receipt"></i> Carrito de Venta</h3>
+                                </div>
+                                <div class="card-body pos-cart-body">
+                                    <div class="form-group margin-bottom-sm">
+                                        <label for="pos-cliente">Nombre del Cliente:</label>
+                                        <input type="text" id="pos-cliente" class="form-control" value="Cliente General">
+                                    </div>
+                                    <div class="form-group margin-bottom-sm">
+                                        <label for="pos-forma-pago">Forma de Pago:</label>
+                                        <select id="pos-forma-pago" class="form-control">
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Transferencia / Móvil">Transferencia / Móvil</option>
+                                            <option value="Tarjeta">Tarjeta</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="cart-items-wrapper">
+                                        <table class="cart-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Producto</th>
+                                                    <th>Cant</th>
+                                                    <th>Precio</th>
+                                                    <th>Subtotal</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="pos-cart-tbody">
+                                                <tr><td colspan="5" class="text-center text-muted">El carrito está vacío.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="cart-summary">
+                                        <div class="summary-row total-row">
+                                            <span>TOTAL A PAGAR:</span>
+                                            <span id="pos-cart-total">$0.00</span>
+                                        </div>
+                                        <button class="btn btn-primary btn-block btn-lg" onclick="procesarVentaPOS()">
+                                            <i class="ph-bold ph-check-circle"></i> Confirmar Venta
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- VISTA 2: Historial de Ventas -->
+                    <div id="subtab-historial-ventas" class="subtab-view {% if usuario.rol == 'Contador' %}active{% endif %}">
+                        <div class="card">
+                            <div class="table-toolbar">
+                                <input type="text" id="filter-historial-ventas" class="form-control" placeholder="Buscar por código de venta (ej. VEN-0001), cliente o vendedor...">
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código Venta</th>
+                                            <th>Fecha</th>
+                                            <th>Cliente</th>
+                                            <th>Atendido Por</th>
+                                            <th>Forma Pago</th>
+                                            <th>Total ($)</th>
+                                            <th>Comprobante</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-historial-ventas">
+                                        <!-- Render dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 4: COMPRAS Y PROVEEDORES -->
+                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Contador'] %}
+                <section id="tab-compras" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Gestión de Compras y Proveedores</h2>
+                            <p>Registra compras a proveedores para aumentar automáticamente el stock en inventario.</p>
+                        </div>
+                        {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="openModal('modal-proveedor')">
+                                <i class="ph-bold ph-user-plus"></i> Nuevo Proveedor
+                            </button>
+                            <button class="btn btn-primary" onclick="openModal('modal-compra')">
+                                <i class="ph-bold ph-plus"></i> Registrar Compra
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid-2col">
+                        <!-- Lista de Compras -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-arrow-down-left"></i> Historial de Compras de Mercancía</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Fecha</th>
+                                                <th>Proveedor</th>
+                                                <th>Total Compra</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-compras">
+                                            <!-- Carga dinámica -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Proveedores -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-truck"></i> Directorio de Proveedores</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Proveedor</th>
+                                                <th>Contacto</th>
+                                                <th>Teléfono</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-proveedores">
+                                            <!-- Carga dinámica -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 5: REPORTES Y CONTABILIDAD -->
+                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                <section id="tab-reportes" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Reportes, Análisis y Procesamiento Contable</h2>
+                            <p>Análisis estadístico del comportamiento del negocio para la toma de decisiones y apoyo contable.</p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid margin-bottom">
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="ph-bold ph-trend-up"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Ingresos por Ventas</span>
+                                <span class="stat-value" id="rep-ingresos">$0.00</span>
+                                <span class="stat-subtext" id="rep-unidades-vendidas">0 unidades vendidas</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon orange">
+                                <i class="ph-bold ph-shopping-bag"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Egresos por Compras</span>
+                                <span class="stat-value" id="rep-egresos">$0.00</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="ph-bold ph-coins"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Margen Bruto Estimado</span>
+                                <span class="stat-value" id="rep-margen">$0.00</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon purple">
+                                <i class="ph-bold ph-arrows-clockwise"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Rotación de Inventario</span>
+                                <span class="stat-value" id="rep-rotacion">0.00x</span>
+                                <span class="stat-subtext">Índice de movimiento</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos Estadísticos Dinámicos -->
+                    <div class="grid-2col margin-bottom">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-chart-line"></i> Comportamiento de Ventas (Tendencia)</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chart-ventas-tendencia" style="max-height: 250px;"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-chart-pie"></i> Productos Más Vendidos (Top Ventas)</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chart-top-productos" style="max-height: 250px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col margin-bottom">
+                        <!-- Tabla Top Productos -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-trophy"></i> Ranking de Repuestos Más Vendidos</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Repuesto</th>
+                                                <th>Unid. Vendidas</th>
+                                                <th>Monto Generado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-top-productos">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabla Alerta Stock Bajo -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-warning-circle"></i> Repuestos con Bajo Nivel de Inventario</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Repuesto</th>
+                                                <th>Stock Actual</th>
+                                                <th>Mínimo Alerta</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-stock-bajo-reporte">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="ph-bold ph-file-text"></i> Informe Consolidado para el Contador Externo (Granada)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="accounting-summary" class="accounting-box">
+                                <p>Cargando información del servidor...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 6: USUARIOS Y ROLES (SOLO ADMIN) -->
+                {% if usuario.rol == 'Administrador' %}
+                <section id="tab-usuarios" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Administración de Usuarios y Jerarquía</h2>
+                            <p>Gestión de credenciales y roles dentro del sistema Jehová Jireh.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openModal('modal-usuario')">
+                            <i class="ph-bold ph-user-plus"></i> Registrar Usuario
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Usuario</th>
+                                        <th>Rol Asignado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-usuarios">
+                                    <!-- Carga dinámica -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: REGISTRAR PRODUCTO -->
+    <div class="modal" id="modal-producto">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-plus-circle"></i> Registrar Nuevo Repuesto</h3>
+                <button class="modal-close" onclick="closeModal('modal-producto')">&times;</button>
+            </div>
+            <form id="form-producto" onsubmit="guardarProducto(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Código de Repuesto:</label>
+                        <input type="text" id="prod-codigo" class="form-control" placeholder="ej. REP-006">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre o Descripción:</label>
+                        <input type="text" id="prod-nombre" class="form-control" placeholder="ej. Freno de Disco Pulsar 180" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría:</label>
+                        <select id="prod-categoria" class="form-control">
+                            <option value="Frenos">Frenos</option>
+                            <option value="Motor / Encendido">Motor / Encendido</option>
+                            <option value="Lubricantes">Lubricantes</option>
+                            <option value="Transmisión">Transmisión</option>
+                            <option value="Eléctrico">Eléctrico</option>
+                            <option value="Chasis / Carrocería">Chasis / Carrocería</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Precio Venta ($):</label>
+                            <input type="number" step="0.01" id="prod-precio" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Costo Compra ($):</label>
+                            <input type="number" step="0.01" id="prod-costo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Stock Inicial:</label>
+                            <input type="number" id="prod-stock" class="form-control" value="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mínimo Alerta Stock:</label>
+                            <input type="number" id="prod-min-stock" class="form-control" value="5" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-producto')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Repuesto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR PRODUCTO -->
+    <div class="modal" id="modal-editar-producto">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-pencil"></i> Editar Repuesto Existente</h3>
+                <button class="modal-close" onclick="closeModal('modal-editar-producto')">&times;</button>
+            </div>
+            <form id="form-editar-producto" onsubmit="guardarEdicionProducto(event)">
+                <input type="hidden" id="edit-prod-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Código de Repuesto:</label>
+                        <input type="text" id="edit-prod-codigo" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre o Descripción:</label>
+                        <input type="text" id="edit-prod-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría:</label>
+                        <select id="edit-prod-categoria" class="form-control">
+                            <option value="Frenos">Frenos</option>
+                            <option value="Motor / Encendido">Motor / Encendido</option>
+                            <option value="Lubricantes">Lubricantes</option>
+                            <option value="Transmisión">Transmisión</option>
+                            <option value="Eléctrico">Eléctrico</option>
+                            <option value="Chasis / Carrocería">Chasis / Carrocería</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Precio Venta ($):</label>
+                            <input type="number" step="0.01" id="edit-prod-precio" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Costo Compra ($):</label>
+                            <input type="number" step="0.01" id="edit-prod-costo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Stock Actual:</label>
+                            <input type="number" id="edit-prod-stock" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mínimo Alerta Stock:</label>
+                            <input type="number" id="edit-prod-min-stock" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-editar-producto')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR REGISTRO DE MOVIMIENTO DE INVENTARIO -->
+    <div class="modal" id="modal-editar-movimiento">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-pencil-line"></i> Editar Movimiento #MOV-<span id="lbl-edit-mov-id"></span></h3>
+                <button class="modal-close" onclick="closeModal('modal-editar-movimiento')">&times;</button>
+            </div>
+            <form id="form-editar-movimiento" onsubmit="guardarEdicionMovimiento(event)">
+                <input type="hidden" id="edit-mov-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Repuesto Asociado:</label>
+                        <input type="text" id="edit-mov-producto-nombre" class="form-control" readonly style="background-color: var(--bg-dark); color: var(--text-muted); font-weight: 600;">
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Tipo de Movimiento:</label>
+                            <select id="edit-mov-tipo" class="form-control">
+                                <option value="ENTRADA_COMPRA">🟢 ENTRADA POR COMPRA</option>
+                                <option value="ENTRADA_INICIAL">🟢 ENTRADA INICIAL</option>
+                                <option value="AJUSTE_ENTRADA">🟢 AJUSTE ENTRADA (Devolución / Incremento)</option>
+                                <option value="SALIDA_VENTA">🔴 SALIDA POR VENTA</option>
+                                <option value="AJUSTE_SALIDA">🔴 AJUSTE SALIDA (Merma / Devolución a proveedor)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cantidad:</label>
+                            <input type="number" id="edit-mov-cantidad" class="form-control" min="1" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Causa / Motivo del Ajuste:</label>
+                        <select id="edit-mov-motivo-tipo" class="form-control" onchange="toggleMotivoStockAlert()">
+                            <option value="AJUSTE_STOCK">📦 Producto agregado de más / Ajuste de cantidad (SÍ actualiza el stock)</option>
+                            <option value="DEFECTUOSO">⚠️ Producto Defectuoso / Dañado (NO actualiza el stock)</option>
+                            <option value="OTRO">📝 Otro motivo de ajuste (SÍ actualiza el stock)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Observación / Detalle de Justificación:</label>
+                        <input type="text" id="edit-mov-motivo" class="form-control" placeholder="ej. Venta VEN-0006 devolución por defectuosa" required>
+                    </div>
+                    <div id="alert-edit-mov-info" class="alert" style="font-size: 0.82rem; background: rgba(245, 158, 11, 0.12); color: var(--primary); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 0.75rem 1rem;">
+                        <i class="ph-bold ph-info"></i> Al seleccionar 'Producto agregado de más', las existencias en inventario se recalcularán automáticamente en tiempo real.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-editar-movimiento')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Edición</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR COMPRA -->
+    <div class="modal" id="modal-compra">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-truck"></i> Registrar Entrada de Mercadería / Compra</h3>
+                <button class="modal-close" onclick="closeModal('modal-compra')">&times;</button>
+            </div>
+            <form id="form-compra" onsubmit="guardarCompra(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Proveedor:</label>
+                        <select id="compra-proveedor-id" class="form-control">
+                            <!-- Carga dinámica -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Repuesto Aumentar Stock:</label>
+                        <select id="compra-producto-id" class="form-control">
+                            <!-- Carga dinámica -->
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Cantidad Recibida:</label>
+                            <input type="number" id="compra-cantidad" class="form-control" min="1" value="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Costo Unitario ($):</label>
+                            <input type="number" step="0.01" id="compra-costo-unitario" class="form-control" placeholder="Dejar 0 para costo actual">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-compra')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Compra y Aumentar Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVO PROVEEDOR -->
+    <div class="modal" id="modal-proveedor">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-user-plus"></i> Registrar Proveedor</h3>
+                <button class="modal-close" onclick="closeModal('modal-proveedor')">&times;</button>
+            </div>
+            <form id="form-proveedor" onsubmit="guardarProveedor(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nombre del Proveedor / Empresa:</label>
+                        <input type="text" id="prov-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre de Contacto:</label>
+                        <input type="text" id="prov-contacto" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono:</label>
+                        <input type="text" id="prov-telefono" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-proveedor')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Proveedor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVO USUARIO -->
+    <div class="modal" id="modal-usuario">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-user-gear"></i> Registrar Nuevo Usuario</h3>
+                <button class="modal-close" onclick="closeModal('modal-usuario')">&times;</button>
+            </div>
+            <form id="form-usuario" onsubmit="guardarUsuario(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nombre Completo:</label>
+                        <input type="text" id="usr-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Usuario (Username):</label>
+                        <input type="text" id="usr-username" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña:</label>
+                        <input type="password" id="usr-password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rol de Jerarquía:</label>
+                        <select id="usr-rol" class="form-control">
+                            <option value="Administrador">Administrador (Acceso Total)</option>
+                            <option value="Vendedor">Vendedor (Punto de Venta)</option>
+                            <option value="Encargado de Inventario">Encargado de Inventario (Existencias/Compras)</option>
+                            <option value="Contador">Contador (Consulta Granada/Reportes)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: COMPROBANTE DE VENTA / TICKET DE IMPRESIÓN -->
+    <div class="modal" id="modal-comprobante">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-receipt"></i> Comprobante de Venta Emitido</h3>
+                <button class="modal-close" onclick="closeModal('modal-comprobante')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="ticket-print-area" class="ticket-card">
+                    <!-- Contenido dinámico del ticket -->
+                </div>
+            </div>
+            <div class="modal-footer" id="footer-modal-comprobante">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-comprobante')">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="imprimirTicketActual()">
+                    <i class="ph-bold ph-printer"></i> Imprimir Ticket
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Role Context -->
+    <script>
+        window.CURRENT_USER_ROLE = "{{ usuario.rol }}";
+    </script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

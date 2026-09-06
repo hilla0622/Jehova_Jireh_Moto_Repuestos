@@ -235,9 +235,12 @@ function renderInventarioTable(productos) {
         const badgeText = isLow ? `¡Bajo! (${p.stock})` : `Disponible (${p.stock})`;
 
         const actionTd = canEdit ? `
-            <td>
+            <td style="display: flex; gap: 0.5rem; justify-content: flex-start; align-items: center; border: none; height: 100%;">
                 <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="openEditarProducto(${p.id})">
                     <i class="ph-bold ph-pencil"></i> Editar
+                </button>
+                <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; background-color: var(--danger-color, #ff4d4f); border-color: var(--danger-color, #ff4d4f); color: white;" onclick="borrarProducto(${p.id})">
+                    <i class="ph-bold ph-trash"></i> Borrar
                 </button>
             </td>
         ` : '';
@@ -267,7 +270,24 @@ function filterInventarioTable(query) {
     renderInventarioTable(filtrados);
 }
 
-// --- EDICIÓN DE PRODUCTO ---
+// --- EDICIÓN Y BORRADO DE PRODUCTO ---
+async function borrarProducto(prodId) {
+    if(!confirm("¿Estás seguro de que deseas eliminar este repuesto? (Los registros históricos se mantendrán por integridad)")) return;
+    try {
+        const res = await fetch(`/api/productos/${prodId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if(res.ok && data.success) {
+            alert("Producto eliminado exitosamente.");
+            loadInventario();
+        } else {
+            alert(data.error || "Error al eliminar producto");
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Error de conexión al eliminar producto");
+    }
+}
+
 function openEditarProducto(prodId) {
     const p = productosCache.find(item => item.id === prodId);
     if (!p) return;

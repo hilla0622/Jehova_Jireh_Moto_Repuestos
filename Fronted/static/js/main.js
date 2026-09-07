@@ -843,7 +843,7 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
 
     container.innerHTML = `
         ${bannerExito}
-        <div style="font-family: monospace, sans-serif; background: #ffffff; color: #0f172a; padding: 1.5rem; border-radius: 8px; max-width: 380px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <div style="font-family: monospace, sans-serif; background: #ffffff; color: #0f172a; padding: 1.5rem; border-radius: 8px; max-width: 750px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 55vh; overflow-y: auto;">
             <div style="text-align: center; border-bottom: 2px dashed #94a3b8; padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
                 <h2 style="font-size: 1.3rem; margin-bottom: 0.2rem; color: #0f172a;">JEHOVÁ JIREH</h2>
                 <div style="font-size: 0.8rem; font-weight: 700; color: #475569;">MOTO REPUESTOS - MASATEPE</div>

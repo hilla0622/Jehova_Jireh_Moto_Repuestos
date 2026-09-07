@@ -518,7 +518,8 @@ def api_ventas():
             return jsonify({"error": "No tienes permiso para procesar ventas."}), 403
         
         data = request.json or {}
-        cliente_id = int(data.get('cliente_id', 1)) 
+        cliente_id_raw = data.get('cliente_id')
+        cliente_id = int(cliente_id_raw) if cliente_id_raw else None
         forma_pago = data.get('forma_pago', 'Efectivo').strip()
         items = data.get('items', []) 
 

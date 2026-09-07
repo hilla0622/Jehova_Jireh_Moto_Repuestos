@@ -79,6 +79,7 @@ function switchTab(tabId) {
         if (tabId === 'tab-reportes') loadReportesContabilidad();
         if (tabId === 'tab-usuarios') loadUsuarios();
         if (tabId === 'tab-panel') loadDashboardStats();
+        if (tabId === 'tab-finanzas') cargarDatosFinanzas();
     }
 }
 
@@ -120,8 +121,62 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('active');
+        if (modalId === 'modal-asiento' && typeof prepareAsientoModal === 'function') {
+            prepareAsientoModal();
+        }
         if (modalId === 'modal-compra') populateCompraSelects();
         if (modalId === 'modal-movimiento') populateMovimientoSelects();
+    }
+}
+
+async function guardarCuenta(e) {
+    e.preventDefault();
+    const data = {
+        codigo: document.getElementById('cta-codigo').value,
+        nombre: document.getElementById('cta-nombre').value,
+        clasificacion: document.getElementById('cta-clasificacion').value,
+        naturaleza: document.getElementById('cta-naturaleza').value,
+        descripcion: document.getElementById('cta-descripcion').value
+    };
+
+    try {
+        const resp = await fetch('/api/finanzas/cuentas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await resp.json();
+        
+        if (resp.ok) {
+            closeModal('modal-cuenta');
+            document.getElementById('form-cuenta').reset();
+            cargarDatosFinanzas();
+        } else {
+            alert("Error: " + result.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Error al guardar la cuenta.");
+    }
+}
+
+async function eliminarCuenta(id) {
+    if (!confirm("¿Estás seguro de que deseas eliminar esta cuenta?")) return;
+    
+    try {
+        const resp = await fetch(`/api/finanzas/cuentas/${id}`, {
+            method: 'DELETE'
+        });
+        const result = await resp.json();
+        
+        if (resp.ok) {
+            cargarDatosFinanzas();
+        } else {
+            alert("Error: " + result.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Error al eliminar la cuenta.");
     }
 }
 
@@ -746,16 +801,14 @@ function filterHistorialVentasTable(query) {
     renderHistorialVentasTable(filtrados);
 }
 
-async function verComprobanteVenta(ventaId) {
-    try {
-        const res = await fetch(`/api/ventas/${ventaId}`);
-        const venta = await res.json();
-        if (res.ok) {
-            renderTicketComprobante(venta, false);
-            openModal('modal-comprobante');
-        }
-    } catch (err) {
-        console.error('Error al obtener comprobante:', err);
+function verComprobanteVenta(ventaId) {
+    const venta = ventasCache.find(v => v.id === ventaId);
+    if (venta) {
+        renderTicketComprobante(venta, false);
+        openModal('modal-comprobante');
+    } else {
+        console.error('Error: Venta no encontrada en caché.');
+        alert('No se pudo cargar el comprobante.');
     }
 }
 
@@ -1188,5 +1241,497 @@ async function guardarUsuario(e) {
         }
     } catch (err) {
         console.error('Error:', err);
+    }
+}
+
+// ==============================================================================
+// GESTION DE CATEGORIAS
+// ==============================================================================
+
+async function loadCategorias() {
+    try {
+        const res = await fetch('/api/categorias');
+        const categorias = await res.json();
+        
+        const tbody = document.getElementById('tbody-categorias');
+        if (!tbody) return;
+
+        if (categorias.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No hay categorías registradas.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = categorias.map(c => `
+            <tr>
+                <td><strong>#${c.id}</strong></td>
+                <td>${c.nombre}</td>
+                <td>${c.descripcion || '-'}</td>
+                <td>
+                    <button class="btn btn-secondary icon-btn-text" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" 
+                        onclick="openCategoriaForm(${c.id}, '${c.nombre.replace(/'/g, "\\'")}', '${(c.descripcion || '').replace(/'/g, "\\'")}')">
+                        <i class="ph-bold ph-pencil-simple"></i> Editar
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        console.error('Error al cargar categorías:', err);
+    }
+}
+
+function openModalCategorias() {
+    loadCategorias();
+    openModal('modal-categorias');
+}
+
+function openCategoriaForm(id = null, nombre = '', descripcion = '') {
+    closeModal('modal-categorias'); // Cerramos la lista temporalmente
+    
+    document.getElementById('cat-id').value = id || '';
+    document.getElementById('cat-nombre').value = nombre;
+    document.getElementById('cat-descripcion').value = descripcion;
+    
+    document.getElementById('cat-form-title').innerHTML = id 
+        ? '<i class="ph-bold ph-pencil-simple"></i> Editar Categoría'
+        : '<i class="ph-bold ph-plus"></i> Registrar Categoría';
+        
+    openModal('modal-categoria-form');
+}
+
+async function guardarCategoria(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('cat-id').value;
+    const nombre = document.getElementById('cat-nombre').value.trim();
+    const descripcion = document.getElementById('cat-descripcion').value.trim();
+    
+    const url = id ? `/api/categorias/${id}` : '/api/categorias';
+    const method = id ? 'PUT' : 'POST';
+    
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, descripcion })
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+            alert(data.mensaje);
+            closeModal('modal-categoria-form');
+            document.getElementById('form-categoria').reset();
+            if(typeof loadInventario === 'function') loadInventario();
+            openModalCategorias();
+        } else {
+            alert(data.error || 'Error al guardar la categoría.');
+        }
+    } catch (err) {
+        console.error('Error al guardar categoría:', err);
+        alert('Ocurrió un error inesperado al guardar la categoría.');
+    }
+}
+
+// ==============================================================================
+// MÓDULO DE ESTADOS FINANCIEROS Y CONTABILIDAD
+// ==============================================================================
+
+function switchFinanzasTab(subtab, btn) {
+    const section = document.getElementById('tab-finanzas');
+    if (!section) return;
+
+    section.querySelectorAll('.btn-outline').forEach(b => b.classList.remove('active'));
+    section.querySelectorAll('.fin-tab-content').forEach(v => {
+        v.style.display = 'none';
+        v.classList.remove('active');
+    });
+
+    btn.classList.add('active');
+    const view = document.getElementById(subtab);
+    if (view) {
+        view.style.display = 'block';
+        view.classList.add('active');
+    }
+}
+
+async function cargarDatosFinanzas() {
+    try {
+        await Promise.all([
+            loadCatalogoCuentas(),
+            loadAsientosContables(),
+            loadEstadoResultados(),
+            loadBalanceGeneral()
+        ]);
+    } catch (e) {
+        console.error("Error al cargar datos financieros:", e);
+    }
+}
+
+async function loadCatalogoCuentas() {
+    try {
+        const resp = await fetch('/api/finanzas/cuentas');
+        const data = await resp.json();
+        
+        const tbody = document.getElementById('tbody-cuentas');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        if (data.error) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500">${data.error}</td></tr>`;
+            return;
+        }
+        
+        data.forEach(cta => {
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-weight:600;">${cta.codigo}</td>
+                    <td>${cta.nombre}</td>
+                    <td><span class="badge ${cta.clasificacion.includes('Activo') ? 'bg-blue' : cta.clasificacion.includes('Pasivo') ? 'bg-red' : cta.clasificacion.includes('Patrimonio') ? 'bg-orange' : 'bg-green'}">${cta.clasificacion}</span></td>
+                    <td>${cta.naturaleza}</td>
+                    <td>
+                        <button class="btn" style="background-color: #ef4444; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 4px;" onclick="eliminarCuenta(${cta.id})">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        // Cargar para el select del modal de asiento
+        window.cuentasDisponibles = data;
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function loadAsientosContables() {
+    try {
+        let finInicio = document.getElementById('fin-fecha-inicio');
+        let finFin = document.getElementById('fin-fecha-fin');
+        const start = finInicio ? finInicio.value : '';
+        const end = finFin ? finFin.value : '';
+        let url = '/api/finanzas/asientos';
+        let queryParams = [];
+        if (start) queryParams.push(`start=${start}`);
+        if (end) queryParams.push(`end=${end}`);
+        if (queryParams.length > 0) url += '?' + queryParams.join('&');
+
+        const resp = await fetch(url);
+        const data = await resp.json();
+        
+        const container = document.getElementById('container-asientos');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        if (data.error) {
+            container.innerHTML = `<p class="text-red-500">${data.error}</p>`;
+            return;
+        }
+        
+        if (data.length === 0) {
+            container.innerHTML = `<p>No hay asientos contables registrados.</p>`;
+            return;
+        }
+        
+        data.forEach(a => {
+            let movsHtml = '';
+            let totalDebe = 0;
+            let totalHaber = 0;
+            
+            let formatNum = (val) => parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            a.movimientos.forEach(m => {
+                totalDebe += m.debe;
+                totalHaber += m.haber;
+                movsHtml += `
+                    <tr>
+                        <td style="padding-left: ${m.haber > 0 ? '2rem' : '0.5rem'}; font-family: monospace;">${m.codigo}</td>
+                        <td>${m.cuenta}</td>
+                        <td class="text-right">${m.debe > 0 ? '$' + formatNum(m.debe) : ''}</td>
+                        <td class="text-right">${m.haber > 0 ? '$' + formatNum(m.haber) : ''}</td>
+                    </tr>
+                `;
+            });
+            
+            container.innerHTML += `
+                <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; background: var(--bg-color);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                        <strong>Asiento #${a.id} | ${a.fecha}</strong>
+                        <span class="badge bg-gray">${a.modulo_origen}</span>
+                    </div>
+                    <p style="margin-bottom: 1rem; color: var(--text-muted); font-style: italic;">"${a.concepto}"</p>
+                    <table class="data-table" style="font-size: 0.9rem;">
+                        <thead style="background: var(--bg-dark);">
+                            <tr><th>Código</th><th>Cuenta</th><th class="text-right">Debe</th><th class="text-right">Haber</th></tr>
+                        </thead>
+                        <tbody>${movsHtml}</tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold;">
+                                <td colspan="2" class="text-right">Sumas Iguales:</td>
+                                <td class="text-right">$${formatNum(totalDebe)}</td>
+                                <td class="text-right">$${formatNum(totalHaber)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function loadEstadoResultados() {
+    try {
+        let finInicio = document.getElementById('fin-fecha-inicio');
+        let finFin = document.getElementById('fin-fecha-fin');
+        const start = finInicio ? finInicio.value : '';
+        const end = finFin ? finFin.value : '';
+        let url = '/api/finanzas/estado_resultados';
+        let queryParams = [];
+        if (start) queryParams.push(`start=${start}`);
+        if (end) queryParams.push(`end=${end}`);
+        if (queryParams.length > 0) url += '?' + queryParams.join('&');
+
+        const resp = await fetch(url);
+        const data = await resp.json();
+        const container = document.getElementById('reporte-estado-resultados');
+        if (!container) return;
+        
+        if (data.error) {
+            container.innerHTML = `<p class="text-red-500">${data.error}</p>`;
+            return;
+        }
+
+        let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Las variables start y end ya fueron declaradas al inicio de la función.
+        let subtitle = "Del 01 de Enero a la fecha actual";
+        if (start && end) subtitle = `Del ${start} al ${end}`;
+        else if (start) subtitle = `A partir del ${start}`;
+        else if (end) subtitle = `Hasta el ${end}`;
+        
+        let html = `<div style="max-width: 800px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;
+        html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE RESULTADOS INTEGRAL<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
+        
+        html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
+        
+        // INGRESOS
+        html += `<tr><td colspan="2" style="font-weight: bold; font-size: 1.1rem; padding-bottom: 0.5rem;">Ingresos Operativos</td></tr>`;
+        data.ingresos.forEach(i => {
+            html += `<tr><td style="padding-left: 2rem;">${i.cuenta}</td><td class="text-right">${formatC(i.saldo)}</td></tr>`;
+        });
+        html += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="font-weight: bold; padding-top: 0.5rem;">Total Ingresos</td><td class="text-right" style="font-weight: bold; padding-top: 0.5rem;">${formatC(data.total_ingresos)}</td></tr>`;
+        
+        // COSTOS
+        html += `<tr><td colspan="2" style="font-weight: bold; font-size: 1.1rem; padding-top: 1.5rem; padding-bottom: 0.5rem;">Costo de Ventas</td></tr>`;
+        data.costos.forEach(c => {
+            html += `<tr><td style="padding-left: 2rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`;
+        });
+        html += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="font-weight: bold; padding-top: 0.5rem;">Total Costo de Ventas</td><td class="text-right" style="font-weight: bold; padding-top: 0.5rem;">${formatC(data.total_costos)}</td></tr>`;
+        
+        // UTILIDAD BRUTA
+        html += `<tr style="background: rgba(30, 60, 114, 0.1);"><td style="font-weight: bold; padding: 0.75rem;">Utilidad Bruta</td><td class="text-right" style="font-weight: bold; padding: 0.75rem;">${formatC(data.utilidad_bruta)}</td></tr>`;
+
+        // GASTOS
+        html += `<tr><td colspan="2" style="font-weight: bold; font-size: 1.1rem; padding-top: 1.5rem; padding-bottom: 0.5rem;">Gastos Operativos</td></tr>`;
+        data.gastos.forEach(g => {
+            html += `<tr><td style="padding-left: 2rem;">${g.cuenta}</td><td class="text-right">${formatC(g.saldo)}</td></tr>`;
+        });
+        html += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="font-weight: bold; padding-top: 0.5rem;">Total Gastos Operativos</td><td class="text-right" style="font-weight: bold; padding-top: 0.5rem;">${formatC(data.total_gastos)}</td></tr>`;
+        
+        // UTILIDAD NETA
+        let isProfit = data.utilidad_neta >= 0;
+        let color = isProfit ? '#10b981' : '#ef4444';
+        html += `<tr style="background: ${isProfit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${color};"><td style="font-weight: bold; font-size: 1.2rem; padding: 1rem;">UTILIDAD NETA DEL EJERCICIO</td><td class="text-right" style="font-weight: bold; font-size: 1.2rem; padding: 1rem;">${formatC(data.utilidad_neta)}</td></tr>`;
+        
+        html += `</tbody></table></div>`;
+        container.innerHTML = html;
+    } catch (e) { console.error(e); }
+}
+
+async function loadBalanceGeneral() {
+    try {
+        let finFin3 = document.getElementById('fin-fecha-fin');
+        const end = finFin3 ? finFin3.value : '';
+        let url = '/api/finanzas/balance_general';
+        if (end) url += `?end=${end}`;
+
+        const resp = await fetch(url);
+        const data = await resp.json();
+        const container = document.getElementById('reporte-balance-general');
+        if (!container) return;
+        
+        if (data.error) {
+            container.innerHTML = `<p class="text-red-500">${data.error}</p>`;
+            return;
+        }
+
+        let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // La variable end ya fue declarada al inicio de la función.
+        let subtitle = end ? `Al ${end}` : "A la fecha actual";
+        
+        let html = `<div style="max-width: 900px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;
+        html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE SITUACIÓN FINANCIERA<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
+        
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">`;
+        
+        // COLUMNA IZQUIERDA: ACTIVOS
+        html += `<div>`;
+        html += `<h3 style="border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem;">ACTIVOS</h3>`;
+        html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
+        
+        html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 0.5rem; color: var(--text-muted);">Activos Corrientes</td></tr>`;
+        data.activos.corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        
+        html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 1rem; color: var(--text-muted);">Activos No Corrientes</td></tr>`;
+        data.activos.no_corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        
+        html += `</tbody></table>`;
+        html += `<div style="margin-top: 2rem; padding: 1rem; background: rgba(15, 32, 39, 0.05); border-radius: 4px; display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem;">
+                    <span>TOTAL ACTIVOS</span><span>${formatC(data.activos.total)}</span>
+                 </div>`;
+        html += `</div>`;
+
+        // COLUMNA DERECHA: PASIVO Y PATRIMONIO
+        html += `<div>`;
+        html += `<h3 style="border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem;">PASIVOS Y PATRIMONIO</h3>`;
+        html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
+        
+        html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 0.5rem; color: var(--text-muted);">Pasivos Corrientes</td></tr>`;
+        data.pasivos.corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        
+        if (data.pasivos.no_corrientes.length > 0) {
+            html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 1rem; color: var(--text-muted);">Pasivos No Corrientes</td></tr>`;
+            data.pasivos.no_corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        }
+        
+        html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 1.5rem; color: var(--text-muted);">Patrimonio</td></tr>`;
+        data.patrimonio.cuentas.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+
+        html += `</tbody></table>`;
+        html += `<div style="margin-top: 2rem; padding: 1rem; background: rgba(15, 32, 39, 0.05); border-radius: 4px; display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem;">
+                    <span>TOTAL PASIVO Y PATR.</span><span>${formatC(data.total_pasivo_patrimonio)}</span>
+                 </div>`;
+        
+        let cuadra = Math.abs(data.activos.total - data.total_pasivo_patrimonio) < 0.01;
+        html += `<div style="margin-top: 1rem; text-align: right;">
+            ${cuadra ? '<span style="color: #10b981; font-weight: bold;"><i class="ph-bold ph-check-circle"></i> Balance Cuadrado</span>' : '<span style="color: #ef4444; font-weight: bold;"><i class="ph-bold ph-warning"></i> Diferencia detectada</span>'}
+        </div>`
+
+        html += `</div>`; // Fin col derecha
+        html += `</div>`; // Fin grid
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (e) { console.error(e); }
+}
+
+// LOGICA MODAL NUEVO ASIENTO
+function agregarFilaAsiento() {
+    const tbody = document.querySelector('#tabla-asiento-movimientos tbody');
+    let options = '<option value="">Seleccione cuenta...</option>';
+    if (window.cuentasDisponibles) {
+        window.cuentasDisponibles.forEach(c => {
+            options += `<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`;
+        });
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><select class="form-control" name="asiento-cta" required>${options}</select></td>
+        <td><input type="number" step="0.01" min="0" class="form-control calc-asiento" name="asiento-debe" value="0.00" oninput="calcularTotalAsiento()"></td>
+        <td><input type="number" step="0.01" min="0" class="form-control calc-asiento" name="asiento-haber" value="0.00" oninput="calcularTotalAsiento()"></td>
+        <td><button type="button" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444; padding: 0.25rem 0.5rem;" onclick="this.closest('tr').remove(); calcularTotalAsiento()"><i class="ph-bold ph-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function calcularTotalAsiento() {
+    let tDebe = 0;
+    let tHaber = 0;
+    document.querySelectorAll('input[name="asiento-debe"]').forEach(i => tDebe += parseFloat(i.value || 0));
+    document.querySelectorAll('input[name="asiento-haber"]').forEach(i => tHaber += parseFloat(i.value || 0));
+    
+    document.getElementById('asiento-total-debe').innerText = '$' + tDebe.toFixed(2);
+    document.getElementById('asiento-total-haber').innerText = '$' + tHaber.toFixed(2);
+    
+    const errDiv = document.getElementById('asiento-error');
+    if (Math.abs(tDebe - tHaber) > 0.01) {
+        errDiv.style.display = 'block';
+        errDiv.innerText = `El asiento no cuadra. Diferencia: $${Math.abs(tDebe - tHaber).toFixed(2)}`;
+    } else {
+        errDiv.style.display = 'none';
+    }
+}
+
+// Evento cuando se abre el modal (interceptar openModal si se puede o llamar directo)
+function prepareAsientoModal() {
+    document.getElementById('asiento-fecha').valueAsDate = new Date();
+    document.querySelector('#tabla-asiento-movimientos tbody').innerHTML = '';
+    agregarFilaAsiento();
+    agregarFilaAsiento(); // 2 filas por defecto
+    calcularTotalAsiento();
+}
+
+async function guardarAsiento(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-guardar-asiento');
+    btn.disabled = true;
+    
+    let tDebe = 0, tHaber = 0;
+    const movimientos = [];
+    
+    const rows = document.querySelectorAll('#tabla-asiento-movimientos tbody tr');
+    rows.forEach(tr => {
+        const ctaId = tr.querySelector('select[name="asiento-cta"]').value;
+        const debe = parseFloat(tr.querySelector('input[name="asiento-debe"]').value || 0);
+        const haber = parseFloat(tr.querySelector('input[name="asiento-haber"]').value || 0);
+        
+        if (ctaId && (debe > 0 || haber > 0)) {
+            movimientos.push({ cuenta_id: ctaId, debe: debe, haber: haber });
+            tDebe += debe;
+            tHaber += haber;
+        }
+    });
+    
+    if (Math.abs(tDebe - tHaber) > 0.01) {
+        alert("El asiento no está cuadrado. Debe y Haber deben sumar lo mismo.");
+        btn.disabled = false;
+        return;
+    }
+    
+    if (movimientos.length < 2) {
+        alert("Debe incluir al menos 2 movimientos válidos.");
+        btn.disabled = false;
+        return;
+    }
+
+    const payload = {
+        fecha: document.getElementById('asiento-fecha').value,
+        concepto: document.getElementById('asiento-concepto').value,
+        movimientos: movimientos
+    };
+
+    try {
+        const resp = await fetch('/api/finanzas/asientos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (res.success) {
+            closeModal('modal-asiento');
+            document.getElementById('form-asiento').reset();
+            cargarDatosFinanzas();
+        } else {
+            alert(res.error || 'Error al guardar asiento');
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Ocurrió un error en la solicitud.");
+    } finally {
+        btn.disabled = false;
     }
 }

@@ -1024,6 +1024,17 @@ body {
     max-width: 440px;
 }
 
+.modal-lg {
+    max-width: 680px;
+}
+
+.modal-table-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 1rem;
+    padding-right: 0.5rem;
+}
+
 /* Printable Ticket Styles */
 @media print {
     body * {

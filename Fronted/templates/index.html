@@ -59,7 +59,12 @@
                 {% if usuario.rol in ['Administrador', 'Contador'] %}
                 <a href="#reportes" class="nav-item" data-tab="tab-reportes">
                     <i class="ph-bold ph-chart-line-up"></i>
-                    <span>Reportes Contables</span>
+                    <span>Reportes Operativos</span>
+                </a>
+                
+                <a href="#finanzas" class="nav-item" data-tab="tab-finanzas">
+                    <i class="ph-bold ph-bank"></i>
+                    <span>Estados Financieros</span>
                 </a>
                 {% endif %}
 
@@ -232,6 +237,9 @@
                         </div>
                         <div class="header-actions">
                             {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                            <button class="btn btn-secondary" onclick="openModalCategorias()" style="margin-right: 10px;">
+                                <i class="ph-bold ph-list"></i> Categorías
+                            </button>
                             <button class="btn btn-primary" onclick="openModal('modal-producto')">
                                 <i class="ph-bold ph-plus"></i> Nuevo Repuesto
                             </button>
@@ -639,6 +647,122 @@
                 </section>
                 {% endif %}
 
+                <!-- TAB: ESTADOS FINANCIEROS Y CONTABILIDAD -->
+                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                <section id="tab-finanzas" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Módulo de Estados Financieros</h2>
+                            <p>Contabilidad por partida doble, catálogo de cuentas, asientos y reportes financieros.</p>
+                        </div>
+                        <div class="header-actions-group" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-color); padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-color);">
+                                <label style="font-size: 0.85rem; font-weight: bold; margin: 0;">Desde:</label>
+                                <input type="date" id="fin-fecha-inicio" class="form-control" style="padding: 0.2rem 0.5rem; height: auto;">
+                                <label style="font-size: 0.85rem; font-weight: bold; margin: 0; margin-left: 0.5rem;">Hasta:</label>
+                                <input type="date" id="fin-fecha-fin" class="form-control" style="padding: 0.2rem 0.5rem; height: auto;">
+                            </div>
+                            <button class="btn btn-primary" onclick="openModal('modal-asiento')">
+                                <i class="ph-bold ph-plus"></i> Nuevo Asiento
+                            </button>
+                            <button class="btn btn-secondary" onclick="cargarDatosFinanzas()">
+                                <i class="ph-bold ph-funnel"></i> Filtrar / Refrescar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Subtabs Financieros -->
+                    <div class="subtabs-container" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                        <button class="btn btn-outline active" onclick="switchFinanzasTab('fin-catalogo', this)">
+                            <i class="ph-bold ph-list-numbers"></i> Catálogo de Cuentas
+                        </button>
+                        <button class="btn btn-outline" onclick="switchFinanzasTab('fin-asientos', this)">
+                            <i class="ph-bold ph-book-open"></i> Libro Diario (Asientos)
+                        </button>
+                        <button class="btn btn-outline" onclick="switchFinanzasTab('fin-resultados', this)">
+                            <i class="ph-bold ph-trend-up"></i> Estado de Resultados
+                        </button>
+                        <button class="btn btn-outline" onclick="switchFinanzasTab('fin-balance', this)">
+                            <i class="ph-bold ph-scales"></i> Balance General
+                        </button>
+                    </div>
+
+                    <!-- CONTENIDO: CATÁLOGO DE CUENTAS -->
+                    <div id="fin-catalogo" class="fin-tab-content active">
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Catálogo de Cuentas Contables</h3>
+                                <button class="btn btn-primary btn-sm" onclick="openModal('modal-cuenta')">
+                                    <i class="ph-bold ph-plus"></i> Nueva Cuenta
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Nombre de la Cuenta</th>
+                                                <th>Clasificación</th>
+                                                <th>Naturaleza</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-cuentas">
+                                            <!-- Carga dinámica -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENIDO: ASIENTOS (LIBRO DIARIO) -->
+                    <div id="fin-asientos" class="fin-tab-content" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Historial de Asientos Contables</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="container-asientos" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                    <!-- Carga dinámica -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENIDO: ESTADO DE RESULTADOS -->
+                    <div id="fin-resultados" class="fin-tab-content" style="display: none;">
+                        <div class="card">
+                            <div class="card-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
+                                <h3>Estado de Resultados Integral</h3>
+                                <span style="font-size: 0.9rem; font-weight: 400; opacity: 0.9;">Del 01 de Enero a la fecha actual</span>
+                            </div>
+                            <div class="card-body" style="padding: 2rem;">
+                                <div id="reporte-estado-resultados" class="reporte-financiero">
+                                    <!-- Carga dinámica -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENIDO: BALANCE GENERAL -->
+                    <div id="fin-balance" class="fin-tab-content" style="display: none;">
+                        <div class="card">
+                            <div class="card-header" style="background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); color: white;">
+                                <h3>Estado de Situación Financiera (Balance General)</h3>
+                                <span style="font-size: 0.9rem; font-weight: 400; opacity: 0.9;">A la fecha actual</span>
+                            </div>
+                            <div class="card-body" style="padding: 2rem;">
+                                <div id="reporte-balance-general" class="reporte-financiero">
+                                    <!-- Carga dinámica -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
                 <!-- TAB 6: USUARIOS Y ROLES (SOLO ADMIN) -->
                 {% if usuario.rol == 'Administrador' %}
                 <section id="tab-usuarios" class="tab-content">
@@ -978,6 +1102,174 @@
                     <i class="ph-bold ph-printer"></i> Imprimir Ticket
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: GESTION DE CATEGORIAS -->
+    <div class="modal" id="modal-categorias">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-list"></i> Categorías de Repuestos</h3>
+                <button class="modal-close" onclick="closeModal('modal-categorias')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive modal-table-scroll" style="margin-top: 0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-categorias">
+                            <!-- Carga dinámica -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="openCategoriaForm()">
+                    <i class="ph-bold ph-plus"></i> Nueva Categoría
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: FORMULARIO DE CATEGORIA -->
+    <div class="modal" id="modal-categoria-form">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="cat-form-title"><i class="ph-bold ph-pencil-simple"></i> Registrar Categoría</h3>
+                <button class="modal-close" type="button" onclick="closeModal('modal-categoria-form'); openModalCategorias();">&times;</button>
+            </div>
+            <form id="form-categoria" onsubmit="guardarCategoria(event)">
+                <input type="hidden" id="cat-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nombre de la Categoría:</label>
+                        <input type="text" id="cat-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción:</label>
+                        <textarea id="cat-descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-categoria-form'); openModalCategorias();">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Categoría</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR ASIENTO CONTABLE MANUAL -->
+    <div class="modal" id="modal-asiento">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-book-bookmark"></i> Registrar Asiento Contable Manual</h3>
+                <button class="modal-close" onclick="closeModal('modal-asiento')">&times;</button>
+            </div>
+            <form id="form-asiento" onsubmit="guardarAsiento(event)">
+                <div class="modal-body">
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Fecha del Asiento:</label>
+                            <input type="date" id="asiento-fecha" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Concepto / Glosa:</label>
+                            <input type="text" id="asiento-concepto" class="form-control" placeholder="Ej. Pago de alquiler de local" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Movimientos (Partidas):</label>
+                        <table class="data-table" id="tabla-asiento-movimientos">
+                            <thead>
+                                <tr>
+                                    <th>Cuenta</th>
+                                    <th>Debe ($)</th>
+                                    <th>Haber ($)</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dinámico -->
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: var(--bg-color); font-weight: bold;">
+                                    <td style="text-align: right;">Totales:</td>
+                                    <td id="asiento-total-debe">$0.00</td>
+                                    <td id="asiento-total-haber">$0.00</td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" onclick="agregarFilaAsiento()">
+                                            <i class="ph-bold ph-plus"></i> Agregar
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <div id="asiento-error" style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem; display: none;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-asiento')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-guardar-asiento">Guardar Asiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR CUENTA CONTABLE -->
+    <div class="modal" id="modal-cuenta">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-plus"></i> Nueva Cuenta Contable</h3>
+                <button class="modal-close" onclick="closeModal('modal-cuenta')">&times;</button>
+            </div>
+            <form id="form-cuenta" onsubmit="guardarCuenta(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Código:</label>
+                        <input type="text" id="cta-codigo" class="form-control" required placeholder="Ej: 1.1.06">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre de la Cuenta:</label>
+                        <input type="text" id="cta-nombre" class="form-control" required placeholder="Ej: Caja Chica">
+                    </div>
+                    <div class="form-group">
+                        <label>Clasificación:</label>
+                        <select id="cta-clasificacion" class="form-control" required>
+                            <option value="Activo corriente">Activo corriente</option>
+                            <option value="Activo no corriente">Activo no corriente</option>
+                            <option value="Activo no corriente - contraactivo">Activo no corriente - contraactivo</option>
+                            <option value="Pasivo corriente">Pasivo corriente</option>
+                            <option value="Pasivo no corriente">Pasivo no corriente</option>
+                            <option value="Patrimonio">Patrimonio</option>
+                            <option value="Ingresos">Ingresos</option>
+                            <option value="Costo">Costo</option>
+                            <option value="Gasto">Gasto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Naturaleza:</label>
+                        <select id="cta-naturaleza" class="form-control" required>
+                            <option value="Deudora">Deudora</option>
+                            <option value="Acreedora">Acreedora</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción:</label>
+                        <textarea id="cta-descripcion" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-cuenta')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cuenta</button>
+                </div>
+            </form>
         </div>
     </div>
 

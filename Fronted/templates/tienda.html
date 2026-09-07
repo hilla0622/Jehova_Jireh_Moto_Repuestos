@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda en Línea - Jenova Jireh</title>
+    <!-- Google Fonts para tipografía Premium -->
+    <link href="https://fonts.googleapis.css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tienda.css') }}">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="#" class="logo-text" onclick="window.scrollTo(0,0);" style="font-size: 1.2rem; font-weight: 800; color: var(--text-light); text-decoration: none; letter-spacing: 1px;">
+            Jehová Jireh <span style="color: var(--accent-color);">Masatepe Moto Repuestos</span>
+        </a>
+        
+        <div class="nav-right" style="display: flex; align-items: center; gap: 2rem;">
+            <div class="nav-links">
+                <a href="#" onclick="window.scrollTo(0,0);">Inicio</a>
+                <div class="dropdown">
+                    <a href="#" class="dropbtn">Repuestos ▾</a>
+                    <div class="dropdown-content">
+                        <a href="#" class="filter-btn" data-filter="all">Ver Todos</a>
+                        {% if categorias %}
+                            {% for c in categorias %}
+                            <a href="#" class="filter-btn" data-filter="{{ c.nombre }}">{{ c.nombre }}</a>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="nav-actions">
+                <!-- Botón de Registro -->
+                <a href="{{ url_for('registro') }}" class="btn-login" style="text-decoration: none; margin-right: 0.5rem;">Registrarse</a>
+                <!-- Botón de Login que lleva a la pantalla original -->
+                <a href="{{ url_for('login') }}" class="btn-login" style="text-decoration: none;">Iniciar Sesión</a>
+                <div class="cart-icon" id="cart-icon">
+                    🛒
+                    <span class="cart-badge" id="cart-badge">0</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Slider Section -->
+    <header class="hero-slider">
+        <div class="slides">
+            <div class="slide active">
+                <div class="slide-bg" style="background-image: url('{{ url_for('static', filename='img/portada_logo.jpg') }}');"></div>
+                <div class="slide-content">
+                    <h1 style="font-size: 2.5rem; line-height: 1.2; max-width: 900px; margin: 0 auto; text-shadow: 2px 2px 10px rgba(0,0,0,0.8);">Tienda de repuestos para motos.<br>¡Nuestro prestigio es la calidad!</h1>
+                </div>
+            </div>
+            <div class="slide">
+                <div class="slide-bg" style="background-image: url('{{ url_for('static', filename='img/llantas.jpg') }}');"></div>
+                <div class="slide-content">
+                    <p class="slide-subtitle">BIENVENIDOS A JEHOVÁ JIREH MASATEPE MOTO REPUESTOS</p>
+                    <h1>LLANTAS Y RINES</h1>
+                    <p class="slide-expert">CONSULTE A LOS EXPERTOS</p>
+                    <button class="btn-info">Mayor Información</button>
+                </div>
+            </div>
+            <div class="slide">
+                <div class="slide-bg" style="background-image: url('{{ url_for('static', filename='img/frenos.jpg') }}');"></div>
+                <div class="slide-content">
+                    <p class="slide-subtitle">BIENVENIDOS A JEHOVÁ JIREH MASATEPE MOTO REPUESTOS</p>
+                    <h1>FRENOS DE ALTO RENDIMIENTO</h1>
+                    <p class="slide-expert">CONSULTE A LOS EXPERTOS</p>
+                    <button class="btn-info">Mayor Información</button>
+                </div>
+            </div>
+        </div>
+        <div class="slider-controls">
+            <button id="prev-slide">&lt;</button>
+            <button id="next-slide">&gt;</button>
+        </div>
+    </header>
+
+    <!-- Catálogo de Productos (Sin fotos) -->
+    <main class="catalog-container">
+        <h2 class="catalog-title">Nuestro Catálogo</h2>
+        <div class="grid">
+            {% if productos %}
+                {% for p in productos %}
+                <div class="card product-card" data-category="{{ p.categoria if p.categoria else 'General' }}">
+                    <span class="card-category">{{ p.categoria if p.categoria else 'General' }}</span>
+                    <h3 class="card-title">{{ p.nombre }}</h3>
+                    <div class="card-footer">
+                        <span class="price">${{ "%.2f"|format(p.precio_venta) }}</span>
+                        <button class="btn-add" onclick="addToCart('{{ p.nombre | replace("'", "\\'") }}', {{ p.precio_venta }})">Agregar</button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-muted); grid-column: 1 / -1; text-align: center;">No hay repuestos disponibles en este momento.</p>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Offcanvas Cart -->
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-header">
+            <h3>Tu Carrito</h3>
+            <button class="close-cart" id="close-cart-btn">&times;</button>
+        </div>
+        <div class="cart-items" id="cart-items-container">
+            <!-- Los items del carrito se insertan aquí vía JS -->
+        </div>
+        <div class="cart-footer">
+            <div class="total-row">
+                <span>Total:</span>
+                <span id="cart-total">$0.00</span>
+            </div>
+            <button class="btn-checkout" id="btn-checkout-cart">Proceder al Pago</button>
+        </div>
+    </div>
+
+    <!-- Modal: Proceso Híbrido de Compra -->
+    <div class="modal-overlay" id="checkout-modal">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            
+            <!-- Vista 1: Formulario de Invitado -->
+            <div id="checkout-form-view">
+                <h2 class="modal-title">Detalles de Envío</h2>
+                <form id="form-checkout">
+                    <div class="form-group">
+                        <label>Nombre Completo (Obligatorio)</label>
+                        <input type="text" class="form-control" required placeholder="Ej. Juan Pérez">
+                    </div>
+                    <div class="form-group">
+                        <label>Correo Electrónico (Para tu recibo)</label>
+                        <input type="email" class="form-control" required placeholder="juan@correo.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección de Envío</label>
+                        <input type="text" class="form-control" required placeholder="Calle 123, Ciudad">
+                    </div>
+                    <button type="submit" class="btn-block">Pagar Ahora</button>
+                </form>
+            </div>
+
+            <!-- Vista 2: Éxito + Opción Híbrida de Registro -->
+            <div id="checkout-success-view" class="success-view">
+                <i>✓</i>
+                <h2 class="modal-title">¡Compra Exitosa!</h2>
+                <p style="color:var(--text-muted)">Tu pedido ha sido procesado. Te enviaremos el recibo a tu correo.</p>
+                
+                <div class="hybrid-offer">
+                    <h3 style="margin-bottom: 1rem; font-size: 1.2rem;">¿Quieres rastrear tus pedidos?</h3>
+                    <p style="color:var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Tus datos de envío ya están guardados. Solo crea una contraseña para tener una cuenta permanente.</p>
+                    <form id="form-hybrid-register">
+                        <div class="form-group">
+                            <input type="password" class="form-control" required placeholder="Crea una contraseña nueva">
+                        </div>
+                        <button type="submit" class="btn-block" style="background:var(--accent-color); color:white;">Guardar y Crear Cuenta</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="{{ url_for('static', filename='js/tienda.js') }}"></script>
+</body>
+</html>

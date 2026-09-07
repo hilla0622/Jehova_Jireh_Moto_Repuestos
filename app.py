@@ -2,6 +2,7 @@ import os
 import pyodbc
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from werkzeug.security import generate_password_hash
 
 app = Flask(__name__, template_folder='Fronted/templates', static_folder='Fronted/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_super_secure')
@@ -82,10 +83,65 @@ def role_required(*roles_permitidos):
 # ==============================================================================
 # RUTAS DE VISTAS (RENDER TEMPLATES)
 # ==============================================================================
-@app.route('/')
+@app.route('/dashboard')
 @login_required
 def inicio():
     return render_template('index.html', usuario=session.get('user'))
+
+@app.route('/')
+def tienda():
+    # Obtener los productos reales de la base de datos
+    query_productos = """
+        SELECT p.id, p.nombre, p.precio_venta, c.nombre AS categoria 
+        FROM productos p 
+        LEFT JOIN categorias c ON p.categoria_id = c.id 
+        WHERE p.activo = 1 AND p.stock_actual > 0
+    """
+    productos = execute_query(query_productos, fetchall=True)
+
+    # Obtener las categorías que tienen al menos un producto activo
+    query_categorias = """
+        SELECT DISTINCT c.nombre AS nombre
+        FROM productos p
+        INNER JOIN categorias c ON p.categoria_id = c.id
+        WHERE p.activo = 1 AND p.stock_actual > 0
+    """
+    categorias = execute_query(query_categorias, fetchall=True)
+
+    return render_template('tienda.html', productos=productos, categorias=categorias)
+
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'POST':
+        nombre_completo = request.form.get('nombre_completo')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        telefono = request.form.get('telefono', '')
+        direccion = request.form.get('direccion', '')
+
+        # Verificar si el correo ya está registrado
+        check_query = "SELECT id FROM clientes WHERE email = ?"
+        user_exists = execute_query(check_query, params=(email,), fetchall=True)
+
+        if user_exists:
+            return render_template('registro.html', error='Ese correo electrónico ya está registrado.')
+
+        # Encriptar la contraseña
+        password_hash = generate_password_hash(password)
+
+        # Insertar el nuevo cliente
+        insert_query = """
+            INSERT INTO clientes (nombre_completo, email, password_hash, telefono, direccion, tipo_cliente)
+            VALUES (?, ?, ?, ?, ?, 'General')
+        """
+        try:
+            execute_query(insert_query, params=(nombre_completo, email, password_hash, telefono, direccion), commit=True)
+            # Redirigir al login con éxito (podríamos usar flash messages, pero por ahora en la URL o render)
+            return render_template('login.html', error='¡Registro exitoso! Por favor inicia sesión con tu nueva cuenta.')
+        except Exception as e:
+            return render_template('registro.html', error='Error al registrar. Por favor intenta de nuevo.')
+
+    return render_template('registro.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -126,7 +182,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login'))
+    return redirect(url_for('tienda'))
 
 # ==============================================================================
 # ENDPOINTS API (JSON) - CONECTADOS A SQL SERVER
@@ -176,6 +232,58 @@ def api_usuarios():
             return jsonify({"success": True, "mensaje": "Usuario registrado exitosamente."}), 201
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+# --- CATEGORIAS ---
+@app.route('/api/categorias', methods=['GET', 'POST'])
+@login_required
+def api_categorias():
+    if request.method == 'GET':
+        categorias = execute_query("SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC", fetchall=True)
+        return jsonify(categorias)
+
+    if request.method == 'POST':
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+            return jsonify({"error": "No tienes permiso para registrar categorías."}), 403
+        
+        data = request.json or {}
+        nombre = data.get('nombre', '').strip()
+        descripcion = data.get('descripcion', '').strip()
+
+        if not nombre:
+            return jsonify({"error": "El nombre de la categoría es obligatorio."}), 400
+
+        existente = execute_query("SELECT id FROM categorias WHERE nombre = ?", (nombre,), fetchone=True)
+        if existente:
+            return jsonify({"error": "El nombre de la categoría ya existe."}), 400
+
+        try:
+            execute_query("INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)", (nombre, descripcion), commit=True)
+            return jsonify({"success": True, "mensaje": "Categoría registrada exitosamente."}), 201
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+@app.route('/api/categorias/<int:cat_id>', methods=['PUT'])
+@login_required
+def api_categoria_editar(cat_id):
+    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+        return jsonify({"error": "No tienes permiso para modificar categorías."}), 403
+    
+    data = request.json or {}
+    nombre = data.get('nombre', '').strip()
+    descripcion = data.get('descripcion', '').strip()
+
+    if not nombre:
+        return jsonify({"error": "El nombre de la categoría es obligatorio."}), 400
+
+    existente = execute_query("SELECT id FROM categorias WHERE nombre = ? AND id != ?", (nombre, cat_id), fetchone=True)
+    if existente:
+        return jsonify({"error": "El nombre de la categoría ya existe."}), 400
+
+    try:
+        execute_query("UPDATE categorias SET nombre = ?, descripcion = ? WHERE id = ?", (nombre, descripcion, cat_id), commit=True)
+        return jsonify({"success": True, "mensaje": "Categoría actualizada exitosamente."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- PRODUCTOS / INVENTARIO ---
 @app.route('/api/productos', methods=['GET', 'POST'])
@@ -472,8 +580,71 @@ def api_ventas():
                     VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
                 """, (p_id, cant, stock_ant, stock_post, f"Venta {codigo_v}", 'Venta desde caja', session['user']['id']))
 
+            # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA ---
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
+            cta_caja = cursor.fetchone()[0]
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'") # Ventas
+            cta_ventas = cursor.fetchone()[0]
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '5.1.01'") # Costo Ventas
+            cta_costo = cursor.fetchone()[0]
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.04'") # Inventario
+            cta_inv = cursor.fetchone()[0]
+
+            total_costo_venta = sum(c[3] * c[1] for c in detalles_a_insertar) # costo * cant
+
+            cursor.execute("""
+                INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                VALUES (GETDATE(), ?, 'VENTAS', ?, ?)
+            """, (f"Venta {codigo_v}", venta_id, session['user']['id']))
+            cursor.execute("SELECT @@IDENTITY AS id")
+            asiento_v_id = cursor.fetchone()[0]
+
+            # Por el ingreso
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_v_id, cta_caja, total_venta))
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_v_id, cta_ventas, total_venta))
+            # Por el costo
+            if total_costo_venta > 0:
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_v_id, cta_costo, total_costo_venta))
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_v_id, cta_inv, total_costo_venta))
+
+            cursor.execute("""
+                SELECT v.id, v.codigo_venta, c.nombre_completo AS cliente, v.fecha_venta AS fecha,
+                       u.nombre_completo AS vendedor, v.total, v.forma_pago
+                FROM ventas v
+                LEFT JOIN clientes c ON v.cliente_id = c.id
+                INNER JOIN usuarios u ON v.usuario_id = u.id
+                WHERE v.id = ?
+            """, (venta_id,))
+            v_row = cursor.fetchone()
+            
+            venta_obj = {
+                "id": v_row.id,
+                "codigo_venta": v_row.codigo_venta,
+                "cliente": v_row.cliente,
+                "fecha": v_row.fecha.strftime('%Y-%m-%d') if hasattr(v_row.fecha, 'strftime') else str(v_row.fecha),
+                "vendedor": v_row.vendedor,
+                "total": float(v_row.total),
+                "forma_pago": v_row.forma_pago,
+                "detalles": []
+            }
+            
+            cursor.execute("""
+                SELECT p.nombre AS producto_nombre, d.cantidad, d.precio_unitario, d.subtotal 
+                FROM detalle_ventas d
+                INNER JOIN productos p ON d.producto_id = p.id
+                WHERE d.venta_id = ?
+            """, (venta_id,))
+            detalles_rows = cursor.fetchall()
+            for d in detalles_rows:
+                venta_obj["detalles"].append({
+                    "producto_nombre": d.producto_nombre,
+                    "cantidad": d.cantidad,
+                    "precio_unitario": float(d.precio_unitario),
+                    "subtotal": float(d.subtotal)
+                })
+
             conn.commit()
-            return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada."}), 201
+            return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada.", "venta": venta_obj}), 201
 
         except Exception as e:
             if 'conn' in locals():
@@ -600,6 +771,22 @@ def api_compras():
 
             cursor.execute("UPDATE compras SET total = ? WHERE id = ?", (total_compra, compra_id))
 
+            # --- ASIENTO CONTABLE AUTOMÁTICO DE COMPRA ---
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.04'") # Inventario
+            cta_inv = cursor.fetchone()[0]
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '2.1.01'") # Proveedores
+            cta_prov = cursor.fetchone()[0]
+
+            cursor.execute("""
+                INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                VALUES (GETDATE(), ?, 'COMPRAS', ?, ?)
+            """, (f"Compra {compra_code}", compra_id, session['user']['id']))
+            cursor.execute("SELECT @@IDENTITY AS id")
+            asiento_c_id = cursor.fetchone()[0]
+
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_c_id, cta_inv, total_compra))
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_c_id, cta_prov, total_compra))
+
             conn.commit()
             return jsonify({"success": True, "mensaje": "Compra registrada."}), 201
 
@@ -671,7 +858,379 @@ def api_reportes():
             conn.close()
 
 # ==============================================================================
-# EJECUCIÓN DEL SERVIDOR
+# MÓDULO CONTABLE Y ESTADOS FINANCIEROS
+# ==============================================================================
+
+@app.route('/api/finanzas/cuentas', methods=['GET', 'POST'])
+@login_required
+def api_cuentas_contables():
+    if session['user']['rol'] not in ['Administrador', 'Contador']:
+        return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
+    
+    if request.method == 'GET':
+        try:
+            cuentas = execute_query("SELECT * FROM cuentas_contables ORDER BY codigo ASC", fetchall=True)
+            return jsonify(cuentas)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    if request.method == 'POST':
+        data = request.json or {}
+        codigo = data.get('codigo')
+        nombre = data.get('nombre')
+        clasificacion = data.get('clasificacion')
+        naturaleza = data.get('naturaleza')
+        descripcion = data.get('descripcion', '')
+        
+        if not codigo or not nombre or not clasificacion or not naturaleza:
+            return jsonify({"error": "Faltan campos obligatorios"}), 400
+            
+        try:
+            query = "INSERT INTO cuentas_contables (codigo, nombre, clasificacion, naturaleza, descripcion) VALUES (?, ?, ?, ?, ?)"
+            execute_query(query, params=(codigo, nombre, clasificacion, naturaleza, descripcion), commit=True)
+            return jsonify({"success": True, "mensaje": "Cuenta creada exitosamente"}), 201
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+@app.route('/api/finanzas/cuentas/<int:id>', methods=['DELETE'])
+@login_required
+def api_cuentas_contables_delete(id):
+    if session['user']['rol'] not in ['Administrador', 'Contador']:
+        return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
+    try:
+        movs = execute_query("SELECT TOP 1 id FROM movimientos_contables WHERE cuenta_id = ?", (id,), fetchall=True)
+        if movs:
+            return jsonify({"error": "No se puede eliminar la cuenta porque tiene movimientos contables asociados."}), 400
+            
+        execute_query("DELETE FROM cuentas_contables WHERE id = ?", (id,), commit=True)
+        return jsonify({"success": True, "mensaje": "Cuenta eliminada exitosamente"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/finanzas/asientos', methods=['GET', 'POST'])
+@login_required
+def api_asientos_contables():
+    if session['user']['rol'] not in ['Administrador', 'Contador']:
+        return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
+    
+    if request.method == 'GET':
+        try:
+            start_date = request.args.get('start')
+            end_date = request.args.get('end')
+            
+            where_clause = ""
+            params = []
+            
+            if start_date and end_date:
+                where_clause = "WHERE CAST(fecha AS DATE) >= ? AND CAST(fecha AS DATE) <= ?"
+                params.extend([start_date, end_date])
+            elif start_date:
+                where_clause = "WHERE CAST(fecha AS DATE) >= ?"
+                params.append(start_date)
+            elif end_date:
+                where_clause = "WHERE CAST(fecha AS DATE) <= ?"
+                params.append(end_date)
+                
+            query_a = f"SELECT id, fecha, concepto, modulo_origen, usuario_id, created_at FROM asientos_contables {where_clause} ORDER BY fecha DESC, id DESC"
+            asientos = execute_query(query_a, params=tuple(params), fetchall=True)
+            for a in asientos:
+                if hasattr(a['fecha'], 'strftime'):
+                    a['fecha'] = a['fecha'].strftime('%Y-%m-%d')
+                if hasattr(a['created_at'], 'strftime'):
+                    a['created_at'] = a['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                
+                movs = execute_query("""
+                    SELECT m.id, c.codigo, c.nombre AS cuenta, m.debe, m.haber 
+                    FROM movimientos_contables m
+                    INNER JOIN cuentas_contables c ON m.cuenta_id = c.id
+                    WHERE m.asiento_id = ?
+                """, (a['id'],), fetchall=True)
+                for m in movs:
+                    m['debe'] = float(m['debe'])
+                    m['haber'] = float(m['haber'])
+                a['movimientos'] = movs
+            return jsonify(asientos)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    if request.method == 'POST':
+        data = request.json or {}
+        fecha = data.get('fecha')
+        concepto = data.get('concepto')
+        movimientos = data.get('movimientos', [])
+        
+        if not fecha or not concepto or not movimientos:
+            return jsonify({"error": "Faltan datos obligatorios para el asiento."}), 400
+
+        total_debe = sum(float(m.get('debe', 0)) for m in movimientos)
+        total_haber = sum(float(m.get('haber', 0)) for m in movimientos)
+        
+        if round(total_debe, 2) != round(total_haber, 2):
+            return jsonify({"error": "El asiento no cuadra. Debe y Haber deben ser iguales."}), 400
+
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Insertar Asiento
+            cursor.execute("""
+                INSERT INTO asientos_contables (fecha, concepto, modulo_origen, usuario_id) 
+                VALUES (?, ?, 'MANUAL', ?)
+            """, (fecha, concepto, session['user']['id']))
+            
+            cursor.execute("SELECT @@IDENTITY AS id")
+            asiento_id = cursor.fetchone()[0]
+            
+            # Insertar Movimientos
+            for m in movimientos:
+                cuenta_id = int(m['cuenta_id'])
+                debe = float(m.get('debe', 0))
+                haber = float(m.get('haber', 0))
+                if debe > 0 or haber > 0:
+                    cursor.execute("""
+                        INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber)
+                        VALUES (?, ?, ?, ?)
+                    """, (asiento_id, cuenta_id, debe, haber))
+                    
+            conn.commit()
+            return jsonify({"success": True, "mensaje": "Asiento contable registrado exitosamente."}), 201
+        except Exception as e:
+            if 'conn' in locals(): conn.rollback()
+            return jsonify({"error": str(e)}), 500
+        finally:
+            if 'conn' in locals(): conn.close()
+
+@app.route('/api/finanzas/balance_comprobacion', methods=['GET'])
+@login_required
+def api_balance_comprobacion():
+    if session['user']['rol'] not in ['Administrador', 'Contador']:
+        return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
+    try:
+        query = """
+            SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
+                   SUM(m.debe) AS total_debe, SUM(m.haber) AS total_haber
+            FROM cuentas_contables c
+            LEFT JOIN movimientos_contables m ON c.id = m.cuenta_id
+            GROUP BY c.codigo, c.nombre, c.clasificacion, c.naturaleza
+            HAVING SUM(m.debe) > 0 OR SUM(m.haber) > 0
+            ORDER BY c.codigo ASC
+        """
+        filas = execute_query(query, fetchall=True)
+        resultados = []
+        suma_debe = 0
+        suma_haber = 0
+        for f in filas:
+            debe = float(f['total_debe'] or 0)
+            haber = float(f['total_haber'] or 0)
+            
+            saldo_deudor = 0
+            saldo_acreedor = 0
+            
+            if f['naturaleza'] == 'Deudora':
+                saldo_deudor = debe - haber
+                if saldo_deudor < 0:
+                    saldo_acreedor = abs(saldo_deudor)
+                    saldo_deudor = 0
+            else:
+                saldo_acreedor = haber - debe
+                if saldo_acreedor < 0:
+                    saldo_deudor = abs(saldo_acreedor)
+                    saldo_acreedor = 0
+                    
+            resultados.append({
+                "codigo": f['codigo'],
+                "cuenta": f['nombre'],
+                "clasificacion": f['clasificacion'],
+                "debe": saldo_deudor,
+                "haber": saldo_acreedor
+            })
+            suma_debe += saldo_deudor
+            suma_haber += saldo_acreedor
+
+        return jsonify({
+            "cuentas": resultados,
+            "totales": {
+                "debe": suma_debe,
+                "haber": suma_haber
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/finanzas/estado_resultados', methods=['GET'])
+@login_required
+def api_estado_resultados():
+    if session['user']['rol'] not in ['Administrador', 'Contador']:
+        return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
+    try:
+        start_date = request.args.get('start')
+        end_date = request.args.get('end')
+        
+        where_clause = ""
+        params = []
+        if start_date and end_date:
+            where_clause = "AND CAST(a.fecha AS DATE) >= ? AND CAST(a.fecha AS DATE) <= ?"
+            params.extend([start_date, end_date])
+        elif start_date:
+            where_clause = "AND CAST(a.fecha AS DATE) >= ?"
+            params.append(start_date)
+        elif end_date:
+            where_clause = "AND CAST(a.fecha AS DATE) <= ?"
+            params.append(end_date)
+
+        query = f"""
+            SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
+                   SUM(m.debe) AS total_debe, SUM(m.haber) AS total_haber
+            FROM cuentas_contables c
+            INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+            INNER JOIN asientos_contables a ON a.id = m.asiento_id
+            WHERE c.clasificacion IN ('Ingresos', 'Costo', 'Gasto') {where_clause}
+            GROUP BY c.codigo, c.nombre, c.clasificacion, c.naturaleza
+            ORDER BY c.clasificacion DESC, c.codigo ASC
+        """
+        filas = execute_query(query, params=tuple(params), fetchall=True)
+        
+        ingresos = []
+        total_ingresos = 0
+        costos = []
+        total_costos = 0
+        gastos = []
+        total_gastos = 0
+        
+        for f in filas:
+            debe = float(f['total_debe'] or 0)
+            haber = float(f['total_haber'] or 0)
+            saldo = (haber - debe) if f['naturaleza'] == 'Acreedora' else (debe - haber)
+            
+            if f['clasificacion'] == 'Ingresos':
+                ingresos.append({"cuenta": f['nombre'], "saldo": saldo})
+                total_ingresos += saldo
+            elif f['clasificacion'] == 'Costo':
+                costos.append({"cuenta": f['nombre'], "saldo": saldo})
+                total_costos += saldo
+            elif f['clasificacion'] == 'Gasto':
+                gastos.append({"cuenta": f['nombre'], "saldo": saldo})
+                total_gastos += saldo
+
+        utilidad_bruta = total_ingresos - total_costos
+        utilidad_neta = utilidad_bruta - total_gastos
+
+        return jsonify({
+            "ingresos": ingresos,
+            "total_ingresos": total_ingresos,
+            "costos": costos,
+            "total_costos": total_costos,
+            "utilidad_bruta": utilidad_bruta,
+            "gastos": gastos,
+            "total_gastos": total_gastos,
+            "utilidad_neta": utilidad_neta
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/finanzas/balance_general', methods=['GET'])
+@login_required
+def api_balance_general():
+    if session['user']['rol'] not in ['Administrador', 'Contador']:
+        return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
+    try:
+        end_date = request.args.get('end')
+        
+        where_clause_a = ""
+        params_a = []
+        if end_date:
+            where_clause_a = "AND CAST(a.fecha AS DATE) <= ?"
+            params_a.append(end_date)
+
+        # Calcular Utilidad Neta primero (para agregarla al Patrimonio)
+        query_er = f"""
+            SELECT c.clasificacion, c.naturaleza, SUM(m.debe) AS d, SUM(m.haber) AS h
+            FROM cuentas_contables c
+            INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+            INNER JOIN asientos_contables a ON a.id = m.asiento_id
+            WHERE c.clasificacion IN ('Ingresos', 'Costo', 'Gasto') {where_clause_a}
+            GROUP BY c.clasificacion, c.naturaleza
+        """
+        filas_er = execute_query(query_er, params=tuple(params_a), fetchall=True)
+        utilidad_neta = 0
+        for f in filas_er:
+            saldo = (float(f['h'])-float(f['d'])) if f['naturaleza'] == 'Acreedora' else (float(f['d'])-float(f['h']))
+            if f['clasificacion'] == 'Ingresos': utilidad_neta += saldo
+            else: utilidad_neta -= saldo
+
+        # Obtener cuentas de balance
+        query_bg = f"""
+            SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
+                   SUM(m.debe) AS d, SUM(m.haber) AS h
+            FROM cuentas_contables c
+            INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+            INNER JOIN asientos_contables a ON a.id = m.asiento_id
+            WHERE c.clasificacion NOT IN ('Ingresos', 'Costo', 'Gasto') {where_clause_a}
+            GROUP BY c.codigo, c.nombre, c.clasificacion, c.naturaleza
+            ORDER BY c.clasificacion ASC, c.codigo ASC
+        """
+        filas_bg = execute_query(query_bg, params=tuple(params_a), fetchall=True)
+        
+        activos_corrientes = []
+        activos_no_corrientes = []
+        pasivos_corrientes = []
+        pasivos_no_corrientes = []
+        patrimonio = []
+        
+        total_activos = 0
+        total_pasivos = 0
+        total_patrimonio = utilidad_neta # Inicializamos con la utilidad del ejercicio
+        
+        for f in filas_bg:
+            debe = float(f['d'] or 0)
+            haber = float(f['h'] or 0)
+            saldo = (haber - debe) if f['naturaleza'] == 'Acreedora' else (debe - haber)
+            
+            # Ajuste para cuentas contra-activo (ej. Depreciación acumulada) que son naturaleza Acreedora pero van en Activos
+            if f['clasificacion'] == 'Activo no corriente - contraactivo':
+                saldo = -abs(saldo) # Se resta del activo
+                
+            obj = {"cuenta": f['nombre'], "saldo": saldo}
+            
+            if 'Activo corriente' in f['clasificacion']:
+                activos_corrientes.append(obj)
+                total_activos += saldo
+            elif 'Activo no corriente' in f['clasificacion']:
+                activos_no_corrientes.append(obj)
+                total_activos += saldo
+            elif 'Pasivo corriente' in f['clasificacion']:
+                pasivos_corrientes.append(obj)
+                total_pasivos += saldo
+            elif 'Pasivo no corriente' in f['clasificacion']:
+                pasivos_no_corrientes.append(obj)
+                total_pasivos += saldo
+            elif 'Patrimonio' in f['clasificacion']:
+                patrimonio.append(obj)
+                total_patrimonio += saldo
+
+        patrimonio.append({"cuenta": "Utilidad neta del período", "saldo": utilidad_neta})
+
+        return jsonify({
+            "activos": {
+                "corrientes": activos_corrientes,
+                "no_corrientes": activos_no_corrientes,
+                "total": total_activos
+            },
+            "pasivos": {
+                "corrientes": pasivos_corrientes,
+                "no_corrientes": pasivos_no_corrientes,
+                "total": total_pasivos
+            },
+            "patrimonio": {
+                "cuentas": patrimonio,
+                "total": total_patrimonio
+            },
+            "total_pasivo_patrimonio": total_pasivos + total_patrimonio
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ==============================================================================
 # ==============================================================================
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

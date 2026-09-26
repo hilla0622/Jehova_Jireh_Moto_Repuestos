@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Jehová Jireh Moto Repuestos</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Ajustes específicos para que el modal de registro no sea tan largo */
+        .login-card {
+            max-width: 500px; /* Un poco más ancho para el registro */
+        }
+    </style>
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo-container">
+                    <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh Moto Repuestos" class="login-logo-img">
+                </div>
+                <h1>Registro de Clientes</h1>
+                <p>Crea tu cuenta para comprar más fácil</p>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-error">
+                <i class="ph-bold ph-warning-circle"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form action="{{ url_for('registro') }}" method="POST" class="login-form">
+                <div class="form-group">
+                    <label for="nombre_completo">
+                        <i class="ph-bold ph-user"></i> Nombre Completo *
+                    </label>
+                    <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Ej. Juan Pérez" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">
+                        <i class="ph-bold ph-envelope"></i> Correo Electrónico *
+                    </label>
+                    <input type="email" id="email" name="email" placeholder="tucorreo@ejemplo.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">
+                        <i class="ph-bold ph-lock-key"></i> Contraseña *
+                    </label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="telefono">
+                        <i class="ph-bold ph-phone"></i> Teléfono (Opcional)
+                    </label>
+                    <input type="text" id="telefono" name="telefono" placeholder="Ej. 8888-8888">
+                </div>
+
+                <div class="form-group">
+                    <label for="direccion">
+                        <i class="ph-bold ph-map-pin"></i> Dirección (Opcional)
+                    </label>
+                    <input type="text" id="direccion" name="direccion" placeholder="Ej. Del parque 2 cuadras al sur">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <span>Crear Cuenta</span>
+                    <i class="ph-bold ph-user-plus"></i>
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; color: var(--text-muted);">
+                <p>¿Ya tienes una cuenta? <a href="{{ url_for('login') }}" style="color: var(--accent-color); font-weight: 600; text-decoration: none;">Inicia Sesión aquí</a></p>
+                <p style="margin-top: 0.5rem;"><a href="{{ url_for('tienda') }}" style="color: var(--text-muted); text-decoration: underline;">Volver a la tienda</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

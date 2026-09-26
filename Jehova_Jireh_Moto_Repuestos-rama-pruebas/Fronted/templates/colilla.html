@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Colilla de Pago - {{ c.empleado }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            color: #000;
+            background-color: #fff;
+            margin: 20px;
+        }
+        .colilla-container {
+            width: 700px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .grid-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .col-left, .col-center, .col-right {
+            display: inline-block;
+            vertical-align: top;
+        }
+        .vacaciones-box {
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+            text-align: right;
+        }
+        .table-section {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .table-section td {
+            padding: 3px 0;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .line-top {
+            border-top: 1px solid #000;
+        }
+        .line-bottom {
+            border-bottom: 1px solid #000;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .firma-container {
+            margin-top: 50px;
+            text-align: center;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print" style="text-align:center; margin-bottom: 15px;">
+    <button onclick="window.print()">🖨️ Imprimir / Guardar en PDF</button>
+</div>
+
+<div class="colilla-container">
+    <!-- Encabezado -->
+    <div class="header">
+        Colilla de pago de {{ c.empresa }}<br>
+        {{ c.periodo }}
+    </div>
+
+    <!-- Información del Empleado y Vacaciones -->
+    <table width="100%">
+        <tr>
+            <td width="45%" valign="top">
+                Nombre: {{ c.empleado }}<br>
+                N° Cédula: {{ c.cedula }}<br>
+                Cargo: {{ c.cargo }}<br>
+                Departamento: {{ c.departamento }}<br>
+                INSS: {{ c.inss }}<br>
+                Salario de Contrato Mensual: C$ {{ "%.2f"|format(c.salario_contrato) }}
+            </td>
+            <td width="25%" valign="top">
+                Ingreso: {{ c.fecha_ingreso }}<br>
+                Días Trabajados: {{ c.dias_trabajados }}
+            </td>
+            <td width="30%" valign="top" class="text-right">
+                <table width="100%">
+                    <tr><td>Acumulado a periodo ant.</td><td class="text-right">{{ "%.2f"|format(c.vac_acumulado) }}</td></tr>
+                    <tr><td>Vacaciones del mes</td><td class="text-right">{{ "%.2f"|format(c.vac_mes) }}</td></tr>
+                    <tr><td class="line-bottom">(-) Días Descansados</td><td class="text-right line-bottom">{{ "%.2f"|format(c.vac_descansados) }}</td></tr>
+                    <tr><td class="bold">Saldo disponible</td><td class="text-right bold">{{ "%.2f"|format(c.vac_saldo) }}</td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <hr style="border: 0.5px solid #000; margin: 10px 0;">
+
+    <!-- Tabla Percepciones y Deducciones -->
+    <table class="table-section">
+        <tr class="bold">
+            <td width="30%">PERCEPCIONES</td>
+            <td width="20%"></td>
+            <td width="30%">DEDUCCIONES</td>
+            <td width="20%"></td>
+        </tr>
+        <tr>
+            <td>Salario Devengado</td>
+            <td class="text-right">C$ {{ "%.2f"|format(c.salario_devengado) }}</td>
+            <td>INSS Laboral</td>
+            <td class="text-right">C$ {{ "%.2f"|format(c.inss_laboral) }}</td>
+        </tr>
+        <tr>
+            <td>KPI / Extras</td>
+            <td class="text-right">C$ {{ "%.2f"|format(c.kpi_meta) }}</td>
+            <td>IR</td>
+            <td class="text-right">C$ {{ "%.2f"|format(c.ir) }}</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td>Adelanto Salarial</td>
+            <td class="text-right">C$ {{ "%.2f"|format(c.adelanto) }}</td>
+        </tr>
+        <tr>
+            <td class="bold line-top">Total Percepciones</td>
+            <td class="text-right bold line-top">C$ {{ "%.2f"|format(c.total_percepciones) }}</td>
+            <td class="bold line-top">Total Deducciones</td>
+            <td class="text-right bold line-top">C$ {{ "%.2f"|format(c.total_deducciones) }}</td>
+        </tr>
+        <tr>
+            <td class="bold">Neto a Recibir</td>
+            <td class="text-right bold">C$ {{ "%.2f"|format(c.neto_a_recibir) }}</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+
+    <hr style="border: 0.5px solid #000; margin: 15px 0;">
+
+    <!-- Pie de Firma -->
+    <div class="firma-container">
+        Recibí Conforme<br><br>
+        {{ c.empleado }}
+    </div>
+</div>
+
+</body>
+</html>

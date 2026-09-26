@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jehová Jireh Moto Repuestos - Sistema de Gestión</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Iconos Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js para Gráficos y Análisis Estadístico -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo-wrapper">
+                    <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh"
+                        class="brand-logo-img">
+                </div>
+                <div class="brand-info">
+                    <h2>Jehová Jireh</h2>
+                    <span>Moto Repuestos</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#panel" class="nav-item active" data-tab="tab-panel">
+                    <i class="ph-bold ph-squares-four"></i>
+                    <span>Panel Principal</span>
+                </a>
+
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Encargado de Inventario', 'Contador'] %}
+                <a href="#inventario" class="nav-item" data-tab="tab-inventario">
+                    <i class="ph-bold ph-package"></i>
+                    <span>Inventario</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Contador'] %}
+                <a href="#ventas" class="nav-item" data-tab="tab-ventas">
+                    <i class="ph-bold ph-shopping-cart"></i>
+                    <span>Ventas / POS</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Contador'] %}
+                <a href="#compras" class="nav-item" data-tab="tab-compras">
+                    <i class="ph-bold ph-truck"></i>
+                    <span>Compras / Proveedores</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                <a href="#reportes" class="nav-item" data-tab="tab-reportes">
+                    <i class="ph-bold ph-chart-line-up"></i>
+                    <span>Reportes Contables</span>
+                </a>
+                <a href="#contabilidad" class="nav-item" data-tab="tab-contabilidad">
+                    <i class="ph-bold ph-bank"></i>
+                    <span>Estados Financieros</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol in ['Administrador', 'Responsable de Recursos Humanos'] %}
+                <a href="#rrhh" class="nav-item" data-tab="tab-rrhh">
+                    <i class="ph-bold ph-users"></i>
+                    <span>Recursos Humanos</span>
+                </a>
+                {% endif %}
+
+                {% if usuario.rol == 'Administrador' %}
+                <a href="#usuarios" class="nav-item" data-tab="tab-usuarios">
+                    <i class="ph-bold ph-users-three"></i>
+                    <span>Usuarios y Roles</span>
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">{{ usuario.nombre[:2].upper() }}</div>
+                    <div class="user-details">
+                        <span class="user-name">{{ usuario.nombre }}</span>
+                        <span class="user-role badge-role role-{{ usuario.rol.lower().replace(' ', '-') }}">
+                            {{ usuario.rol }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-search">
+                    <i class="ph-bold ph-magnifying-glass"></i>
+                    <input type="text" id="global-search" placeholder="Buscar repuesto, código de venta o proveedor...">
+                </div>
+                <div class="header-actions">
+                    <button id="theme-toggle" class="btn btn-secondary" title="Alternar tema">
+                        <i class="ph-bold ph-sun" id="theme-icon"></i>
+                    </button>
+                    <div class="user-pill">
+                        <i class="ph-bold ph-user-circle"></i>
+                        <span>{{ usuario.nombre }} ({{ usuario.rol }})</span>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary icon-btn-text" title="Cerrar Sesión">
+                        <i class="ph-bold ph-sign-out"></i>
+                        <span>Salir</span>
+                    </a>
+                </div>
+            </header>
+
+            <!-- Dashboard Content Area -->
+            <div class="content-body">
+
+                <!-- TAB 1: PANEL PRINCIPAL -->
+                <section id="tab-panel" class="tab-content active">
+                    <div class="welcome-banner">
+                        <div class="banner-text">
+                            <h1>Bienvenido, {{ usuario.nombre }} 👋</h1>
+                            <p>Modo de acceso: <strong>{{ usuario.rol }}</strong>. Panel centralizado de operaciones de
+                                Jehová Jireh Moto Repuestos (Masatepe).</p>
+                        </div>
+                        <div class="banner-right">
+                            <div class="banner-status">
+                                <span class="status-indicator online"></span>
+                                <span>Servidor Operativo</span>
+                            </div>
+                            <div class="banner-logo-badge">
+                                <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh"
+                                    class="banner-logo-img">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon orange">
+                                <i class="ph-bold ph-package"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Total Repuestos</span>
+                                <span class="stat-value" id="stat-total-productos">0</span>
+                                <span class="stat-subtext">Catálogo en sistema</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="ph-bold ph-currency-dollar"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Ventas Totales</span>
+                                <span class="stat-value" id="stat-total-ventas">$0.00</span>
+                                <span class="stat-subtext" id="stat-conteo-ventas">0 transacciones</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon red">
+                                <i class="ph-bold ph-warning-circle"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Stock Bajo Alerta</span>
+                                <span class="stat-value" id="stat-stock-bajo">0</span>
+                                <span class="stat-subtext">Requieren reabastecimiento</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="ph-bold ph-truck"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Proveedores Registrados</span>
+                                <span class="stat-value" id="stat-proveedores">0</span>
+                                <span class="stat-subtext">Proveedores activos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Section -->
+                    <div class="grid-2col margin-top">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-lightning"></i> Módulos Disponibles para tu Perfil</h3>
+                            </div>
+                            <div class="card-body quick-actions-list">
+                                {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                                <button class="action-tile" onclick="switchTab('tab-ventas')">
+                                    <i class="ph-bold ph-shopping-cart"></i>
+                                    <span>Punto de Venta (POS)</span>
+                                </button>
+                                {% endif %}
+
+                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Vendedor'] %}
+                                <button class="action-tile" onclick="switchTab('tab-inventario')">
+                                    <i class="ph-bold ph-package"></i>
+                                    <span>Consultar Inventario</span>
+                                </button>
+                                {% endif %}
+
+                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                <button class="action-tile" onclick="switchTab('tab-compras')">
+                                    <i class="ph-bold ph-arrow-down-left"></i>
+                                    <span>Ingreso de Compras</span>
+                                </button>
+                                {% endif %}
+
+                                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                                <button class="action-tile" onclick="switchTab('tab-reportes')">
+                                    <i class="ph-bold ph-chart-line-up"></i>
+                                    <span>Reportes y Contabilidad</span>
+                                </button>
+                                {% endif %}
+
+                                {% if usuario.rol in ['Administrador', 'Responsable de Recursos Humanos'] %}
+                                <button class="action-tile" onclick="switchTab('tab-rrhh')">
+                                    <i class="ph-bold ph-users"></i>
+                                    <span>Recursos Humanos</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-clock-counter-clockwise"></i> Actividad Reciente de Ventas</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="recent-sales-list" class="recent-list">
+                                    <!-- Carga dinámica -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: INVENTARIO -->
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Encargado de Inventario', 'Contador'] %}
+                <section id="tab-inventario" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Gestión de Productos e Inventario</h2>
+                            <p>Administra repuestos, precios, existencias e historial de movimientos (Kardex).</p>
+                        </div>
+                        <div class="header-actions">
+                            {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                            <button class="btn btn-primary" onclick="openModal('modal-producto')">
+                                <i class="ph-bold ph-plus"></i> Nuevo Repuesto
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Sub-navegación de inventario -->
+                    <div class="subnav-pills">
+                        <button class="subnav-btn active" onclick="switchInventarioSubtab('existencias', this)">
+                            <i class="ph-bold ph-package"></i> Existencias Actuales
+                        </button>
+                        <button class="subnav-btn" onclick="switchInventarioSubtab('kardex', this)">
+                            <i class="ph-bold ph-clock-counter-clockwise"></i> Historial de Movimientos (Kardex)
+                        </button>
+                    </div>
+
+                    <!-- VISTA 1: Existencias -->
+                    <div id="subtab-existencias" class="subtab-view active">
+                        <div class="card">
+                            <div class="table-toolbar">
+                                <i class="ph-bold ph-magnifying-glass"
+                                    style="margin-left: 0.5rem; color: var(--text-muted);"></i>
+                                <input type="text" id="filter-inventario" class="form-control"
+                                    placeholder="Buscar repuesto por código, nombre o categoría...">
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre del Repuesto</th>
+                                            <th>Categoría</th>
+                                            <th>Precio Venta</th>
+                                            <th>Costo Compra</th>
+                                            <th>Existencias</th>
+                                            <th>Estado Stock</th>
+                                            {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                            <th>Acción</th>
+                                            {% endif %}
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-inventario">
+                                        <!-- Render dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VISTA 2: Kardex / Movimientos -->
+                    <div id="subtab-kardex" class="subtab-view">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-list-bullets"></i> Registro Cronológico de Entradas y Salidas
+                                    (Kardex Automático)</h3>
+                                <input type="text" id="filter-movimientos" class="form-control"
+                                    style="max-width: 300px;" placeholder="Filtrar movimientos...">
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th># ID</th>
+                                                <th>Fecha</th>
+                                                <th>Código / Repuesto</th>
+                                                <th>Tipo Movimiento</th>
+                                                <th>Cantidad</th>
+                                                <th>Motivo / Referencia</th>
+                                                <th>Usuario</th>
+                                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                                <th>Acción</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-movimientos">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 3: VENTAS (POS & HISTORIAL) -->
+                {% if usuario.rol in ['Administrador', 'Vendedor', 'Contador'] %}
+                <section id="tab-ventas" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Gestión de Ventas y Comprobantes</h2>
+                            <p>Procesa transacciones en tiempo real, genera facturas/comprobantes e inspecciona el
+                                historial de ventas.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sub-navegación de ventas -->
+                    <div class="subnav-pills">
+                        {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                        <button class="subnav-btn active" onclick="switchVentasSubtab('pos', this)">
+                            <i class="ph-bold ph-shopping-cart"></i> Caja / Punto de Venta (POS)
+                        </button>
+                        {% endif %}
+                        <button class="subnav-btn {% if usuario.rol == 'Contador' %}active{% endif %}"
+                            onclick="switchVentasSubtab('historial-ventas', this)">
+                            <i class="ph-bold ph-receipt"></i> Historial de Ventas Realizadas
+                        </button>
+                    </div>
+
+                    <!-- VISTA 1: POS -->
+                    {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                    <div id="subtab-pos" class="subtab-view active">
+                        <div class="pos-layout">
+                            <!-- Selector de Productos -->
+                            <div class="card pos-products-card">
+                                <div class="card-header">
+                                    <h3><i class="ph-bold ph-magnifying-glass"></i> Catálogo de Repuestos Disponibles
+                                    </h3>
+                                    <input type="text" id="pos-search" class="form-control"
+                                        placeholder="Buscar repuesto por código o nombre...">
+                                </div>
+                                <div class="card-body">
+                                    <div class="pos-products-grid" id="pos-products-grid">
+                                        <!-- Tarjetas de repuestos -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Carrito de Venta -->
+                            <div class="card pos-cart-card">
+                                <div class="card-header">
+                                    <h3><i class="ph-bold ph-receipt"></i> Carrito de Venta</h3>
+                                </div>
+                                <div class="card-body pos-cart-body">
+                                    <div class="form-group margin-bottom-sm">
+                                        <label for="pos-cliente">Nombre del Cliente:</label>
+                                        <input type="text" id="pos-cliente" class="form-control"
+                                            value="Cliente General">
+                                    </div>
+                                    <div class="form-group margin-bottom-sm">
+                                        <label for="pos-forma-pago">Forma de Pago:</label>
+                                        <select id="pos-forma-pago" class="form-control">
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Transferencia / Móvil">Transferencia / Móvil</option>
+                                            <option value="Tarjeta">Tarjeta</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="cart-items-wrapper">
+                                        <table class="cart-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Producto</th>
+                                                    <th>Cant</th>
+                                                    <th>Precio</th>
+                                                    <th>Subtotal</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="pos-cart-tbody">
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted">El carrito está
+                                                        vacío.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="cart-summary">
+                                        <div class="summary-row total-row">
+                                            <span>TOTAL A PAGAR:</span>
+                                            <span id="pos-cart-total">$0.00</span>
+                                        </div>
+                                        <button class="btn btn-primary btn-block btn-lg" onclick="procesarVentaPOS()">
+                                            <i class="ph-bold ph-check-circle"></i> Confirmar Venta
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- VISTA 2: Historial de Ventas -->
+                    <div id="subtab-historial-ventas"
+                        class="subtab-view {% if usuario.rol == 'Contador' %}active{% endif %}">
+                        <div class="card">
+                            <div class="table-toolbar">
+                                <input type="text" id="filter-historial-ventas" class="form-control"
+                                    placeholder="Buscar por código de venta (ej. VEN-0001), cliente o vendedor...">
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Código Venta</th>
+                                            <th>Fecha</th>
+                                            <th>Cliente</th>
+                                            <th>Atendido Por</th>
+                                            <th>Forma Pago</th>
+                                            <th>Total ($)</th>
+                                            <th>Comprobante</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-historial-ventas">
+                                        <!-- Render dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 4: COMPRAS Y PROVEEDORES -->
+                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Contador'] %}
+                <section id="tab-compras" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Gestión de Compras y Proveedores</h2>
+                            <p>Registra compras a proveedores para aumentar automáticamente el stock en inventario.</p>
+                        </div>
+                        {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="openModal('modal-proveedor')">
+                                <i class="ph-bold ph-user-plus"></i> Nuevo Proveedor
+                            </button>
+                            <button class="btn btn-primary" onclick="openModal('modal-compra')">
+                                <i class="ph-bold ph-plus"></i> Registrar Compra
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid-2col">
+                        <!-- Lista de Compras -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-arrow-down-left"></i> Historial de Compras de Mercancía</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Fecha</th>
+                                                <th>Proveedor</th>
+                                                <th>Total Compra</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-compras">
+                                            <!-- Carga dinámica -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Proveedores -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-truck"></i> Directorio de Proveedores</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Proveedor</th>
+                                                <th>Contacto</th>
+                                                <th>Teléfono</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-proveedores">
+                                            <!-- Carga dinámica -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 5: REPORTES Y CONTABILIDAD -->
+                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                <section id="tab-reportes" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Reportes, Análisis y Procesamiento Contable</h2>
+                            <p>Análisis estadístico del comportamiento del negocio para la toma de decisiones y apoyo
+                                contable.</p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid margin-bottom">
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="ph-bold ph-trend-up"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Ingresos por Ventas</span>
+                                <span class="stat-value" id="rep-ingresos">$0.00</span>
+                                <span class="stat-subtext" id="rep-unidades-vendidas">0 unidades vendidas</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon orange">
+                                <i class="ph-bold ph-shopping-bag"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Egresos por Compras</span>
+                                <span class="stat-value" id="rep-egresos">$0.00</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="ph-bold ph-coins"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Margen Bruto Estimado</span>
+                                <span class="stat-value" id="rep-margen">$0.00</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon purple">
+                                <i class="ph-bold ph-arrows-clockwise"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Rotación de Inventario</span>
+                                <span class="stat-value" id="rep-rotacion">0.00x</span>
+                                <span class="stat-subtext">Índice de movimiento</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos Estadísticos Dinámicos -->
+                    <div class="grid-2col margin-bottom">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-chart-line"></i> Comportamiento de Ventas (Tendencia)</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chart-ventas-tendencia" style="max-height: 250px;"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-chart-pie"></i> Productos Más Vendidos (Top Ventas)</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chart-top-productos" style="max-height: 250px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col margin-bottom">
+                        <!-- Tabla Top Productos -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-trophy"></i> Ranking de Repuestos Más Vendidos</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Repuesto</th>
+                                                <th>Unid. Vendidas</th>
+                                                <th>Monto Generado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-top-productos">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabla Alerta Stock Bajo -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-warning-circle"></i> Repuestos con Bajo Nivel de Inventario
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Repuesto</th>
+                                                <th>Stock Actual</th>
+                                                <th>Mínimo Alerta</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-stock-bajo-reporte">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="ph-bold ph-file-text"></i> Informe Consolidado para el Contador Externo
+                                (Granada)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="accounting-summary" class="accounting-box">
+                                <p>Cargando información del servidor...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB CONTABILIDAD: ESTADOS FINANCIEROS -->
+                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                <section id="tab-contabilidad" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Estados Financieros y Contabilidad</h2>
+                            <p>Consulta el Balance General y el Estado de Resultados generados a partir de las
+                                transacciones.</p>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn btn-primary" onclick="cargarEstadosFinancieros()">
+                                <i class="ph-bold ph-arrows-clockwise"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col margin-bottom">
+                        <!-- Balance General -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-scales"></i> Balance General</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="balance-general-container">
+                                    <p>Cargando información...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado de Resultados -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-chart-line-up"></i> Estado de Resultados</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="estado-resultados-container">
+                                    <p>Cargando información...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB RRHH: RECURSOS HUMANOS -->
+                {% if usuario.rol in ['Administrador', 'Responsable de Recursos Humanos'] %}
+                <section id="tab-rrhh" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Recursos Humanos y Nómina</h2>
+                            <p>Administra empleados, vacaciones, permisos y genera la nómina mensual (Ley 185 + Ley
+                                822).</p>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="openModal('modal-empleado')">
+                                <i class="ph-bold ph-user-plus"></i> Nuevo Empleado
+                            </button>
+                            <button class="btn btn-secondary" onclick="openModal('modal-movimiento-laboral')">
+                                <i class="ph-bold ph-calendar-blank"></i> Registrar Vacaciones/Permiso
+                            </button>
+                            <button class="btn btn-primary" onclick="openModal('modal-generar-nomina')">
+                                <i class="ph-bold ph-money"></i> Generar Nómina
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stats rapidos RRHH -->
+                    <div class="stats-grid" id="rrhh-stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue"><i class="ph-bold ph-users"></i></div>
+                            <div class="stat-data">
+                                <span class="stat-title">Empleados Activos</span>
+                                <span class="stat-value" id="rrhh-stat-empleados">0</span>
+                                <span class="stat-subtext">En planilla</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green"><i class="ph-bold ph-money"></i></div>
+                            <div class="stat-data">
+                                <span class="stat-title">Masa Salarial Total</span>
+                                <span class="stat-value" id="rrhh-stat-masa-salarial">C$0.00</span>
+                                <span class="stat-subtext">Salarios base/mes</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon orange"><i class="ph-bold ph-calendar-check"></i></div>
+                            <div class="stat-data">
+                                <span class="stat-title">Nóminas Generadas</span>
+                                <span class="stat-value" id="rrhh-stat-nominas">0</span>
+                                <span class="stat-subtext">En historial</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABLA DE EMPLEADOS -->
+                    <div class="card" style="margin-top:1.5rem;">
+                        <div class="card-header">
+                            <h3><i class="ph-bold ph-users"></i> Listado de Empleados</h3>
+                            <div style="display:flex;gap:.5rem;">
+                                <select id="rrhh-filtro-estado" class="form-control" style="width:140px;"
+                                    onchange="cargarEmpleadosRRHH()">
+                                    <option value="todos">Todos</option>
+                                    <option value="activos" selected>Solo Activos</option>
+                                    <option value="inactivos">Solo Inactivos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table" id="tabla-empleados">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Cédula</th>
+                                        <th>Nº INSS</th>
+                                        <th>Cargo</th>
+                                        <th>Salario Base</th>
+                                        <th>Días Vac.</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-empleados"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TABLA MOVIMIENTOS LABORALES -->
+                    <div class="card" style="margin-top:1.5rem;">
+                        <div class="card-header">
+                            <h3><i class="ph-bold ph-calendar-blank"></i> Vacaciones y Permisos</h3>
+                            <select id="rrhh-filtro-emp-movimiento" class="form-control" style="width:220px;"
+                                onchange="cargarMovimientosLaborales()">
+                                <option value="">Todos los empleados</option>
+                            </select>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Empleado</th>
+                                        <th>Tipo</th>
+                                        <th>Fecha Inicio</th>
+                                        <th>Fecha Fin</th>
+                                        <th>Días Tomados</th>
+                                        <th>Observación</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-movimientos-laborales">
+                                    <tr>
+                                        <td colspan="6" style="text-align:center;color:var(--text-muted);">Sin registros
+                                            de movimientos laborales.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- HISTORIAL DE NÓMINAS -->
+                    <div class="card" style="margin-top:1.5rem;">
+                        <div class="card-header">
+                            <h3><i class="ph-bold ph-clipboard-text"></i> Historial de Nóminas</h3>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Período</th>
+                                        <th>Fecha Generación</th>
+                                        <th>Total Bruto</th>
+                                        <th>Total Deducciones</th>
+                                        <th>Total Neto</th>
+                                        <th>INSS Patronal</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-historial-nominas">
+                                    <tr>
+                                        <td colspan="8" style="text-align:center;color:var(--text-muted);">No hay
+                                            nóminas generadas.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- TAB 6: USUARIOS Y ROLES (SOLO ADMIN) -->
+                {% if usuario.rol == 'Administrador' %}
+                <section id="tab-usuarios" class="tab-content">
+                    <div class="section-header">
+                        <div>
+                            <h2>Administración de Usuarios y Jerarquía</h2>
+                            <p>Gestión de credenciales y roles dentro del sistema Jehová Jireh.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openModal('modal-usuario')">
+                            <i class="ph-bold ph-user-plus"></i> Registrar Usuario
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Usuario</th>
+                                        <th>Rol Asignado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-usuarios">
+                                    <!-- Carga dinámica -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: REGISTRAR PRODUCTO -->
+    <div class="modal" id="modal-producto">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-plus-circle"></i> Registrar Nuevo Repuesto</h3>
+                <button class="modal-close" onclick="closeModal('modal-producto')">&times;</button>
+            </div>
+            <form id="form-producto" onsubmit="guardarProducto(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Código de Repuesto:</label>
+                        <input type="text" id="prod-codigo" class="form-control" placeholder="ej. MAN037">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre o Descripción:</label>
+                        <input type="text" id="prod-nombre" class="form-control"
+                            placeholder="ej. Freno de Disco Pulsar 180" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría:</label>
+                        <select id="prod-categoria" class="form-control">
+                            <option value="Motor y Partes Internas">Motor y Partes Internas</option>
+                            <option value="Sistema Eléctrico y Encendido">Sistema Eléctrico y Encendido</option>
+                            <option value="Transmisión y Embrague">Transmisión y Embrague</option>
+                            <option value="Sistema de Frenos">Sistema de Frenos</option>
+                            <option value="Suspensión y Dirección">Suspensión y Dirección</option>
+                            <option value="Llantas y Ruedas">Llantas y Ruedas</option>
+                            <option value="Accesorios y Carrocería">Accesorios y Carrocería</option>
+                            <option value="Lubricantes y Químicos">Lubricantes y Químicos</option>
+                            <option value="Herramientas y Otros">Herramientas y Otros</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Precio Venta ($):</label>
+                            <input type="number" step="0.01" id="prod-precio" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Costo Compra ($):</label>
+                            <input type="number" step="0.01" id="prod-costo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Stock Inicial:</label>
+                            <input type="number" id="prod-stock" class="form-control" value="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mínimo Alerta Stock:</label>
+                            <input type="number" id="prod-min-stock" class="form-control" value="5" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-producto')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Repuesto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR PRODUCTO -->
+    <div class="modal" id="modal-editar-producto">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-pencil"></i> Editar Repuesto Existente</h3>
+                <button class="modal-close" onclick="closeModal('modal-editar-producto')">&times;</button>
+            </div>
+            <form id="form-editar-producto" onsubmit="guardarEdicionProducto(event)">
+                <input type="hidden" id="edit-prod-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Código de Repuesto:</label>
+                        <input type="text" id="edit-prod-codigo" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre o Descripción:</label>
+                        <input type="text" id="edit-prod-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría:</label>
+                        <select id="edit-prod-categoria" class="form-control">
+                            <option value="Motor y Partes Internas">Motor y Partes Internas</option>
+                            <option value="Sistema Eléctrico y Encendido">Sistema Eléctrico y Encendido</option>
+                            <option value="Transmisión y Embrague">Transmisión y Embrague</option>
+                            <option value="Sistema de Frenos">Sistema de Frenos</option>
+                            <option value="Suspensión y Dirección">Suspensión y Dirección</option>
+                            <option value="Llantas y Ruedas">Llantas y Ruedas</option>
+                            <option value="Accesorios y Carrocería">Accesorios y Carrocería</option>
+                            <option value="Lubricantes y Químicos">Lubricantes y Químicos</option>
+                            <option value="Herramientas y Otros">Herramientas y Otros</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Precio Venta ($):</label>
+                            <input type="number" step="0.01" id="edit-prod-precio" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Costo Compra ($):</label>
+                            <input type="number" step="0.01" id="edit-prod-costo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Stock Actual:</label>
+                            <input type="number" id="edit-prod-stock" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mínimo Alerta Stock:</label>
+                            <input type="number" id="edit-prod-min-stock" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-editar-producto')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR REGISTRO DE MOVIMIENTO DE INVENTARIO -->
+    <div class="modal" id="modal-editar-movimiento">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-pencil-line"></i> Editar Movimiento #MOV-<span id="lbl-edit-mov-id"></span>
+                </h3>
+                <button class="modal-close" onclick="closeModal('modal-editar-movimiento')">&times;</button>
+            </div>
+            <form id="form-editar-movimiento" onsubmit="guardarEdicionMovimiento(event)">
+                <input type="hidden" id="edit-mov-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Repuesto Asociado:</label>
+                        <input type="text" id="edit-mov-producto-nombre" class="form-control" readonly
+                            style="background-color: var(--bg-dark); color: var(--text-muted); font-weight: 600;">
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Tipo de Movimiento:</label>
+                            <select id="edit-mov-tipo" class="form-control">
+                                <option value="ENTRADA_COMPRA">🟢 ENTRADA POR COMPRA</option>
+                                <option value="ENTRADA_INICIAL">🟢 ENTRADA INICIAL</option>
+                                <option value="AJUSTE_ENTRADA">🟢 AJUSTE ENTRADA (Devolución / Incremento)</option>
+                                <option value="SALIDA_VENTA">🔴 SALIDA POR VENTA</option>
+                                <option value="AJUSTE_SALIDA">🔴 AJUSTE SALIDA (Merma / Devolución a proveedor)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cantidad:</label>
+                            <input type="number" id="edit-mov-cantidad" class="form-control" min="1" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Causa / Motivo del Ajuste:</label>
+                        <select id="edit-mov-motivo-tipo" class="form-control" onchange="toggleMotivoStockAlert()">
+                            <option value="AJUSTE_STOCK">📦 Producto agregado de más / Ajuste de cantidad (SÍ actualiza
+                                el stock)</option>
+                            <option value="DEFECTUOSO">⚠️ Producto Defectuoso / Dañado (NO actualiza el stock)</option>
+                            <option value="OTRO">📝 Otro motivo de ajuste (SÍ actualiza el stock)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Observación / Detalle de Justificación:</label>
+                        <input type="text" id="edit-mov-motivo" class="form-control"
+                            placeholder="ej. Venta VEN-0006 devolución por defectuosa" required>
+                    </div>
+                    <div id="alert-edit-mov-info" class="alert"
+                        style="font-size: 0.82rem; background: rgba(245, 158, 11, 0.12); color: var(--primary); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 0.75rem 1rem;">
+                        <i class="ph-bold ph-info"></i> Al seleccionar 'Producto agregado de más', las existencias en
+                        inventario se recalcularán automáticamente en tiempo real.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-editar-movimiento')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Edición</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR COMPRA -->
+    <div class="modal" id="modal-compra">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-truck"></i> Registrar Entrada de Mercadería / Compra</h3>
+                <button class="modal-close" onclick="closeModal('modal-compra')">&times;</button>
+            </div>
+            <form id="form-compra" onsubmit="guardarCompra(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Proveedor:</label>
+                        <select id="compra-proveedor-id" class="form-control">
+                            <!-- Carga dinámica -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Repuesto Aumentar Stock:</label>
+                        <select id="compra-producto-id" class="form-control">
+                            <!-- Carga dinámica -->
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Cantidad Recibida:</label>
+                            <input type="number" id="compra-cantidad" class="form-control" min="1" value="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Costo Unitario ($):</label>
+                            <input type="number" step="0.01" id="compra-costo-unitario" class="form-control"
+                                placeholder="Dejar 0 para costo actual">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-compra')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Compra y Aumentar Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVO PROVEEDOR -->
+    <div class="modal" id="modal-proveedor">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-user-plus"></i> Registrar Proveedor</h3>
+                <button class="modal-close" onclick="closeModal('modal-proveedor')">&times;</button>
+            </div>
+            <form id="form-proveedor" onsubmit="guardarProveedor(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nombre del Proveedor / Empresa:</label>
+                        <input type="text" id="prov-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre de Contacto:</label>
+                        <input type="text" id="prov-contacto" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono:</label>
+                        <input type="text" id="prov-telefono" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-proveedor')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Proveedor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVO USUARIO -->
+    <div class="modal" id="modal-usuario">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-user-gear"></i> Registrar Nuevo Usuario</h3>
+                <button class="modal-close" onclick="closeModal('modal-usuario')">&times;</button>
+            </div>
+            <form id="form-usuario" onsubmit="guardarUsuario(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nombre Completo:</label>
+                        <input type="text" id="usr-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Usuario (Username):</label>
+                        <input type="text" id="usr-username" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña:</label>
+                        <input type="password" id="usr-password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rol de Jerarquía:</label>
+                        <select id="usr-rol" class="form-control">
+                            <option value="Administrador">Administrador (Acceso Total)</option>
+                            <option value="Vendedor">Vendedor (Punto de Venta)</option>
+                            <option value="Encargado de Inventario">Encargado de Inventario (Existencias/Compras)
+                            </option>
+                            <option value="Contador">Contador (Consulta Granada/Reportes)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-usuario')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- ====================================================
+         MODALES: RECURSOS HUMANOS
+    ==================================================== -->
+
+    <!-- MODAL: NUEVO / EDITAR EMPLEADO -->
+    <div class="modal" id="modal-empleado">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-user-plus"></i> <span id="modal-empleado-titulo">Registrar Nuevo
+                        Empleado</span></h3>
+                <button class="modal-close" onclick="closeModal('modal-empleado')">&times;</button>
+            </div>
+            <form id="form-empleado" onsubmit="guardarEmpleado(event)">
+                <input type="hidden" id="emp-id">
+                <div class="modal-body">
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Nombre Completo: *</label>
+                            <input type="text" id="emp-nombre" class="form-control" placeholder="Ej. María López Pérez"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>Cédula de Identidad:</label>
+                            <input type="text" id="emp-identificacion" class="form-control"
+                                placeholder="Ej. 401-250195-0001A">
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Número INSS:</label>
+                            <input type="text" id="emp-num-inss" class="form-control" placeholder="Ej. 1234567">
+                        </div>
+                        <div class="form-group">
+                            <label>Cargo / Puesto:</label>
+                            <input type="text" id="emp-cargo" class="form-control"
+                                placeholder="Ej. Vendedor, Bodeguero">
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Salario Base Mensual (C$): *</label>
+                            <input type="number" step="0.01" id="emp-salario" class="form-control"
+                                placeholder="Ej. 12000.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Ingreso:</label>
+                            <input type="date" id="emp-fecha-ingreso" class="form-control">
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Teléfono:</label>
+                            <input type="text" id="emp-telefono" class="form-control" placeholder="Ej. 8888-9999">
+                        </div>
+                        <div class="form-group">
+                            <label>Correo Electrónico:</label>
+                            <input type="email" id="emp-email" class="form-control" placeholder="correo@ejemplo.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones:</label>
+                        <input type="text" id="emp-observaciones" class="form-control" placeholder="Notas adicionales">
+                    </div>
+                    <!-- Vista previa del cálculo de nómina -->
+                    <div id="emp-preview-calculo"
+                        style="display:none; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:1rem; margin-top:0.5rem;">
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;"><i
+                                class="ph-bold ph-calculator"></i> Vista previa del cálculo de nómina:</p>
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; font-size:0.83rem;">
+                            <div><strong>INSS Laboral (7%):</strong><br><span id="prev-inss-lab">C$0.00</span></div>
+                            <div><strong>IR Mensual:</strong><br><span id="prev-ir">C$0.00</span></div>
+                            <div><strong>Neto a Recibir:</strong><br><span id="prev-neto"
+                                    style="color:#22c55e;">C$0.00</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-empleado')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-guardar-empleado">Guardar Empleado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR MOVIMIENTO LABORAL (Vacaciones/Permiso/Falta) -->
+    <div class="modal" id="modal-movimiento-laboral">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-calendar-blank"></i> Registrar Vacaciones / Permiso / Falta</h3>
+                <button class="modal-close" onclick="closeModal('modal-movimiento-laboral')">&times;</button>
+            </div>
+            <form id="form-movimiento-laboral" onsubmit="guardarMovimientoLaboral(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Empleado: *</label>
+                        <select id="mov-empleado-id" class="form-control" required>
+                            <option value="">-- Seleccionar empleado --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Movimiento: *</label>
+                        <select id="mov-tipo" class="form-control" required>
+                            <option value="VACACIONES">🏞️ Vacaciones</option>
+                            <option value="PERMISO_CON_GOCE">✅ Permiso con Goce de Salario</option>
+                            <option value="PERMISO_SIN_GOCE">❌ Permiso sin Goce de Salario</option>
+                            <option value="FALTA">⚠️ Falta Injustificada</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Fecha Inicio: *</label>
+                            <input type="date" id="mov-fecha-inicio" class="form-control" required
+                                onchange="calcularDiasMovimiento()">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha Fin: *</label>
+                            <input type="date" id="mov-fecha-fin" class="form-control" required
+                                onchange="calcularDiasMovimiento()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Días Tomados: *</label>
+                        <input type="number" step="0.5" id="mov-dias" class="form-control" min="0.5" required>
+                        <small style="color:var(--text-muted);">Se calcula automáticamente según las fechas
+                            seleccionadas.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Observación:</label>
+                        <input type="text" id="mov-observacion" class="form-control"
+                            placeholder="Motivo del permiso, etc.">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-movimiento-laboral')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Movimiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: GENERAR NÓMINA -->
+    <div class="modal" id="modal-generar-nomina">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-money"></i> Generar Nómina Mensual</h3>
+                <button class="modal-close" onclick="closeModal('modal-generar-nomina')">&times;</button>
+            </div>
+            <form id="form-generar-nomina" onsubmit="procesarNomina(event)">
+                <div class="modal-body">
+                    <p style="color:var(--text-muted); margin-bottom:1rem;">Se calculará automáticamente el INSS Laboral
+                        (7%), IR (Ley 822) y provisiones de vacaciones y aguinaldo (Ley 185) para todos los empleados
+                        activos.</p>
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label>Empleado: *</label>
+                        <select id="nomina-empleado" class="form-control" required>
+                            <option value="all">Todos los empleados (Nómina General)</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Mes: *</label>
+                            <select id="nomina-mes" class="form-control" required>
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9" selected>Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Año: *</label>
+                            <input type="number" id="nomina-anio" class="form-control" value="2026" min="2020"
+                                max="2030" required>
+                        </div>
+                    </div>
+                    <div
+                        style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.2); border-radius:8px; padding:0.8rem 1rem; font-size:0.83rem; color:var(--text-muted);">
+                        <i class="ph-bold ph-info"></i>
+                        <strong>Ley 822:</strong> IR calculado con tabla progresiva anualizada.<br>
+                        <strong>Ley 185:</strong> 1.25 días de vacaciones acumulados por empleado.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('modal-generar-nomina')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-procesar-nomina">
+                        <i class="ph-bold ph-calculator"></i> Calcular y Generar Nómina
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: DETALLE DE NÓMINA -->
+    <div class="modal" id="modal-detalle-nomina">
+        <div class="modal-content modal-xl">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-clipboard-text"></i> Detalle de Nómina — <span id="lbl-nomina-periodo"></span>
+                </h3>
+                <button class="modal-close" onclick="closeModal('modal-detalle-nomina')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Resumen cabecera -->
+                <div
+                    style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.75rem; margin-bottom:1.5rem; padding:1rem; background:rgba(99,102,241,0.06); border-radius:10px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-muted);">Total Bruto</div>
+                        <div style="font-size:1.1rem; font-weight:700;" id="dndet-bruto">C$0.00</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-muted);">Deducciones (Empleado)</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#ef4444;" id="dndet-deducciones">C$0.00
+                        </div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-muted);">Total Neto</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#22c55e;" id="dndet-neto">C$0.00</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-muted);">INSS Patronal</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#f59e0b;" id="dndet-patronal">C$0.00</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-muted);">Provisiones (Vac+Agui)</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#a855f7;" id="dndet-provisiones">C$0.00
+                        </div>
+                    </div>
+                </div>
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="data-table" id="tabla-detalle-nomina">
+                        <thead>
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Cargo</th>
+                                <th>Salario Base</th>
+                                <th>INSS Lab. (7%)</th>
+                                <th>IR (Ley 822)</th>
+                                <th>Neto a Recibir</th>
+                                <th>Colilla</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-detalle-nomina"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary"
+                    onclick="closeModal('modal-detalle-nomina')">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="imprimirDetalleNomina()">
+                    <i class="ph-bold ph-printer"></i> Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: COLILLA INDIVIDUAL DE PAGO -->
+    <div class="modal" id="modal-colilla">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-receipt"></i> Colilla de Pago</h3>
+                <button class="modal-close" onclick="closeModal('modal-colilla')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="colilla-print-area"
+                    style="background:#fff; color:#1e293b; padding:1.5rem; border-radius:8px; font-family:'Outfit',sans-serif;">
+
+                    <!-- Encabezado -->
+                    <div
+                        style="text-align:center; border-bottom:2px solid #4338ca; padding-bottom:0.8rem; margin-bottom:1rem;">
+                        <div style="font-size:1.1rem; font-weight:800; color:#4338ca;">JEHOVÁ JIREH MOTO REPUESTOS</div>
+                        <div style="font-size:0.75rem; color:#64748b;">Masatepe, Nicaragua</div>
+                        <div id="col-periodo" style="font-size:0.9rem; font-weight:600; margin-top:4px;"></div>
+                    </div>
+
+                    <!-- Datos del Empleado -->
+                    <table style="width:100%; font-size:0.82rem; border-collapse:collapse; margin-bottom:0.8rem;">
+                        <tr>
+                            <td style="width:55%; vertical-align:top; padding:2px 0;">
+                                <div><span style="color:#64748b;">Nombre: </span><strong id="col-empleado"></strong>
+                                </div>
+                                <div><span style="color:#64748b;">N° Cédula: </span><span id="col-cedula"></span></div>
+                                <div><span style="color:#64748b;">Cargo: </span><span id="col-cargo"></span></div>
+                                <div><span style="color:#64748b;">N° INSS: </span><span id="col-inss"></span></div>
+                                <div><span style="color:#64748b;">Salario Contrato: </span><strong
+                                        id="col-salario-contrato"></strong></div>
+                            </td>
+                            <td style="width:45%; vertical-align:top; padding:2px 0; text-align:right;">
+                                <div><span style="color:#64748b;">Ingreso: </span><span id="col-fecha-ingreso">—</span>
+                                </div>
+                                <div><span style="color:#64748b;">Días Trabajados: </span><span
+                                        id="col-dias-trabajados">—</span></div>
+                                <!-- Vacaciones -->
+                                <table
+                                    style="width:100%; font-size:0.78rem; margin-top:6px; border-top:1px solid #e2e8f0; padding-top:4px;">
+                                    <tr>
+                                        <td style="color:#64748b;">Vacaciones acumuladas</td>
+                                        <td id="col-vac-acumulado" style="text-align:right; font-weight:600;">—</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:#64748b;">(-) Días tomados</td>
+                                        <td id="col-vac-tomados" style="text-align:right;">—</td>
+                                    </tr>
+                                    <tr style="border-top:1px dashed #cbd5e1;">
+                                        <td style="color:#4338ca; font-weight:700;">Saldo disponible</td>
+                                        <td id="col-vac-saldo"
+                                            style="text-align:right; font-weight:700; color:#4338ca;">—</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="border-top:1px dashed #cbd5e1; margin:0.6rem 0;"></div>
+
+                    <!-- Percepciones y Deducciones -->
+                    <table style="width:100%; font-size:0.82rem; border-collapse:collapse;">
+                        <tr>
+                            <td style="width:50%; vertical-align:top; padding-right:1rem;">
+                                <div
+                                    style="font-weight:700; text-transform:uppercase; font-size:0.75rem; color:#4338ca; margin-bottom:4px; border-bottom:1px solid #4338ca; padding-bottom:2px;">
+                                    PERCEPCIONES</div>
+                                <table style="width:100%;">
+                                    <tr>
+                                        <td style="padding:2px 0;">Salario Devengado</td>
+                                        <td id="col-salario-base" style="text-align:right;"></td>
+                                    </tr>
+                                    <tr id="col-extras-row">
+                                        <td style="padding:2px 0; color:#64748b;">Otros Ingresos</td>
+                                        <td id="col-ingresos-extra" style="text-align:right; color:#64748b;"></td>
+                                    </tr>
+                                    <tr style="border-top:1px solid #e2e8f0; font-weight:700;">
+                                        <td style="padding:4px 0;">Total Percepciones</td>
+                                        <td id="col-bruto" style="text-align:right;"></td>
+                                    </tr>
+                                    <tr style="font-size:1rem; font-weight:800; color:#16a34a; margin-top:4px;">
+                                        <td style="padding:4px 0;">Neto a Recibir</td>
+                                        <td id="col-neto" style="text-align:right;"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td
+                                style="width:50%; vertical-align:top; padding-left:1rem; border-left:1px dashed #cbd5e1;">
+                                <div
+                                    style="font-weight:700; text-transform:uppercase; font-size:0.75rem; color:#b91c1c; margin-bottom:4px; border-bottom:1px solid #b91c1c; padding-bottom:2px;">
+                                    DEDUCCIONES</div>
+                                <table style="width:100%;">
+                                    <tr>
+                                        <td style="padding:2px 0;">INSS Laboral (7%)</td>
+                                        <td id="col-inss-lab" style="text-align:right; color:#ef4444;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:2px 0;">IR (Ley 822)</td>
+                                        <td id="col-ir" style="text-align:right; color:#ef4444;"></td>
+                                    </tr>
+                                    <tr id="col-adelanto-row">
+                                        <td style="padding:2px 0;">Adelanto Salarial</td>
+                                        <td id="col-adelanto" style="text-align:right; color:#ef4444;">C$0.00</td>
+                                    </tr>
+                                    <tr style="border-top:1px solid #e2e8f0; font-weight:700; color:#b91c1c;">
+                                        <td style="padding:4px 0;">Total Deducciones</td>
+                                        <td id="col-deducciones" style="text-align:right;"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="border-top:1px dashed #cbd5e1; margin:1rem 0;"></div>
+
+                    <!-- Firma -->
+                    <div
+                        style="display:flex; justify-content:space-around; font-size:0.75rem; color:#64748b; margin-top:1.5rem; text-align:center;">
+                        <div>___________________________<br>Firma Empleado</div>
+                        <div>___________________________<br>Firma Responsable RRHH</div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-colilla')">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="imprimirColilla()">
+                    <i class="ph-bold ph-printer"></i> Imprimir Colilla
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: COMPROBANTE DE VENTA / TICKET DE IMPRESIÓN -->
+    <div class="modal" id="modal-comprobante">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-receipt"></i> Comprobante de Venta Emitido</h3>
+                <button class="modal-close" onclick="closeModal('modal-comprobante')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="ticket-print-area" class="ticket-card">
+                    <!-- Contenido dinámico del ticket -->
+                </div>
+            </div>
+            <div class="modal-footer" id="footer-modal-comprobante">
+                <button type="button" class="btn btn-secondary"
+                    onclick="closeModal('modal-comprobante')">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="imprimirTicketActual()">
+                    <i class="ph-bold ph-printer"></i> Imprimir Ticket
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Role Context -->
+    <script>
+        window.CURRENT_USER_ROLE = "{{ usuario.rol }}";
+    </script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeBtn = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+
+            const updateIcon = () => {
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                themeIcon.className = isLight ? 'ph-bold ph-moon' : 'ph-bold ph-sun';
+            };
+
+            updateIcon();
+
+            if (themeBtn) {
+                themeBtn.addEventListener('click', () => {
+                    const current = document.documentElement.getAttribute('data-theme');
+                    const next = current === 'light' ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', next);
+                    localStorage.setItem('theme', next);
+                    updateIcon();
+                });
+            }
+        });
+    </script>
+
+    <!-- ========================================================
+         MÓDULO RRHH — JavaScript
+    ======================================================== -->
+    <script>
+        // ---- Variables globales RRHH ----
+        let _empleadosCache = [];
+        let _nominaDetalleId = null;
+
+        const MESES_ES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        function cs(n) { return 'C$' + (parseFloat(n) || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+        // ---- Carga inicial cuando se abre el tab RRHH ----
+        document.addEventListener('DOMContentLoaded', () => {
+            // Escuchar cuando el tab RRHH se activa
+            document.querySelectorAll('[data-tab="tab-rrhh"]').forEach(el => {
+                el.addEventListener('click', () => {
+                    setTimeout(inicializarRRHH, 100);
+                });
+            });
+
+            // Preview de cálculo en el formulario de empleado
+            const empSalario = document.getElementById('emp-salario');
+            if (empSalario) {
+                empSalario.addEventListener('input', previsualizarCalculo);
+            }
+        });
+
+        function inicializarRRHH() {
+            cargarEmpleadosRRHH();
+            cargarHistorialNominas();
+            cargarMovimientosLaborales();
+        }
+
+        // ==============================
+        // EMPLEADOS
+        // ==============================
+        async function cargarEmpleadosRRHH() {
+            try {
+                const res = await fetch('/api/empleados');
+                const data = await res.json();
+                _empleadosCache = data;
+
+                const filtro = document.getElementById('rrhh-filtro-estado')?.value || 'activos';
+                let lista = data;
+                if (filtro === 'activos') lista = data.filter(e => e.activo);
+                if (filtro === 'inactivos') lista = data.filter(e => !e.activo);
+
+                // Stats
+                const activos = data.filter(e => e.activo);
+                const masaSalarial = activos.reduce((s, e) => s + (parseFloat(e.salario_base) || 0), 0);
+                const statEmp = document.getElementById('rrhh-stat-empleados');
+                const statMasa = document.getElementById('rrhh-stat-masa-salarial');
+                if (statEmp) statEmp.textContent = activos.length;
+                if (statMasa) statMasa.textContent = cs(masaSalarial);
+
+                // Llenar select de empleados (para movimientos laborales y generar nómina)
+                ['mov-empleado-id', 'rrhh-filtro-emp-movimiento', 'nomina-empleado'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    if (!sel) return;
+                    const first = sel.options[0];
+                    sel.innerHTML = '';
+                    sel.appendChild(first);
+                    activos.forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = e.id;
+                        opt.textContent = e.nombre_completo;
+                        sel.appendChild(opt);
+                    });
+                });
+
+                // Tabla
+                const tbody = document.getElementById('tbody-empleados');
+                if (!tbody) return;
+                if (lista.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">No hay empleados registrados.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = lista.map(e => `
+                <tr style="opacity:${e.activo ? '1' : '0.5'}">
+                    <td>#${String(e.id).padStart(3, '0')}</td>
+                    <td><strong>${e.nombre_completo}</strong></td>
+                    <td>${e.identificacion || '—'}</td>
+                    <td>${e.num_inss || '—'}</td>
+                    <td>${e.cargo || '—'}</td>
+                    <td>${cs(e.salario_base)}</td>
+                    <td>${parseFloat(e.dias_vacaciones_disponibles).toFixed(1)} días</td>
+                    <td><span class="badge" style="background:${e.activo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}; color:${e.activo ? '#22c55e' : '#ef4444'}; padding:2px 8px; border-radius:20px; font-size:0.75rem;">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
+                    <td>
+                        <div style="display:flex;gap:4px;">
+                            <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="editarEmpleado(${e.id})" title="Editar"><i class="ph-bold ph-pencil"></i></button>
+                            <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem; color:${e.activo ? '#ef4444' : '#22c55e'};" onclick="toggleEmpleadoEstado(${e.id}, ${!e.activo})" title="${e.activo ? 'Inactivar' : 'Activar'}"><i class="ph-bold ph-${e.activo ? 'user-minus' : 'user-check'}"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+            } catch (e) {
+                console.error('Error cargando empleados RRHH:', e);
+            }
+        }
+
+        function abrirNuevoEmpleado() {
+            document.getElementById('emp-id').value = '';
+            document.getElementById('form-empleado').reset();
+            document.getElementById('modal-empleado-titulo').textContent = 'Registrar Nuevo Empleado';
+            document.getElementById('btn-guardar-empleado').textContent = 'Guardar Empleado';
+            document.getElementById('emp-preview-calculo').style.display = 'none';
+            openModal('modal-empleado');
+        }
+
+        function editarEmpleado(id) {
+            const emp = _empleadosCache.find(e => e.id === id);
+            if (!emp) return;
+            document.getElementById('emp-id').value = emp.id;
+            document.getElementById('emp-nombre').value = emp.nombre_completo || '';
+            document.getElementById('emp-identificacion').value = emp.identificacion || '';
+            document.getElementById('emp-num-inss').value = emp.num_inss || '';
+            document.getElementById('emp-cargo').value = emp.cargo || '';
+            document.getElementById('emp-salario').value = emp.salario_base || '';
+            document.getElementById('emp-fecha-ingreso').value = emp.fecha_ingreso ? emp.fecha_ingreso.split('T')[0] : '';
+            document.getElementById('emp-telefono').value = emp.telefono || '';
+            document.getElementById('emp-email').value = emp.email || '';
+            document.getElementById('emp-observaciones').value = emp.observaciones || '';
+            document.getElementById('modal-empleado-titulo').textContent = 'Editar Empleado';
+            document.getElementById('btn-guardar-empleado').textContent = 'Actualizar Empleado';
+            previsualizarCalculo();
+            openModal('modal-empleado');
+        }
+
+        async function guardarEmpleado(event) {
+            event.preventDefault();
+            const id = document.getElementById('emp-id').value;
+            const payload = {
+                nombre_completo: document.getElementById('emp-nombre').value.trim(),
+                identificacion: document.getElementById('emp-identificacion').value.trim(),
+                num_inss: document.getElementById('emp-num-inss').value.trim(),
+                cargo: document.getElementById('emp-cargo').value.trim(),
+                salario_base: parseFloat(document.getElementById('emp-salario').value) || 0,
+                fecha_ingreso: document.getElementById('emp-fecha-ingreso').value,
+                telefono: document.getElementById('emp-telefono').value.trim(),
+                email: document.getElementById('emp-email').value.trim(),
+                observaciones: document.getElementById('emp-observaciones').value.trim()
+            };
+            try {
+                const url = id ? `/api/empleados/${id}` : '/api/empleados';
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (data.success) {
+                    closeModal('modal-empleado');
+                    cargarEmpleadosRRHH();
+                    mostrarNotificacion(data.mensaje, 'success');
+                } else {
+                    mostrarNotificacion(data.error || 'Error al guardar empleado.', 'error');
+                }
+            } catch (e) {
+                mostrarNotificacion('Error de conexión.', 'error');
+            }
+        }
+
+        async function toggleEmpleadoEstado(id, nuevoActivo) {
+            const accion = nuevoActivo ? 'activar' : 'inactivar';
+            if (!confirm(`¿Deseas ${accion} este empleado?`)) return;
+            try {
+                const res = await fetch(`/api/empleados/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activo: nuevoActivo })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    cargarEmpleadosRRHH();
+                    mostrarNotificacion(data.mensaje, 'success');
+                } else {
+                    mostrarNotificacion(data.error, 'error');
+                }
+            } catch (e) {
+                mostrarNotificacion('Error de conexión.', 'error');
+            }
+        }
+
+        function previsualizarCalculo() {
+            const salario = parseFloat(document.getElementById('emp-salario')?.value) || 0;
+            if (salario <= 0) { document.getElementById('emp-preview-calculo').style.display = 'none'; return; }
+            const inss = salario * 0.07;
+            const baseAnual = (salario - inss) * 12;
+            let irAnual = 0;
+            if (baseAnual > 500000) irAnual = 82500 + (baseAnual - 500000) * 0.30;
+            else if (baseAnual > 350000) irAnual = 45000 + (baseAnual - 350000) * 0.25;
+            else if (baseAnual > 200000) irAnual = 15000 + (baseAnual - 200000) * 0.20;
+            else if (baseAnual > 100000) irAnual = (baseAnual - 100000) * 0.15;
+            const irMes = irAnual / 12;
+            const neto = salario - inss - irMes;
+            document.getElementById('prev-inss-lab').textContent = cs(inss);
+            document.getElementById('prev-ir').textContent = cs(irMes);
+            document.getElementById('prev-neto').textContent = cs(neto);
+            document.getElementById('emp-preview-calculo').style.display = 'block';
+        }
+
+        // ==============================
+        // MOVIMIENTOS LABORALES
+        // ==============================
+        async function cargarMovimientosLaborales() {
+            const empFiltro = document.getElementById('rrhh-filtro-emp-movimiento')?.value || '';
+            const url = empFiltro ? `/api/movimientos-laborales?empleado_id=${empFiltro}` : '/api/movimientos-laborales';
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                const tbody = document.getElementById('tbody-movimientos-laborales');
+                if (!tbody) return;
+                if (!data.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Sin movimientos registrados.</td></tr>';
+                    return;
+                }
+                const tipoLabel = { VACACIONES: '🏖️ Vacaciones', PERMISO_CON_GOCE: '✅ Permiso c/Goce', PERMISO_SIN_GOCE: '❌ Permiso s/Goce', FALTA: '⚠️ Falta' };
+                tbody.innerHTML = data.map(m => `
+                <tr>
+                    <td>${m.empleado}</td>
+                    <td>${tipoLabel[m.tipo] || m.tipo}</td>
+                    <td>${m.fecha_inicio}</td>
+                    <td>${m.fecha_fin}</td>
+                    <td>${m.dias_tomados} día(s)</td>
+                    <td>${m.observacion || '—'}</td>
+                </tr>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        function calcularDiasMovimiento() {
+            const fi = document.getElementById('mov-fecha-inicio')?.value;
+            const ff = document.getElementById('mov-fecha-fin')?.value;
+            if (!fi || !ff) return;
+            const dias = Math.ceil((new Date(ff) - new Date(fi)) / (1000 * 60 * 60 * 24)) + 1;
+            if (dias > 0) document.getElementById('mov-dias').value = dias;
+        }
+
+        async function guardarMovimientoLaboral(event) {
+            event.preventDefault();
+            const payload = {
+                empleado_id: parseInt(document.getElementById('mov-empleado-id').value),
+                tipo: document.getElementById('mov-tipo').value,
+                fecha_inicio: document.getElementById('mov-fecha-inicio').value,
+                fecha_fin: document.getElementById('mov-fecha-fin').value,
+                dias_tomados: parseFloat(document.getElementById('mov-dias').value),
+                observacion: document.getElementById('mov-observacion').value.trim()
+            };
+            try {
+                const res = await fetch('/api/movimientos-laborales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (data.success) {
+                    closeModal('modal-movimiento-laboral');
+                    document.getElementById('form-movimiento-laboral').reset();
+                    cargarMovimientosLaborales();
+                    cargarEmpleadosRRHH(); // actualizar días disponibles
+                    mostrarNotificacion(data.mensaje, 'success');
+                } else {
+                    mostrarNotificacion(data.error || 'Error.', 'error');
+                }
+            } catch (e) { mostrarNotificacion('Error de conexión.', 'error'); }
+        }
+
+        // ==============================
+        // NÓMINA
+        // ==============================
+        async function procesarNomina(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btn-procesar-nomina');
+            const empleadoId = document.getElementById('nomina-empleado').value;
+            const mes = parseInt(document.getElementById('nomina-mes').value);
+            const anio = parseInt(document.getElementById('nomina-anio').value);
+            if (!confirm(`¿Generar nómina para ${MESES_ES[mes]} ${anio}? Esta acción no se puede deshacer.`)) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner"></i> Procesando...';
+            try {
+                const payload = { mes, anio, empleado_id: empleadoId };
+                const res = await fetch('/api/nomina/generar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (data.success) {
+                    closeModal('modal-generar-nomina');
+                    mostrarNotificacion(data.mensaje, 'success');
+                    cargarHistorialNominas();
+                    cargarEmpleadosRRHH(); // Actualizar días vacaciones ganados
+                    // Mostrar resumen
+                    if (data.nomina_id) setTimeout(() => verDetalleNomina(data.nomina_id), 500);
+                } else {
+                    mostrarNotificacion(data.error || 'Error al generar nómina.', 'error');
+                }
+            } catch (e) {
+                mostrarNotificacion('Error de conexión.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph-bold ph-calculator"></i> Calcular y Generar Nómina';
+            }
+        }
+
+        async function eliminarNomina(id) {
+            if (!confirm('¿Estás seguro de eliminar esta nómina? Se revertirán los días de vacaciones acumulados para los empleados en esta nómina. Esta acción es irreversible.')) return;
+            try {
+                const res = await fetch(`/api/nomina/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    mostrarNotificacion('Nómina eliminada con éxito.', 'success');
+                    cargarHistorialNominas();
+                    cargarEmpleadosRRHH();
+                } else {
+                    mostrarNotificacion(data.error || 'Error al eliminar nómina.', 'error');
+                }
+            } catch (e) {
+                mostrarNotificacion('Error de conexión.', 'error');
+            }
+        }
+
+        async function cargarHistorialNominas() {
+            try {
+                const res = await fetch('/api/nomina/historial');
+                const data = await res.json();
+                const stat = document.getElementById('rrhh-stat-nominas');
+                if (stat) stat.textContent = data.length;
+                const tbody = document.getElementById('tbody-historial-nominas');
+                if (!tbody) return;
+                if (!data.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No hay nóminas generadas.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.map(n => `
+                <tr>
+                    <td><strong>${MESES_ES[n.mes] || n.mes} ${n.anio}</strong></td>
+                    <td>${(n.fecha_generacion || '').split(' ')[0]}</td>
+                    <td>${cs(n.total_ingresos)}</td>
+                    <td style="color:#ef4444;">${cs(n.total_deducciones)}</td>
+                    <td style="color:#22c55e;font-weight:600;">${cs(n.total_neto)}</td>
+                    <td style="color:#f59e0b;">${cs(n.inss_patronal_total)}</td>
+                    <td><span style="background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 8px;border-radius:20px;font-size:0.75rem;">${n.estado || 'CERRADA'}</span></td>
+                    <td>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;" onclick="verDetalleNomina(${n.id})">
+                            <i class="ph-bold ph-eye"></i> Ver Detalle
+                        </button>
+                        <button class="btn btn-primary" style="background:#ef4444; border-color:#ef4444; padding:4px 10px;font-size:0.75rem; margin-left:4px;" onclick="eliminarNomina(${n.id})" title="Eliminar Nómina">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function verDetalleNomina(nominaId) {
+            _nominaDetalleId = nominaId;
+            try {
+                const res = await fetch(`/api/nomina/${nominaId}/detalle`);
+                const data = await res.json();
+                if (data.error) { mostrarNotificacion(data.error, 'error'); return; }
+                const { cabecera, detalles } = data;
+                // Cabecera
+                document.getElementById('lbl-nomina-periodo').textContent = `${MESES_ES[cabecera.mes] || cabecera.mes} ${cabecera.anio}`;
+                document.getElementById('dndet-bruto').textContent = cs(cabecera.total_ingresos);
+                document.getElementById('dndet-deducciones').textContent = cs(cabecera.total_deducciones);
+                document.getElementById('dndet-neto').textContent = cs(cabecera.total_neto);
+                document.getElementById('dndet-patronal').textContent = cs(cabecera.inss_patronal_total);
+                document.getElementById('dndet-provisiones').textContent = cs((cabecera.provision_vac_total || 0) + (cabecera.provision_agui_total || 0));
+                // Detalle
+                const tbody = document.getElementById('tbody-detalle-nomina');
+                tbody.innerHTML = detalles.map(d => `
+                <tr>
+                    <td><strong>${d.empleado}</strong></td>
+                    <td>${d.cargo || '—'}</td>
+                    <td>${cs(d.salario_base)}</td>
+                    <td style="color:#ef4444;">${cs(d.inss_laboral)}</td>
+                    <td style="color:#ef4444;">${cs(d.ir)}</td>
+                    <td style="color:#22c55e;font-weight:700;">${cs(d.neto_pagar)}</td>
+                    <td>
+                        <button class="btn btn-secondary" style="padding:3px 8px;font-size:0.72rem;" onclick="verColilla(${nominaId}, ${d.empleado_id})" title="Ver Colilla">
+                            <i class="ph-bold ph-receipt"></i> Colilla
+                        </button>
+                    </td>
+                </tr>`).join('');
+                openModal('modal-detalle-nomina');
+            } catch (e) { mostrarNotificacion('Error cargando detalle de nómina.', 'error'); }
+        }
+
+        // ==============================
+        // COLILLA INDIVIDUAL
+        // ==============================
+        async function verColilla(nominaId, empId) {
+            try {
+                const res = await fetch(`/api/nomina/${nominaId}/empleado/${empId}`);
+                const data = await res.json();
+                if (data.error) { mostrarNotificacion(data.error, 'error'); return; }
+                const { nomina, colilla } = data;
+                const mes = MESES_ES[nomina.mes] || nomina.mes;
+
+                document.getElementById('col-periodo').textContent = `Colilla de Pago — ${mes} ${nomina.anio}`;
+                document.getElementById('col-empleado').textContent = colilla.empleado;
+                document.getElementById('col-cedula').textContent = colilla.identificacion || '—';
+                document.getElementById('col-inss').textContent = colilla.num_inss || '—';
+                document.getElementById('col-cargo').textContent = colilla.cargo || '—';
+                document.getElementById('col-salario-contrato').textContent = cs(colilla.salario_base);
+                document.getElementById('col-fecha-ingreso').textContent = colilla.fecha_ingreso || '—';
+                document.getElementById('col-dias-trabajados').textContent = (colilla.dias_trabajados || 30) + ' días';
+
+                // Vacaciones
+                const vacAcum = parseFloat(colilla.dias_vacaciones_disponibles || 0);
+                const vacTomados = 0; // Se puede extender si se tiene el dato en la respuesta
+                document.getElementById('col-vac-acumulado').textContent = vacAcum.toFixed(2) + ' días';
+                document.getElementById('col-vac-tomados').textContent = vacTomados.toFixed(2) + ' días';
+                document.getElementById('col-vac-saldo').textContent = (vacAcum - vacTomados).toFixed(2) + ' días';
+
+                // Percepciones
+                document.getElementById('col-salario-base').textContent = cs(colilla.salario_base);
+                const extras = parseFloat(colilla.ingresos_extra || 0);
+                document.getElementById('col-ingresos-extra').textContent = cs(extras);
+                // Mostrar/ocultar fila de otros ingresos
+                const extrasRow = document.getElementById('col-extras-row');
+                if (extrasRow) extrasRow.style.display = extras > 0 ? '' : 'none';
+
+                document.getElementById('col-bruto').textContent = cs(colilla.salario_bruto || colilla.salario_base);
+                document.getElementById('col-neto').textContent = cs(colilla.neto_pagar);
+
+                // Deducciones
+                document.getElementById('col-inss-lab').textContent = cs(colilla.inss_laboral);
+                document.getElementById('col-ir').textContent = cs(colilla.ir);
+                const adelanto = parseFloat(colilla.otras_deducciones || 0);
+                document.getElementById('col-adelanto').textContent = cs(adelanto);
+                const adelRow = document.getElementById('col-adelanto-row');
+                if (adelRow) adelRow.style.display = adelanto > 0 ? '' : 'none';
+
+                document.getElementById('col-deducciones').textContent = cs(colilla.total_deducciones);
+
+                // Cerrar el modal de detalle de nómina antes de abrir la colilla
+                closeModal('modal-detalle-nomina');
+                setTimeout(() => openModal('modal-colilla'), 150);
+            } catch (e) { mostrarNotificacion('Error cargando colilla.', 'error'); }
+        }
+
+        function imprimirColilla() {
+            const periodo = document.getElementById('col-periodo').textContent;
+            const empleado = document.getElementById('col-empleado').textContent;
+            const cedula = document.getElementById('col-cedula').textContent;
+            const inss = document.getElementById('col-inss').textContent;
+            const cargo = document.getElementById('col-cargo').textContent;
+            const salContr = document.getElementById('col-salario-contrato').textContent;
+            const fechaIng = document.getElementById('col-fecha-ingreso').textContent;
+            const diasTrab = document.getElementById('col-dias-trabajados').textContent;
+            const vacAcum = document.getElementById('col-vac-acumulado').textContent;
+            const vacTom = document.getElementById('col-vac-tomados').textContent;
+            const vacSaldo = document.getElementById('col-vac-saldo').textContent;
+            const salBase = document.getElementById('col-salario-base').textContent;
+            const extras = document.getElementById('col-ingresos-extra').textContent;
+            const bruto = document.getElementById('col-bruto').textContent;
+            const inssLab = document.getElementById('col-inss-lab').textContent;
+            const ir = document.getElementById('col-ir').textContent;
+            const adelanto = document.getElementById('col-adelanto').textContent;
+            const deduc = document.getElementById('col-deducciones').textContent;
+            const neto = document.getElementById('col-neto').textContent;
+
+            const extrasRow = (parseFloat((extras || '').replace(/[^\d.]/g, '')) || 0) > 0 ?
+                `<tr><td>Otros Ingresos</td><td class="r">${extras}</td></tr>` : '';
+            const adelRow = (parseFloat((adelanto || '').replace(/[^\d.]/g, '')) || 0) > 0 ?
+                `<tr><td>Adelanto Salarial</td><td class="r" style="color:#b91c1c;">${adelanto}</td></tr>` : '';
+
+            const win = window.open('', '_blank', 'width=680,height=900');
+            win.document.write(`
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Colilla de Pago — ${empleado}</title>
+  <style>
+    @page { margin: 1.5cm; size: A4; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff; margin: 0; }
+    .header { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 14px; }
+    .empresa { font-size: 15px; font-weight: bold; }
+    .periodo  { font-size: 11px; margin-top: 2px; }
+    .top-grid { display: flex; gap: 16px; margin-bottom: 12px; }
+    .emp-data { flex: 1; font-size: 11px; line-height: 1.7; }
+    .vac-table { font-size: 10px; border-collapse: collapse; min-width: 200px; }
+    .vac-table td { padding: 2px 6px; }
+    .vac-saldo td { font-weight: bold; border-top: 1px solid #000; }
+    hr { border: none; border-top: 1px dashed #aaa; margin: 10px 0; }
+    .cols { display: flex; gap: 16px; }
+    .col50 { flex: 1; }
+    .col-title { font-weight: bold; text-transform: uppercase; font-size: 10px; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; }
+    table.detail { width: 100%; border-collapse: collapse; font-size: 11px; }
+    table.detail td { padding: 3px 2px; }
+    .r { text-align: right; }
+    .total-row td { border-top: 1px solid #000; font-weight: bold; padding-top: 4px; }
+    .neto-row td { font-size: 13px; font-weight: bold; padding-top: 6px; }
+    .firmas { margin-top: 40px; display: flex; justify-content: space-around; font-size: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="empresa">JEHOVÁ JIREH MOTO REPUESTOS</div>
+    <div style="font-size:10px; color:#555;">Masatepe, Nicaragua</div>
+    <div class="periodo">${periodo}</div>
+  </div>
+
+  <div class="top-grid">
+    <div class="emp-data">
+      <div><b>Nombre:</b> ${empleado}</div>
+      <div><b>N° Cédula:</b> ${cedula}</div>
+      <div><b>Cargo:</b> ${cargo}</div>
+      <div><b>N° INSS:</b> ${inss}</div>
+      <div><b>Salario de Contrato:</b> ${salContr}</div>
+    </div>
+    <div>
+      <div style="font-size:10px; margin-bottom:4px;"><b>Ingreso:</b> ${fechaIng} &nbsp; <b>Días trabajados:</b> ${diasTrab}</div>
+      <table class="vac-table">
+        <tr><td>Vacaciones acumuladas</td><td class="r">${vacAcum}</td></tr>
+        <tr><td>(-) Días tomados</td><td class="r">${vacTom}</td></tr>
+        <tr class="vac-saldo"><td>Saldo disponible</td><td class="r">${vacSaldo}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="cols">
+    <div class="col50">
+      <div class="col-title">PERCEPCIONES</div>
+      <table class="detail">
+        <tr><td>Salario Devengado</td><td class="r">${salBase}</td></tr>
+        ${extrasRow}
+        <tr class="total-row"><td>Total Percepciones</td><td class="r">${bruto}</td></tr>
+        <tr class="neto-row"><td>Neto a Recibir</td><td class="r">${neto}</td></tr>
+      </table>
+    </div>
+    <div class="col50" style="border-left:1px dashed #aaa; padding-left:12px;">
+      <div class="col-title">DEDUCCIONES</div>
+      <table class="detail">
+        <tr><td>INSS Laboral (7%)</td><td class="r">${inssLab}</td></tr>
+        <tr><td>IR (Ley 822)</td><td class="r">${ir}</td></tr>
+        ${adelRow}
+        <tr class="total-row"><td>Total Deducciones</td><td class="r">${deduc}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="firmas">
+    <div>___________________________<br>Recibí Conforme<br>${empleado}</div>
+    <div>___________________________<br>Firma Responsable RRHH</div>
+  </div>
+</body>
+</html>`);
+            win.document.close();
+            setTimeout(() => { win.print(); }, 300);
+        }
+
+        function imprimirDetalleNomina() {
+            const periodo = document.getElementById('lbl-nomina-periodo')?.textContent || 'Nómina';
+            const tabla = document.getElementById('tabla-detalle-nomina');
+            if (!tabla) return;
+
+            const win = window.open('', '_blank', 'width=900,height=700');
+            win.document.write(`
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Detalle de Nómina — ${periodo}</title>
+  <style>
+    @page { margin: 1.5cm; size: landscape; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
+    h2 { text-align: center; font-size: 1rem; margin-bottom: 4px; color: #4338ca; }
+    p  { text-align: center; font-size: 0.78rem; color: #555; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #4338ca; color: #fff; padding: 6px 5px; text-align: left; font-size: 0.75rem; }
+    td { padding: 5px; border-bottom: 1px solid #e2e8f0; }
+    tr:nth-child(even) td { background: #f8fafc; }
+  </style>
+</head>
+<body>
+  <h2>JEHOVÁ JIREH MOTO REPUESTOS</h2>
+  <p>Detalle de ${periodo} — Generado el ${new Date().toLocaleDateString('es-NI')}</p>
+  ${tabla.outerHTML}
+</body>
+</html>`);
+            win.document.close();
+            setTimeout(() => { win.print(); }, 300);
+        }
+
+        // ==============================
+        // HELPER: mostrar notificacion si main.js no tiene showToast
+        // ==============================
+        function mostrarNotificacion(msg, tipo) {
+            if (typeof showToast === 'function') { showToast(msg, tipo); return; }
+            if (typeof mostrarAlerta === 'function') { mostrarAlerta(msg, tipo); return; }
+
+            // Crear un toast simple en lugar de usar el alert nativo que bloquea la pantalla
+            let toast = document.getElementById('custom-toast-notification');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'custom-toast-notification';
+                toast.style.cssText = 'position:fixed; top:20px; right:20px; z-index:9999; min-width:250px; background:#fff; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.2); padding:16px; border-left:5px solid #22c55e; transition: opacity 0.3s ease;';
+                document.body.appendChild(toast);
+            }
+
+            const isError = (tipo === 'error');
+            toast.style.borderLeftColor = isError ? '#ef4444' : '#22c55e';
+            toast.style.opacity = '1';
+            toast.innerHTML = `
+            <div style="font-weight:bold; margin-bottom:5px; color:${isError ? '#ef4444' : '#22c55e'};">${isError ? 'Error' : 'Éxito'}</div>
+            <div style="font-size:0.9rem; color:#333;">${msg}</div>
+        `;
+
+            setTimeout(() => { toast.style.opacity = '0'; }, 5000);
+        }
+    </script>
+</body>
+
+</html>

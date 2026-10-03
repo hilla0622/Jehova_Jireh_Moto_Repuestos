@@ -9,7 +9,7 @@ app = Flask(__name__, template_folder='Fronted/templates', static_folder='Fronte
 app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_super_secure')
 
 # ==============================================================================
-# CONFIGURACIÓN DE BASE DE DATOS SQL SERVER
+# CONFIGURACIÃ“N DE BASE DE DATOS SQL SERVER
 # ==============================================================================
 # Cambia 'LAPTOP-CNR3S3I3' por tu nombre de servidor SQL Server.
 DB_SERVER = os.environ.get('DB_SERVER', r'HILLARY')
@@ -26,7 +26,7 @@ def get_db_connection():
     return conn
 
 def execute_query(query, params=(), fetchone=False, fetchall=False, commit=False):
-    """Función de ayuda para ejecutar consultas y retornar diccionarios"""
+    """FunciÃ³n de ayuda para ejecutar consultas y retornar diccionarios"""
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -76,7 +76,7 @@ def role_required(*roles_permitidos):
                 return redirect(url_for('login'))
             user_rol = session['user'].get('rol')
             if user_rol not in roles_permitidos:
-                return jsonify({"error": "Acceso denegado: Tu rol no tiene permisos para esta acción."}), 403
+                return jsonify({"error": "Acceso denegado: Tu rol no tiene permisos para esta acciÃ³n."}), 403
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -105,7 +105,7 @@ def tienda():
     """
     productos = execute_query(query_productos, fetchall=True)
 
-    # Obtener las categorías que tienen al menos un producto activo
+    # Obtener las categorÃ­as que tienen al menos un producto activo
     query_categorias = """
         SELECT DISTINCT c.nombre AS nombre
         FROM productos p
@@ -125,14 +125,14 @@ def registro():
         telefono = request.form.get('telefono', '')
         direccion = request.form.get('direccion', '')
 
-        # Verificar si el correo ya está registrado
+        # Verificar si el correo ya estÃ¡ registrado
         check_query = "SELECT id FROM clientes WHERE email = ?"
         user_exists = execute_query(check_query, params=(email,), fetchall=True)
 
         if user_exists:
-            return render_template('registro.html', error='Ese correo electrónico ya está registrado.')
+            return render_template('registro.html', error='Ese correo electrÃ³nico ya estÃ¡ registrado.')
 
-        # Encriptar la contraseña
+        # Encriptar la contraseÃ±a
         password_hash = generate_password_hash(password)
 
         # Insertar el nuevo cliente
@@ -142,8 +142,8 @@ def registro():
         """
         try:
             execute_query(insert_query, params=(nombre_completo, email, password_hash, telefono, direccion), commit=True)
-            # Redirigir al login con éxito (podríamos usar flash messages, pero por ahora en la URL o render)
-            return render_template('login.html', error='¡Registro exitoso! Por favor inicia sesión con tu nueva cuenta.')
+            # Redirigir al login con Ã©xito (podrÃ­amos usar flash messages, pero por ahora en la URL o render)
+            return render_template('login.html', error='Â¡Registro exitoso! Por favor inicia sesiÃ³n con tu nueva cuenta.')
         except Exception as e:
             return render_template('registro.html', error='Error al registrar. Por favor intenta de nuevo.')
 
@@ -158,7 +158,7 @@ def login():
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
 
-        # 1. Validación como Empleado/Admin en la base de datos SQL Server
+        # 1. ValidaciÃ³n como Empleado/Admin en la base de datos SQL Server
         query = """
             SELECT u.id, u.username, u.nombre_completo AS nombre, r.nombre AS rol
             FROM usuarios u
@@ -178,7 +178,7 @@ def login():
                 return jsonify({"success": True, "redirect": url_for('inicio')})
             return redirect(url_for('inicio'))
             
-        # 2. Validación como Cliente Web
+        # 2. ValidaciÃ³n como Cliente Web
         query_cliente = "SELECT id, email, nombre_completo, password_hash, direccion FROM clientes WHERE email = ?"
         cliente = execute_query(query_cliente, (username,), fetchone=True)
         
@@ -195,7 +195,7 @@ def login():
             return redirect(url_for('tienda'))
 
         # Si falla en ambas tablas
-        error_msg = "Usuario o contraseña incorrectos."
+        error_msg = "Usuario o contraseÃ±a incorrectos."
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"success": False, "error": error_msg}), 401
         return render_template('login.html', error=error_msg)
@@ -240,7 +240,7 @@ def api_usuarios():
 
         rol_info = execute_query("SELECT id FROM roles WHERE nombre = ?", (rol,), fetchone=True)
         if not rol_info:
-            return jsonify({"error": "Rol no válido."}), 400
+            return jsonify({"error": "Rol no vÃ¡lido."}), 400
 
         existente = execute_query("SELECT id FROM usuarios WHERE username = ?", (username,), fetchone=True)
         if existente:
@@ -266,22 +266,22 @@ def api_categorias():
 
     if request.method == 'POST':
         if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
-            return jsonify({"error": "No tienes permiso para registrar categorías."}), 403
+            return jsonify({"error": "No tienes permiso para registrar categorÃ­as."}), 403
         
         data = request.json or {}
         nombre = data.get('nombre', '').strip()
         descripcion = data.get('descripcion', '').strip()
 
         if not nombre:
-            return jsonify({"error": "El nombre de la categoría es obligatorio."}), 400
+            return jsonify({"error": "El nombre de la categorÃ­a es obligatorio."}), 400
 
         existente = execute_query("SELECT id FROM categorias WHERE nombre = ?", (nombre,), fetchone=True)
         if existente:
-            return jsonify({"error": "El nombre de la categoría ya existe."}), 400
+            return jsonify({"error": "El nombre de la categorÃ­a ya existe."}), 400
 
         try:
             execute_query("INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)", (nombre, descripcion), commit=True)
-            return jsonify({"success": True, "mensaje": "Categoría registrada exitosamente."}), 201
+            return jsonify({"success": True, "mensaje": "CategorÃ­a registrada exitosamente."}), 201
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
@@ -289,22 +289,22 @@ def api_categorias():
 @login_required
 def api_categoria_editar(cat_id):
     if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
-        return jsonify({"error": "No tienes permiso para modificar categorías."}), 403
+        return jsonify({"error": "No tienes permiso para modificar categorÃ­as."}), 403
     
     data = request.json or {}
     nombre = data.get('nombre', '').strip()
     descripcion = data.get('descripcion', '').strip()
 
     if not nombre:
-        return jsonify({"error": "El nombre de la categoría es obligatorio."}), 400
+        return jsonify({"error": "El nombre de la categorÃ­a es obligatorio."}), 400
 
     existente = execute_query("SELECT id FROM categorias WHERE nombre = ? AND id != ?", (nombre, cat_id), fetchone=True)
     if existente:
-        return jsonify({"error": "El nombre de la categoría ya existe."}), 400
+        return jsonify({"error": "El nombre de la categorÃ­a ya existe."}), 400
 
     try:
         execute_query("UPDATE categorias SET nombre = ?, descripcion = ? WHERE id = ?", (nombre, descripcion, cat_id), commit=True)
-        return jsonify({"success": True, "mensaje": "Categoría actualizada exitosamente."})
+        return jsonify({"success": True, "mensaje": "CategorÃ­a actualizada exitosamente."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -340,7 +340,7 @@ def api_productos():
         min_stock = int(data.get('min_stock', 5))
 
         if not nombre or precio <= 0 or not codigo:
-            return jsonify({"error": "Nombre, Código y Precio válidos son obligatorios."}), 400
+            return jsonify({"error": "Nombre, CÃ³digo y Precio vÃ¡lidos son obligatorios."}), 400
 
         query_insert = """
             INSERT INTO productos (codigo_sku, categoria_id, nombre, costo, precio_venta, stock_actual, stock_minimo)
@@ -350,7 +350,7 @@ def api_productos():
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # Buscar o crear categoría
+            # Buscar o crear categorÃ­a
             cursor.execute("SELECT id FROM categorias WHERE nombre = ?", (categoria,))
             cat_row = cursor.fetchone()
             if cat_row:
@@ -429,7 +429,7 @@ def api_producto_editar(prod_id):
                 cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (nuevo_stock, prod_id))
                 mov_query = """
                     INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, motivo, usuario_id)
-                    VALUES (?, ?, ?, ?, ?, 'Ajuste por edición de producto', ?)
+                    VALUES (?, ?, ?, ?, ?, 'Ajuste por ediciÃ³n de producto', ?)
                 """
                 cursor.execute(mov_query, (prod_id, tipo_mov, abs(diff), prod['stock_actual'], nuevo_stock, session['user']['id']))
         
@@ -504,6 +504,151 @@ def api_movimientos():
 def api_movimiento_editar(mov_id):
     return jsonify({"error": "Por integridad contable (SQL), edita el stock con un nuevo movimiento o ajuste, no alterando el historial pasado."}), 400
 
+# --- CAJA ---
+@app.route('/api/caja/estado', methods=['GET'])
+@login_required
+def api_caja_estado():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT TOP 1 id, fecha_apertura, monto_inicial FROM sesiones_caja WHERE usuario_id = ? AND estado = 'Abierta' ORDER BY id DESC", (session['user']['id'],))
+        caja = cursor.fetchone()
+        
+        if caja:
+            return jsonify({
+                "estado": "Abierta",
+                "sesion_caja_id": caja.id,
+                "fecha_apertura": caja.fecha_apertura.strftime('%Y-%m-%d %H:%M:%S'),
+                "monto_inicial": float(caja.monto_inicial)
+            })
+        else:
+            return jsonify({"estado": "Cerrada"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/caja/apertura', methods=['POST'])
+@login_required
+def api_caja_apertura():
+    data = request.json or {}
+    monto_inicial = data.get('monto_inicial', 0.0)
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM sesiones_caja WHERE usuario_id = ? AND estado = 'Abierta'", (session['user']['id'],))
+        if cursor.fetchone():
+            return jsonify({"error": "Ya tienes un turno de caja abierto."}), 400
+            
+        cursor.execute('''
+            INSERT INTO sesiones_caja (usuario_id, monto_inicial, estado)
+            OUTPUT INSERTED.id
+            VALUES (?, ?, 'Abierta')
+        ''', (session['user']['id'], monto_inicial))
+        
+        sesion_id = cursor.fetchone()[0]
+        conn.commit()
+        
+        return jsonify({"success": True, "sesion_caja_id": sesion_id, "mensaje": "Caja abierta exitosamente."})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/caja/cierre', methods=['POST'])
+@login_required
+def api_caja_cierre():
+    data = request.json or {}
+    sesion_id = data.get('sesion_caja_id')
+    monto_final_real = data.get('monto_final_real', 0.0)
+    observaciones = data.get('observaciones', '')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT monto_inicial, estado FROM sesiones_caja WHERE id = ? AND usuario_id = ?", 
+                       (sesion_id, session['user']['id']))
+        caja = cursor.fetchone()
+        if not caja or caja.estado != 'Abierta':
+            return jsonify({"error": "SesiÃ³n de caja invÃ¡lida o ya estÃ¡ cerrada."}), 400
+            
+        monto_inicial = caja.monto_inicial
+        
+        cursor.execute("SELECT ISNULL(SUM(total), 0) FROM ventas WHERE sesion_caja_id = ? AND estado != 'Anulada' AND forma_pago = 'Efectivo'", (sesion_id,))
+        ventas_efectivo = cursor.fetchone()[0]
+        
+        monto_final_esperado = float(monto_inicial) + float(ventas_efectivo)
+        diferencia = float(monto_final_real) - monto_final_esperado
+        
+        cursor.execute('''
+            UPDATE sesiones_caja 
+            SET fecha_cierre = GETDATE(),
+                monto_final_esperado = ?,
+                monto_final_real = ?,
+                diferencia = ?,
+                estado = 'Cerrada',
+                observaciones = ?
+            WHERE id = ?
+        ''', (monto_final_esperado, monto_final_real, diferencia, observaciones, sesion_id))
+        
+        conn.commit()
+        return jsonify({"success": True, "mensaje": "Caja cerrada correctamente.", "diferencia": diferencia})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/caja/sesiones', methods=['GET'])
+@role_required('Administrador', 'Contador')
+def api_caja_sesiones():
+    query = """
+        SELECT s.id, u.nombre_completo AS usuario, 
+               FORMAT(s.fecha_apertura, 'yyyy-MM-dd HH:mm:ss') as fecha_apertura,
+               FORMAT(s.fecha_cierre, 'yyyy-MM-dd HH:mm:ss') as fecha_cierre,
+               s.estado, s.diferencia
+        FROM sesiones_caja s
+        INNER JOIN usuarios u ON s.usuario_id = u.id
+        ORDER BY s.fecha_apertura DESC
+    """
+    sesiones = execute_query(query, fetchall=True)
+    return jsonify(sesiones)
+
+@app.route('/api/caja/sesion/<int:id>', methods=['GET'])
+@login_required
+def api_caja_sesion(id):
+    query = """
+        SELECT s.id, u.nombre_completo AS usuario, 
+               FORMAT(s.fecha_apertura, 'yyyy-MM-dd HH:mm:ss') as fecha_apertura,
+               FORMAT(s.fecha_cierre, 'yyyy-MM-dd HH:mm:ss') as fecha_cierre,
+               s.monto_inicial, s.monto_final_esperado, s.monto_final_real,
+               s.diferencia, s.estado, s.observaciones
+        FROM sesiones_caja s
+        INNER JOIN usuarios u ON s.usuario_id = u.id
+        WHERE s.id = ?
+    """
+    sesion = execute_query(query, (id,), fetchone=True)
+    
+    if not sesion:
+        return jsonify({"error": "SesiÃ³n no encontrada"}), 404
+        
+    query_ventas = "SELECT ISNULL(SUM(total), 0) FROM ventas WHERE sesion_caja_id = ? AND estado != 'Anulada' AND forma_pago = 'Efectivo'"
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query_ventas, (id,))
+        ventas_efectivo = cursor.fetchone()[0]
+        sesion['ventas_efectivo'] = float(ventas_efectivo)
+    except:
+        sesion['ventas_efectivo'] = 0.0
+    finally:
+        cursor.close()
+        conn.close()
+
+    return jsonify(sesion)
+
 # --- VENTAS (POS) ---
 @app.route('/api/ventas', methods=['GET', 'POST'])
 @login_required
@@ -513,7 +658,7 @@ def api_ventas():
             SELECT v.id, v.codigo_venta, 
                    COALESCE(c.nombre_completo, v.nombre_cliente_invitado) AS cliente, 
                    v.fecha_venta AS fecha,
-                   u.nombre_completo AS vendedor, v.total, v.forma_pago
+                   u.nombre_completo AS vendedor, v.total, v.forma_pago, v.estado
             FROM ventas v
             LEFT JOIN clientes c ON v.cliente_id = c.id
             LEFT JOIN usuarios u ON v.usuario_id = u.id
@@ -548,7 +693,7 @@ def api_ventas():
         items = data.get('items', []) 
 
         if not items:
-            return jsonify({"error": "El carrito de compra está vacío."}), 400
+            return jsonify({"error": "El carrito de compra estÃ¡ vacÃ­o."}), 400
 
         try:
             conn = get_db_connection()
@@ -583,10 +728,17 @@ def api_ventas():
                     p_id, cant, float(prod.precio_venta), float(prod.costo), subtotal, prod.stock_actual
                 ))
 
+            cursor.execute("SELECT id FROM sesiones_caja WHERE usuario_id = ? AND estado = 'Abierta'", (session['user']['id'],))
+            sesion_row = cursor.fetchone()
+            if not sesion_row:
+                conn.rollback()
+                return jsonify({"error": "Debe abrir un turno de caja antes de realizar ventas."}), 400
+            sesion_id = sesion_row.id
+
             cursor.execute("""
-                INSERT INTO ventas (codigo_venta, cliente_id, nombre_cliente_invitado, usuario_id, fecha_venta, subtotal, descuento, total, forma_pago, estado)
-                VALUES (?, NULL, ?, ?, GETDATE(), ?, 0, ?, ?, 'Completada')
-            """, (codigo_v, cliente_nombre, session['user']['id'], total_venta, total_venta, forma_pago))
+                INSERT INTO ventas (codigo_venta, cliente_id, nombre_cliente_invitado, usuario_id, sesion_caja_id, fecha_venta, subtotal, descuento, total, forma_pago, estado)
+                VALUES (?, NULL, ?, ?, ?, GETDATE(), ?, 0, ?, ?, 'Completada')
+            """, (codigo_v, cliente_nombre, session['user']['id'], sesion_id, total_venta, total_venta, forma_pago))
             
             cursor.execute("SELECT @@IDENTITY AS id")
             venta_id = cursor.fetchone()[0]
@@ -605,7 +757,7 @@ def api_ventas():
                     VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
                 """, (p_id, cant, stock_ant, stock_post, f"Venta {codigo_v}", 'Venta desde caja', session['user']['id']))
 
-            # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA ---
+            # --- ASIENTO CONTABLE AUTOMÃTICO DE VENTA ---
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
             cta_caja = cursor.fetchone()[0]
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'") # Ventas
@@ -634,7 +786,7 @@ def api_ventas():
 
             cursor.execute("""
                 SELECT v.id, v.codigo_venta, c.nombre_completo AS cliente, v.fecha_venta AS fecha,
-                       u.nombre_completo AS vendedor, v.total, v.forma_pago
+                       u.nombre_completo AS vendedor, v.total, v.forma_pago, v.estado
                 FROM ventas v
                 LEFT JOIN clientes c ON v.cliente_id = c.id
                 INNER JOIN usuarios u ON v.usuario_id = u.id
@@ -686,7 +838,7 @@ def api_ventas_web():
     items = data.get('items', []) 
 
     if not items:
-        return jsonify({"error": "El carrito de compra está vacío."}), 400
+        return jsonify({"error": "El carrito de compra estÃ¡ vacÃ­o."}), 400
 
     cliente_id = None
     if 'user' in session and session['user']['rol'] == 'Cliente':
@@ -725,7 +877,7 @@ def api_ventas_web():
                 p_id, cant, float(prod.precio_venta), float(prod.costo), subtotal, prod.stock_actual
             ))
 
-        # Buscar un admin genérico para los movimientos que exigen usuario_id NO NULL
+        # Buscar un admin genÃ©rico para los movimientos que exigen usuario_id NO NULL
         cursor.execute("SELECT TOP 1 u.id FROM usuarios u INNER JOIN roles r ON u.rol_id = r.id WHERE r.nombre = 'Administrador'")
         admin_row = cursor.fetchone()
         admin_id = admin_row[0] if admin_row else 1
@@ -753,7 +905,7 @@ def api_ventas_web():
                 VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
             """, (p_id, cant, stock_ant, stock_post, f"Venta Web {codigo_v}", 'Venta desde la tienda online', admin_id))
 
-        # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA WEB ---
+        # --- ASIENTO CONTABLE AUTOMÃTICO DE VENTA WEB ---
         cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
         cta_caja = cursor.fetchone()[0]
         cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'") # Ventas
@@ -781,7 +933,7 @@ def api_ventas_web():
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_v_id, cta_inv, total_costo_venta))
 
         conn.commit()
-        return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada con éxito."}), 201
+        return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada con Ã©xito."}), 201
 
     except Exception as e:
         if 'conn' in locals():
@@ -792,7 +944,69 @@ def api_ventas_web():
 @app.route('/api/ventas/<int:v_id>', methods=['GET'])
 @login_required
 def api_venta_detalle(v_id):
-    return jsonify({"error": "Detalle único no implementado (la vista general ya los incluye)."}), 501
+    return jsonify({"error": "Detalle Ãºnico no implementado (la vista general ya los incluye)."}), 501
+
+
+
+@app.route('/api/ventas/<int:v_id>/anular', methods=['POST'])
+@role_required('Administrador', 'Vendedor')
+def api_venta_anular(v_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT estado, codigo_venta FROM ventas WHERE id = ?", (v_id,))
+        venta = cursor.fetchone()
+        if not venta:
+            return jsonify({"error": "Venta no encontrada."}), 404
+        if venta.estado == 'Anulada':
+            return jsonify({"error": "Esta venta ya se encuentra anulada."}), 400
+
+        cursor.execute("UPDATE ventas SET estado = 'Anulada' WHERE id = ?", (v_id,))
+        
+        cursor.execute("SELECT producto_id, cantidad FROM detalle_ventas WHERE venta_id = ?", (v_id,))
+        detalles = cursor.fetchall()
+        
+        for det in detalles:
+            cursor.execute("SELECT stock_actual AS stock FROM productos WHERE id = ?", (det.producto_id,))
+            prod = cursor.fetchone()
+            if prod:
+                stock_anterior = prod.stock
+                stock_posterior = stock_anterior + det.cantidad
+                cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (stock_posterior, det.producto_id))
+                
+                cursor.execute("""
+                    INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, motivo, usuario_id)
+                    VALUES (?, 'DEVOLUCION_CLIENTE', ?, ?, ?, ?, ?)
+                """, (det.producto_id, det.cantidad, stock_anterior, stock_posterior, f"Anulacion de venta {venta.codigo_venta}", session['user']['id']))
+        
+        # --- REVERSION CONTABLE ---
+        cursor.execute("SELECT id FROM asientos_contables WHERE referencia_id = ? AND modulo_origen IN ('VENTAS', 'VENTAS_WEB')", (v_id,))
+        asiento = cursor.fetchone()
+        if asiento:
+            cursor.execute("""
+                INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                VALUES (GETDATE(), ?, 'REVERSION_VENTA', ?, ?)
+            """, (f"Anulacion Venta {venta.codigo_venta}", v_id, session['user']['id']))
+            cursor.execute("SELECT @@IDENTITY AS id")
+            new_asiento_id = cursor.fetchone().id
+            
+            cursor.execute("SELECT cuenta_id, debe, haber FROM movimientos_contables WHERE asiento_id = ?", (asiento.id,))
+            movimientos = cursor.fetchall()
+            for mov in movimientos:
+                cursor.execute("""
+                    INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber)
+                    VALUES (?, ?, ?, ?)
+                """, (new_asiento_id, mov.cuenta_id, mov.haber, mov.debe))
+        # --------------------------
+        
+        conn.commit()
+        return jsonify({"success": True, "mensaje": f"Venta {venta.codigo_venta} anulada correctamente. Stock retornado."})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # --- COMPRAS Y PROVEEDORES ---
@@ -800,7 +1014,7 @@ def api_venta_detalle(v_id):
 @login_required
 def api_proveedores():
     if request.method == 'GET':
-        provs = execute_query("SELECT id, nombre_empresa AS nombre, contacto_nombre AS contacto, telefono, email FROM proveedores WHERE activo=1", fetchall=True)
+        provs = execute_query("SELECT id, nombre_empresa AS nombre, contacto_nombre AS contacto, telefono, email, activo FROM proveedores", fetchall=True)
         return jsonify(provs)
 
     if request.method == 'POST':
@@ -822,6 +1036,22 @@ def api_proveedores():
             return jsonify({"success": True, "mensaje": "Proveedor agregado"}), 201
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+@app.route('/api/proveedores/<int:prov_id>/estado', methods=['PUT'])
+@login_required
+def api_proveedor_estado(prov_id):
+    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+        return jsonify({"error": "No tienes permisos."}), 403
+    
+    data = request.json or {}
+    nuevo_estado = 1 if data.get('activo') else 0
+    
+    try:
+        execute_query("UPDATE proveedores SET activo = ? WHERE id = ?", (nuevo_estado, prov_id), commit=True)
+        mensaje = "Proveedor activado" if nuevo_estado else "Proveedor inactivado"
+        return jsonify({"success": True, "mensaje": mensaje})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/compras', methods=['GET', 'POST'])
 @login_required
@@ -908,7 +1138,7 @@ def api_compras():
 
             cursor.execute("UPDATE compras SET total = ? WHERE id = ?", (total_compra, compra_id))
 
-            # --- ASIENTO CONTABLE AUTOMÁTICO DE COMPRA ---
+            # --- ASIENTO CONTABLE AUTOMÃTICO DE COMPRA ---
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.04'") # Inventario
             cta_inv = cursor.fetchone()[0]
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '2.1.01'") # Proveedores
@@ -995,7 +1225,7 @@ def api_reportes():
             conn.close()
 
 # ==============================================================================
-# MÓDULO CONTABLE Y ESTADOS FINANCIEROS
+# MÃ“DULO CONTABLE Y ESTADOS FINANCIEROS
 # ==============================================================================
 
 @app.route('/api/finanzas/cuentas', methods=['GET', 'POST'])
@@ -1323,7 +1553,7 @@ def api_balance_general():
             haber = float(f['h'] or 0)
             saldo = (haber - debe) if f['naturaleza'] == 'Acreedora' else (debe - haber)
             
-            # Ajuste para cuentas contra-activo (ej. Depreciación acumulada) que son naturaleza Acreedora pero van en Activos
+            # Ajuste para cuentas contra-activo (ej. DepreciaciÃ³n acumulada) que son naturaleza Acreedora pero van en Activos
             if f['clasificacion'] == 'Activo no corriente - contraactivo':
                 saldo = -abs(saldo) # Se resta del activo
                 
@@ -1345,7 +1575,7 @@ def api_balance_general():
                 patrimonio.append(obj)
                 total_patrimonio += saldo
 
-        patrimonio.append({"cuenta": "Utilidad neta del período", "saldo": utilidad_neta})
+        patrimonio.append({"cuenta": "Utilidad neta del perÃ­odo", "saldo": utilidad_neta})
 
         return jsonify({
             "activos": {
@@ -1368,7 +1598,7 @@ def api_balance_general():
         return jsonify({"error": str(e)}), 500
 
 # ==============================================================================
-# RECURSOS HUMANOS Y NÓMINA
+# RECURSOS HUMANOS Y NÃ“MINA
 # Roles permitidos: Administrador, Responsable de Recursos Humanos
 # ==============================================================================
 ROLES_RRHH = ['Administrador', 'Responsable de Recursos Humanos']
@@ -1413,7 +1643,7 @@ def api_empleados():
         observaciones = data.get('observaciones', '').strip()
 
         if not nombre or salario_base <= 0:
-            return jsonify({"error": "Nombre y Salario base válidos son obligatorios."}), 400
+            return jsonify({"error": "Nombre y Salario base vÃ¡lidos son obligatorios."}), 400
 
         try:
             execute_query(
@@ -1529,11 +1759,11 @@ def api_movimientos_laborales():
         observacion  = data.get('observacion', '').strip()
 
         if not empleado_id or not tipo or not fecha_inicio or not fecha_fin or dias_tomados <= 0:
-            return jsonify({"error": "Todos los campos son obligatorios y los días deben ser mayores a 0."}), 400
+            return jsonify({"error": "Todos los campos son obligatorios y los dÃ­as deben ser mayores a 0."}), 400
 
         tipos_validos = ['VACACIONES', 'PERMISO_CON_GOCE', 'PERMISO_SIN_GOCE', 'FALTA']
         if tipo not in tipos_validos:
-            return jsonify({"error": f"Tipo inválido. Use: {tipos_validos}"}), 400
+            return jsonify({"error": f"Tipo invÃ¡lido. Use: {tipos_validos}"}), 400
 
         try:
             execute_query(
@@ -1543,7 +1773,7 @@ def api_movimientos_laborales():
                 (empleado_id, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion),
                 commit=True
             )
-            # Si es vacaciones, descontar días disponibles del empleado
+            # Si es vacaciones, descontar dÃ­as disponibles del empleado
             if tipo == 'VACACIONES':
                 execute_query(
                     "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles - ? WHERE id = ?",
@@ -1554,13 +1784,13 @@ def api_movimientos_laborales():
             return jsonify({"error": str(e)}), 500
 
 
-# --- GENERACIÓN DE NÓMINA ---
+# --- GENERACIÃ“N DE NÃ“MINA ---
 @app.route('/api/nomina/generar', methods=['POST'])
 @login_required
 def api_nomina_generar():
-    """Genera la nómina mensual para todos los empleados activos con cálculos correctos Ley 822 + Ley 185."""
+    """Genera la nÃ³mina mensual para todos los empleados activos con cÃ¡lculos correctos Ley 822 + Ley 185."""
     if session['user']['rol'] not in ROLES_RRHH:
-        return jsonify({"error": "No tienes permisos para generar nóminas."}), 403
+        return jsonify({"error": "No tienes permisos para generar nÃ³minas."}), 403
 
     data = request.json or {}
     mes  = int(data.get('mes', 1))
@@ -1570,27 +1800,42 @@ def api_nomina_generar():
         conn   = get_db_connection()
         cursor = conn.cursor()
 
-        # Validar duplicado
+        # Validar duplicado o recuperar cabecera
         cursor.execute("SELECT id FROM nomina WHERE periodo_mes = ? AND periodo_anio = ?", (mes, anio))
-        if cursor.fetchone():
-            conn.close()
-            return jsonify({"error": f"La nómina {mes}/{anio} ya fue generada anteriormente."}), 400
-
-        # Crear cabecera
-        cursor.execute("INSERT INTO nomina (periodo_mes, periodo_anio) VALUES (?, ?)", (mes, anio))
-        cursor.execute("SELECT @@IDENTITY AS id")
-        nomina_id = int(cursor.fetchone()[0])
+        row = cursor.fetchone()
+        if row:
+            nomina_id = int(row[0])
+            es_complemento = True
+        else:
+            cursor.execute("INSERT INTO nomina (periodo_mes, periodo_anio) VALUES (?, ?)", (mes, anio))
+            cursor.execute("SELECT @@IDENTITY AS id")
+            nomina_id = int(cursor.fetchone()[0])
+            es_complemento = False
 
         empleado_id_param = data.get('empleado_id', 'all')
         if empleado_id_param != 'all':
-            cursor.execute("SELECT id, salario_base FROM empleados WHERE activo=1 AND id=?", (empleado_id_param,))
+            cursor.execute("""
+                SELECT id, salario_base FROM empleados 
+                WHERE activo=1 AND id=? 
+                AND id NOT IN (SELECT empleado_id FROM detalle_nomina WHERE nomina_id = ?)
+            """, (empleado_id_param, nomina_id))
         else:
-            cursor.execute("SELECT id, salario_base FROM empleados WHERE activo=1")
+            cursor.execute("""
+                SELECT id, salario_base FROM empleados 
+                WHERE activo=1 
+                AND id NOT IN (SELECT empleado_id FROM detalle_nomina WHERE nomina_id = ?)
+            """, (nomina_id,))
 
         empleados = cursor.fetchall()
+        
+        if not empleados:
+            conn.close()
+            return jsonify({"error": f"La nÃ³mina {mes}/{anio} ya fue generada para el/los empleado(s) seleccionado(s)."}), 400
 
         t_bruto       = 0.0
         t_deducciones = 0.0
+        t_inss_lab    = 0.0
+        t_ir          = 0.0
         t_neto        = 0.0
         t_patronal    = 0.0
         t_vac         = 0.0
@@ -1600,7 +1845,7 @@ def api_nomina_generar():
             e_id   = emp[0]
             salario = float(emp[1])
 
-            # Usar módulo de cálculos con lógica correcta
+            # Usar mÃ³dulo de cÃ¡lculos con lÃ³gica correcta
             calc = calcular_nomina_empleado(salario)
 
             cursor.execute(
@@ -1620,7 +1865,7 @@ def api_nomina_generar():
                  calc['provision_aguinaldo'])
             )
 
-            # Acumular días de vacaciones ganados este mes (1.25 días = 15 días / 12 meses)
+            # Acumular dÃ­as de vacaciones ganados este mes (1.25 dÃ­as = 15 dÃ­as / 12 meses)
             cursor.execute(
                 "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles + 1.25 WHERE id = ?",
                 (e_id,)
@@ -1628,6 +1873,8 @@ def api_nomina_generar():
 
             t_bruto       += calc['salario_bruto']
             t_deducciones += calc['total_deducciones']
+            t_inss_lab    += calc['inss_laboral']
+            t_ir          += calc['ir_retencion']
             t_neto        += calc['salario_neto']
             t_patronal    += calc['inss_patronal']
             t_vac         += calc['provision_vacaciones']
@@ -1636,18 +1883,63 @@ def api_nomina_generar():
         # Actualizar totales en cabecera
         cursor.execute(
             """UPDATE nomina
-               SET total_ingresos=?, total_deducciones=?, total_neto=?,
-                   inss_patronal_total=?, provision_vac_total=?, provision_agui_total=?
+               SET total_ingresos=total_ingresos+?, total_deducciones=total_deducciones+?, total_neto=total_neto+?,
+                   inss_patronal_total=inss_patronal_total+?, provision_vac_total=provision_vac_total+?, provision_agui_total=provision_agui_total+?
                WHERE id=?""",
             (round(t_bruto, 2), round(t_deducciones, 2), round(t_neto, 2),
              round(t_patronal, 2), round(t_vac, 2), round(t_agui, 2), nomina_id)
         )
 
+        # --- ASIENTO CONTABLE AUTOMÃTICO DE NÃ“MINA ---
+        def get_cta(codigo):
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = ?", (codigo,))
+            row = cursor.fetchone()
+            return row[0] if row else None
+            
+        cta_sueldos_gasto = get_cta('6.1.01')
+        cta_cargas_patronales = get_cta('6.1.11')
+        cta_prestaciones_gasto = get_cta('6.1.12')
+        
+        cta_retenciones_inss = get_cta('2.1.06')
+        cta_retenciones_ir = get_cta('2.1.07')
+        cta_provisiones = get_cta('2.1.08')
+        cta_sueldos_pagar = get_cta('2.1.04')
+        
+        concepto_asiento = f"Registro de nÃ³mina mes {mes:02d}/{anio}"
+        if es_complemento:
+            concepto_asiento = f"Registro de nÃ³mina mes {mes:02d}/{anio} (Complemento)"
+        cursor.execute("""
+            INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+            VALUES (GETDATE(), ?, 'RRHH', ?, ?)
+        """, (concepto_asiento, nomina_id, session['user']['id']))
+        cursor.execute("SELECT @@IDENTITY AS id")
+        asiento_id = cursor.fetchone()[0]
+        
+        # DÃ©bitos (Gastos)
+        if t_bruto > 0 and cta_sueldos_gasto:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_sueldos_gasto, round(t_bruto, 2)))
+        if t_patronal > 0 and cta_cargas_patronales:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_cargas_patronales, round(t_patronal, 2)))
+        t_prestaciones = t_vac + t_agui
+        if t_prestaciones > 0 and cta_prestaciones_gasto:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_prestaciones_gasto, round(t_prestaciones, 2)))
+            
+        # CrÃ©ditos (Pasivos)
+        t_inss_total = t_inss_lab + t_patronal
+        if t_inss_total > 0 and cta_retenciones_inss:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_retenciones_inss, round(t_inss_total, 2)))
+        if t_ir > 0 and cta_retenciones_ir:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_retenciones_ir, round(t_ir, 2)))
+        if t_prestaciones > 0 and cta_provisiones:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_provisiones, round(t_prestaciones, 2)))
+        if t_neto > 0 and cta_sueldos_pagar:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_sueldos_pagar, round(t_neto, 2)))
+
         conn.commit()
         conn.close()
         return jsonify({
             "success"   : True,
-            "mensaje"   : f"Nómina {mes:02d}/{anio} generada con éxito para {len(empleados)} empleados.",
+            "mensaje"   : f"NÃ³mina {mes:02d}/{anio} generada con Ã©xito para {len(empleados)} empleados.",
             "nomina_id" : nomina_id,
             "resumen"   : {
                 "total_bruto"      : round(t_bruto, 2),
@@ -1669,7 +1961,7 @@ def api_nomina_generar():
 @app.route('/api/nomina/historial', methods=['GET'])
 @login_required
 def api_nomina_historial():
-    """Lista el historial de todas las nóminas generadas."""
+    """Lista el historial de todas las nÃ³minas generadas."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     query2 = """
@@ -1696,7 +1988,7 @@ def api_nomina_historial():
 @app.route('/api/nomina/<int:nomina_id>/detalle', methods=['GET'])
 @login_required
 def api_nomina_detalle(nomina_id):
-    """Obtiene el detalle completo de una nómina: cabecera + líneas por empleado."""
+    """Obtiene el detalle completo de una nÃ³mina: cabecera + lÃ­neas por empleado."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     cabecera = execute_query(
@@ -1710,7 +2002,7 @@ def api_nomina_detalle(nomina_id):
         (nomina_id,), fetchone=True
     )
     if not cabecera:
-        return jsonify({"error": "Nómina no encontrada."}), 404
+        return jsonify({"error": "NÃ³mina no encontrada."}), 404
 
     detalles = execute_query(
         """SELECT dn.id, e.id AS empleado_id, e.nombre_completo AS empleado, e.identificacion, e.cargo,
@@ -1744,7 +2036,7 @@ def api_nomina_detalle(nomina_id):
 @app.route('/api/nomina/<int:nomina_id>/empleado/<int:emp_id>', methods=['GET'])
 @login_required
 def api_colilla_individual(nomina_id, emp_id):
-    """Obtiene la colilla (recibo) individual de pago de un empleado en una nómina."""
+    """Obtiene la colilla (recibo) individual de pago de un empleado en una nÃ³mina."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     nomina = execute_query(
@@ -1752,7 +2044,7 @@ def api_colilla_individual(nomina_id, emp_id):
         (nomina_id,), fetchone=True
     )
     if not nomina:
-        return jsonify({"error": "Nómina no encontrada."}), 404
+        return jsonify({"error": "NÃ³mina no encontrada."}), 404
     if nomina.get('fecha_generacion'):
         nomina['fecha_generacion'] = str(nomina['fecha_generacion'])
 
@@ -1770,7 +2062,7 @@ def api_colilla_individual(nomina_id, emp_id):
         (nomina_id, emp_id), fetchone=True
     )
     if not detalle:
-        return jsonify({"error": "Detalle de empleado no encontrado en esta nómina."}), 404
+        return jsonify({"error": "Detalle de empleado no encontrado en esta nÃ³mina."}), 404
     campos_float = ['salario_base', 'ingresos_extra', 'inss_laboral', 'ir',
                     'inss_patronal', 'provision_vacaciones', 'provision_aguinaldo', 'neto_pagar']
     for c in campos_float:
@@ -1788,7 +2080,7 @@ def api_colilla_individual(nomina_id, emp_id):
 @app.route('/api/nomina/<int:nomina_id>', methods=['DELETE'])
 @login_required
 def api_nomina_delete(nomina_id):
-    """Elimina una nómina completa y revierte las vacaciones acumuladas."""
+    """Elimina una nÃ³mina completa y revierte las vacaciones acumuladas."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     try:
@@ -1799,9 +2091,9 @@ def api_nomina_delete(nomina_id):
         cursor.execute("SELECT id FROM nomina WHERE id=?", (nomina_id,))
         if not cursor.fetchone():
             conn.close()
-            return jsonify({"error": "Nómina no encontrada."}), 404
+            return jsonify({"error": "NÃ³mina no encontrada."}), 404
 
-        # Revertir vacaciones (restar los 1.25 que se sumaron a cada empleado en esta nómina)
+        # Revertir vacaciones (restar los 1.25 que se sumaron a cada empleado en esta nÃ³mina)
         cursor.execute("SELECT empleado_id FROM detalle_nomina WHERE nomina_id=?", (nomina_id,))
         empleados_en_nomina = cursor.fetchall()
         for emp in empleados_en_nomina:
@@ -1810,7 +2102,7 @@ def api_nomina_delete(nomina_id):
                 (emp[0],)
             )
 
-        # Eliminar la nómina (ON DELETE CASCADE debe borrar detalle_nomina)
+        # Eliminar la nÃ³mina (ON DELETE CASCADE debe borrar detalle_nomina)
         cursor.execute("DELETE FROM nomina WHERE id=?", (nomina_id,))
         conn.commit()
         conn.close()
@@ -1856,11 +2148,11 @@ def ver_colilla(id_detalle):
 
     meses_es = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-    mes_nombre = meses_es[datos.get('periodo_mes', 0)] if datos.get('periodo_mes') else '—'
+    mes_nombre = meses_es[datos.get('periodo_mes', 0)] if datos.get('periodo_mes') else 'â€”'
     periodo = f"{mes_nombre} {datos.get('periodo_anio', '')}"
 
     c = {
-        "empresa": "Jehová Jireh Moto Repuestos",
+        "empresa": "JehovÃ¡ Jireh Moto Repuestos",
         "periodo": periodo,
         "empleado": datos['empleado'],
         "cedula": datos.get('cedula') or 'N/A',
@@ -1868,7 +2160,7 @@ def ver_colilla(id_detalle):
         "departamento": 'General',
         "inss": datos.get('inss') or 'N/A',
         "salario_contrato": float(datos.get('salario_contrato') or 0),
-        "fecha_ingreso": str(datos.get('fecha_ingreso', ''))[:10] if datos.get('fecha_ingreso') else '—',
+        "fecha_ingreso": str(datos.get('fecha_ingreso', ''))[:10] if datos.get('fecha_ingreso') else 'â€”',
         "dias_trabajados": 30,
         "vac_acumulado": float(datos.get('vac_saldo') or 0),
         "vac_mes": 1.25,

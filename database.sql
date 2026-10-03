@@ -163,12 +163,28 @@ GO
 -- 5. FACTURACIÓN Y VENTAS (PUNTO DE VENTA / POS)
 -- ==============================================================================
 
+CREATE TABLE sesiones_caja (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    usuario_id INT NOT NULL, -- El cajero o vendedor
+    fecha_apertura DATETIME NOT NULL DEFAULT GETDATE(),
+    monto_inicial DECIMAL(12, 2) NOT NULL,
+    fecha_cierre DATETIME NULL,
+    monto_final_esperado DECIMAL(12, 2) NULL,
+    monto_final_real DECIMAL(12, 2) NULL,
+    diferencia DECIMAL(12, 2) NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'Abierta' CHECK (estado IN ('Abierta', 'Cerrada')),
+    observaciones VARCHAR(MAX) NULL,
+    CONSTRAINT fk_sesiones_caja_usuarios FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+GO
+
 CREATE TABLE ventas (
     id INT IDENTITY(1,1) PRIMARY KEY,
     codigo_venta VARCHAR(30) NOT NULL UNIQUE,
     cliente_id INT NULL, -- NULL si es cliente físico o invitado web
     nombre_cliente_invitado VARCHAR(150) NULL, -- Guardará el nombre del cliente físico o web que no se registró
     usuario_id INT NULL, -- NULL si la venta se hizo sola desde la web, o el ID del vendedor si fue física
+    sesion_caja_id INT NULL, -- ID de la caja abierta
     fecha_venta DATE NOT NULL,
     subtotal DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     descuento DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
@@ -178,7 +194,8 @@ CREATE TABLE ventas (
     notas VARCHAR(MAX) NULL,
     created_at DATETIME DEFAULT GETDATE(),
     CONSTRAINT fk_ventas_clientes FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
-    CONSTRAINT fk_ventas_usuarios FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    CONSTRAINT fk_ventas_usuarios FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_ventas_sesion FOREIGN KEY (sesion_caja_id) REFERENCES sesiones_caja(id)
 );
 GO
 

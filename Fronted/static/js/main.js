@@ -1,5 +1,5 @@
 // ==============================================================================
-// JehovÃƒÆ’¡ Jireh Moto Repuestos - LÃƒÆ’³gica Frontend SPA & ConexiÃƒÆ’³n con API Flask
+// Jehová Jireh Moto Repuestos - Lógica Frontend SPA & Conexión con API Flask
 // ==============================================================================
 
 let productosCache = [];
@@ -14,12 +14,12 @@ let chartTopProdsInstance = null;
 let ventaSeleccionadaActual = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('⚡ Inicializando Sistema JehovÃƒÆ’¡ Jireh Moto Repuestos...');
+    console.log('⚡ Inicializando Sistema Jehová Jireh Moto Repuestos...');
 
     initNavigation();
     loadDashboardStats();
 
-    // Event listeners para filtros de bÃƒÆ’ºsqueda
+    // Event listeners para filtros de búsqueda
     const filterInv = document.getElementById('filter-inventario');
     if (filterInv) {
         filterInv.addEventListener('input', (e) => filterInventarioTable(e.target.value));
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==============================================================================
-// NAVEGACIÃƒÆ’"N Y PESTAÃƒÆ’Ã¢â‚¬ËœAS (TABS & SUBTABS)
+// NAVEGACIÓN Y PESTAÑAS (TABS & SUBTABS)
 // ==============================================================================
 
 function initNavigation() {
@@ -74,7 +74,7 @@ function switchTab(tabId) {
     if (tabSection) {
         tabSection.classList.add('active');
 
-        // Cargar datos segÃƒÆ’ºn la pestaÃƒÆ’±a activa
+        // Cargar datos según la pestaña activa
         if (tabId === 'tab-inventario') loadInventario();
         if (tabId === 'tab-ventas') {
             loadPOSProducts();
@@ -116,18 +116,18 @@ async function verificarEstadoCaja() {
         const botonCierreDiscreto = document.getElementById('caja-cierre-discreto');
         const infoActiva = document.getElementById('caja-info-activa');
         
-        if(!bannerApertura) return; // Si no estÃƒÆ’¡ en el DOM
+        if(!bannerApertura) return; // Si no está en el DOM
         
         if (data.estado === 'Abierta') {
             // Ocultar banner grande
             bannerApertura.style.display = 'none';
-            // Mostrar botÃƒÆ’³n discreto
+            // Mostrar botón discreto
             botonCierreDiscreto.style.display = 'block';
             infoActiva.innerHTML = `<strong>CAJA ACTIVA</strong> | Abierta: ${data.fecha_apertura}`;
         } else {
             // Mostrar banner grande
             bannerApertura.style.display = 'block';
-            // Ocultar botÃƒÆ’³n discreto
+            // Ocultar botón discreto
             botonCierreDiscreto.style.display = 'none';
         }
     } catch (e) {
@@ -289,7 +289,7 @@ async function guardarCuenta(e) {
 }
 
 async function eliminarCuenta(id) {
-    if (!confirm("Ãƒâ€š¿EstÃƒÆ’¡s seguro de que deseas eliminar esta cuenta?")) return;
+    if (!confirm("¿Estás seguro de que deseas eliminar esta cuenta?")) return;
     
     try {
         const resp = await fetch(`/api/finanzas/cuentas/${id}`, {
@@ -355,7 +355,7 @@ function renderRecentSalesList(ventas) {
     if (!container) return;
 
     if (!Array.isArray(ventas) || ventas.length === 0) {
-        container.innerHTML = `<div class="empty-state"><p>No hay ventas registradas aÃƒÆ’ºn.</p></div>`;
+        container.innerHTML = `<div class="empty-state"><p>No hay ventas registradas aún.</p></div>`;
         return;
     }
 
@@ -385,7 +385,7 @@ function renderRecentSalesList(ventas) {
 }
 
 // ==============================================================================
-// MÃƒÆ’"DULO 1: INVENTARIO & KARDEX
+// MÁ"DULO 1: INVENTARIO & KARDEX
 // ==============================================================================
 
 async function loadInventario() {
@@ -453,9 +453,9 @@ function filterInventarioTable(query) {
     renderInventarioTable(filtrados);
 }
 
-// --- EDICIÃƒÆ’"N Y BORRADO DE PRODUCTO ---
+// --- EDICIÓN Y BORRADO DE PRODUCTO ---
 async function borrarProducto(prodId) {
-    if(!confirm("Ãƒâ€š¿EstÃƒÆ’¡s seguro de que deseas eliminar este repuesto? (Los registros histÃƒÆ’³ricos se mantendrÃƒÆ’¡n por integridad)")) return;
+    if(!confirm("¿Estás seguro de que deseas eliminar este repuesto? (Los registros históricos se mantendrán por integridad)")) return;
     try {
         const res = await fetch(`/api/productos/${prodId}`, { method: 'DELETE' });
         const data = await res.json();
@@ -467,7 +467,7 @@ async function borrarProducto(prodId) {
         }
     } catch(e) {
         console.error(e);
-        alert("Error de conexiÃƒÆ’³n al eliminar producto");
+        alert("Error de conexión al eliminar producto");
     }
 }
 
@@ -506,7 +506,7 @@ async function guardarEdicionProducto(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('¡Repuesto actualizado con ÃƒÆ’©xito!');
+            alert('¡Repuesto actualizado con éxito!');
             closeModal('modal-editar-producto');
             loadInventario();
             loadDashboardStats();
@@ -593,13 +593,13 @@ function toggleMotivoStockAlert() {
         alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
         alertBox.style.color = 'var(--accent-red)';
         alertBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-        alertBox.innerHTML = `<i class="ph-bold ph-warning"></i> <strong>Modo Producto Defectuoso / DaÃƒÆ’±ado:</strong> El registro en Kardex se actualizarÃƒÆ’¡ con esta devoluciÃƒÆ’³n, pero el stock disponible en catÃƒÆ’¡logo <strong>NO se incrementarÃƒÆ’¡</strong> (el repuesto defectuoso no vuelve a estar a la venta).`;
+        alertBox.innerHTML = `<i class="ph-bold ph-warning"></i> <strong>Modo Producto Defectuoso / Dañado:</strong> El registro en Kardex se actualizará con esta devolución, pero el stock disponible en catálogo <strong>NO se incrementará</strong> (el repuesto defectuoso no vuelve a estar a la venta).`;
     } else {
         alertBox.className = 'alert alert-info';
         alertBox.style.background = 'rgba(245, 158, 11, 0.12)';
         alertBox.style.color = 'var(--primary)';
         alertBox.style.border = '1px solid rgba(245, 158, 11, 0.3)';
-        alertBox.innerHTML = `<i class="ph-bold ph-info"></i> <strong>Modo Ajuste por Producto de MÃƒÆ’¡s / Cantidad:</strong> Las existencias en el inventario actual <strong>SÃƒÆ’ se recalcularÃƒÆ’¡n y actualizarÃƒÆ’¡n</strong> en tiempo real.`;
+        alertBox.innerHTML = `<i class="ph-bold ph-info"></i> <strong>Modo Ajuste por Producto de Más / Cantidad:</strong> Las existencias en el inventario actual <strong>SÁ se recalcularán y actualizarán</strong> en tiempo real.`;
     }
 }
 
@@ -659,7 +659,7 @@ async function guardarEdicionMovimiento(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert(`¡Movimiento #MOV-${movId} guardado con ÃƒÆ’©xito!\n${data.mensaje}`);
+            alert(`¡Movimiento #MOV-${movId} guardado con éxito!\n${data.mensaje}`);
             closeModal('modal-editar-movimiento');
             loadMovimientos();
             loadInventario();
@@ -690,7 +690,7 @@ async function guardarProducto(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('¡Repuesto guardado con ÃƒÆ’©xito!');
+            alert('¡Repuesto guardado con éxito!');
             closeModal('modal-producto');
             document.getElementById('form-producto').reset();
             loadInventario();
@@ -704,7 +704,7 @@ async function guardarProducto(e) {
 }
 
 // ==============================================================================
-// MÃƒÆ’"DULO 2: VENTAS (POS, HISTORIAL & COMPROBANTES)
+// MÁ"DULO 2: VENTAS (POS, HISTORIAL & COMPROBANTES)
 // ==============================================================================
 
 async function loadPOSProducts() {
@@ -714,7 +714,7 @@ async function loadPOSProducts() {
         productosCache = productos;
         renderPOSProductsGrid(productos);
     } catch (err) {
-        console.error('Error al cargar catÃƒÆ’¡logo POS:', err);
+        console.error('Error al cargar catálogo POS:', err);
     }
 }
 
@@ -779,7 +779,7 @@ function addToCartPOS(prodId) {
         if (itemEnCarrito.cantidad < prod.stock) {
             itemEnCarrito.cantidad++;
         } else {
-            alert(`No puedes agregar mÃƒÆ’¡s unidades de '${prod.nombre}'. Stock disponible: ${prod.stock}`);
+            alert(`No puedes agregar más unidades de '${prod.nombre}'. Stock disponible: ${prod.stock}`);
         }
     } else {
         cartPOS.push({
@@ -827,7 +827,7 @@ function renderCartPOS() {
     if (!tbody || !totalEl) return;
 
     if (cartPOS.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">El carrito estÃƒÆ’¡ vacÃƒÆ’­o.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">El carrito está vacío.</td></tr>`;
         totalEl.textContent = '$0.00';
         return;
     }
@@ -928,7 +928,7 @@ function renderHistorialVentasTable(ventas) {
             <td><strong>${v.codigo_venta}</strong></td>
             <td>${v.fecha}</td>
             <td>${v.cliente || 'Invitado'}</td>
-            <td>${v.vendedor || 'Sistema AutomÃƒÆ’¡tico'}</td>
+            <td>${v.vendedor || 'Sistema Automático'}</td>
             <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${v.forma_pago}</span></td>
             <td style="font-weight: 700; color: var(--accent-green);">$${v.total.toFixed(2)}</td>
             <td style="display: flex; gap: 5px; align-items: center;">
@@ -994,7 +994,7 @@ function verComprobanteVenta(ventaId) {
         renderTicketComprobante(venta, false);
         openModal('modal-comprobante');
     } else {
-        console.error('Error: Venta no encontrada en cachÃƒÆ’©.');
+        console.error('Error: Venta no encontrada en caché.');
         alert('No se pudo cargar el comprobante.');
     }
 }
@@ -1032,9 +1032,9 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
         ${bannerExito}
         <div style="font-family: monospace, sans-serif; background: #ffffff; color: #0f172a; padding: 1.5rem; border-radius: 8px; max-width: 750px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 55vh; overflow-y: auto;">
             <div style="text-align: center; border-bottom: 2px dashed #94a3b8; padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
-                <h2 style="font-size: 1.3rem; margin-bottom: 0.2rem; color: #0f172a;">JEHOVÃƒÆ’ JIREH</h2>
+                <h2 style="font-size: 1.3rem; margin-bottom: 0.2rem; color: #0f172a;">JEHOVÁ JIREH</h2>
                 <div style="font-size: 0.8rem; font-weight: 700; color: #475569;">MOTO REPUESTOS - MASATEPE</div>
-                <div style="font-size: 0.75rem; color: #64748b;">AtenciÃƒÆ’³n de Calidad y Repuestos Originales</div>
+                <div style="font-size: 0.75rem; color: #64748b;">Atención de Calidad y Repuestos Originales</div>
                 <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.2rem;">Tel: +505 8899-0000 | Masatepe, Masaya</div>
             </div>
 
@@ -1065,7 +1065,7 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
             </div>
 
             <div style="text-align: center; font-size: 0.75rem; color: #64748b; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 0.5rem;">
-                ¡Gracias por su compra en JehovÃƒÆ’¡ Jireh! í°Ã…Â¸Ã¢â€žÂ¢<br>
+                ¡Gracias por su compra en Jehová Jireh! 🙏<br>
                 Conserve este comprobante para cualquier reclamo.
             </div>
         </div>
@@ -1102,7 +1102,7 @@ function imprimirTicketActual() {
 }
 
 // ==============================================================================
-// MÃƒÆ’"DULO 3: COMPRAS Y PROVEEDORES
+// MÁ"DULO 3: COMPRAS Y PROVEEDORES
 // ==============================================================================
 
 async function toggleProveedorEstado(id, activar) {
@@ -1252,7 +1252,7 @@ async function guardarProveedor(e) {
 }
 
 // ==============================================================================
-// MÃƒÆ’"DULO 4: REPORTES Y ANÃƒÆ’LISIS CON CHART.JS
+// MÁ"DULO 4: REPORTES Y ANÁLISIS CON CHART.JS
 // ==============================================================================
 
 async function loadReportesContabilidad() {
@@ -1273,7 +1273,7 @@ async function loadReportesContabilidad() {
         document.getElementById('rep-margen').textContent = `$${data.margen_bruto_estimado.toFixed(2)}`;
         document.getElementById('rep-rotacion').textContent = `${data.rotacion_inventario || 0.00}x`;
 
-        // Render GrÃƒÆ’¡ficos Chart.js
+        // Render Gráficos Chart.js
         renderCharts(data);
 
         // Render Tabla Top Productos
@@ -1462,7 +1462,7 @@ async function loadCategorias() {
         if (!tbody) return;
 
         if (categorias.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No hay categorÃƒÆ’­as registradas.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No hay categorías registradas.</td></tr>`;
             return;
         }
 
@@ -1480,7 +1480,7 @@ async function loadCategorias() {
             </tr>
         `).join('');
     } catch (err) {
-        console.error('Error al cargar categorÃƒÆ’­as:', err);
+        console.error('Error al cargar categorías:', err);
     }
 }
 
@@ -1497,8 +1497,8 @@ function openCategoriaForm(id = null, nombre = '', descripcion = '') {
     document.getElementById('cat-descripcion').value = descripcion;
     
     document.getElementById('cat-form-title').innerHTML = id 
-        ? '<i class="ph-bold ph-pencil-simple"></i> Editar CategorÃƒÆ’­a'
-        : '<i class="ph-bold ph-plus"></i> Registrar CategorÃƒÆ’­a';
+        ? '<i class="ph-bold ph-pencil-simple"></i> Editar Categoría'
+        : '<i class="ph-bold ph-plus"></i> Registrar Categoría';
         
     openModal('modal-categoria-form');
 }
@@ -1528,16 +1528,16 @@ async function guardarCategoria(e) {
             if(typeof loadInventario === 'function') loadInventario();
             openModalCategorias();
         } else {
-            alert(data.error || 'Error al guardar la categorÃƒÆ’­a.');
+            alert(data.error || 'Error al guardar la categoría.');
         }
     } catch (err) {
-        console.error('Error al guardar categorÃƒÆ’­a:', err);
-        alert('OcurriÃƒÆ’³ un error inesperado al guardar la categorÃƒÆ’­a.');
+        console.error('Error al guardar categoría:', err);
+        alert('Ocurrió un error inesperado al guardar la categoría.');
     }
 }
 
 // ==============================================================================
-// MÃƒÆ’"DULO DE ESTADOS FINANCIEROS Y CONTABILIDAD
+// MÁ"DULO DE ESTADOS FINANCIEROS Y CONTABILIDAD
 // ==============================================================================
 
 function switchFinanzasTab(subtab, btn) {
@@ -1716,14 +1716,14 @@ async function loadEstadoResultados() {
 
         let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
-        // Las variables start y end ya fueron declaradas al inicio de la funciÃƒÆ’³n.
+        // Las variables start y end ya fueron declaradas al inicio de la función.
         let subtitle = "Del 01 de Enero a la fecha actual";
         if (start && end) subtitle = `Del ${start} al ${end}`;
         else if (start) subtitle = `A partir del ${start}`;
         else if (end) subtitle = `Hasta el ${end}`;
         
         let html = `<div style="max-width: 800px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÃƒÆ’ JIREH MOTO REPUESTOS</h2>`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;
         html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE RESULTADOS INTEGRAL<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
         
         html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
@@ -1781,12 +1781,12 @@ async function loadBalanceGeneral() {
 
         let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
-        // La variable end ya fue declarada al inicio de la funciÃƒÆ’³n.
+        // La variable end ya fue declarada al inicio de la función.
         let subtitle = end ? `Al ${end}` : "A la fecha actual";
         
         let html = `<div style="max-width: 900px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÃƒÆ’ JIREH MOTO REPUESTOS</h2>`;
-        html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE SITUACIÃƒÆ’"N FINANCIERA<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;
+        html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE SITUACIÓN FINANCIERA<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
         
         html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">`;
         
@@ -1909,13 +1909,13 @@ async function guardarAsiento(e) {
     });
     
     if (Math.abs(tDebe - tHaber) > 0.01) {
-        alert("El asiento no estÃƒÆ’¡ cuadrado. Debe y Haber deben sumar lo mismo.");
+        alert("El asiento no está cuadrado. Debe y Haber deben sumar lo mismo.");
         btn.disabled = false;
         return;
     }
     
     if (movimientos.length < 2) {
-        alert("Debe incluir al menos 2 movimientos vÃƒÆ’¡lidos.");
+        alert("Debe incluir al menos 2 movimientos válidos.");
         btn.disabled = false;
         return;
     }
@@ -1942,7 +1942,7 @@ async function guardarAsiento(e) {
         }
     } catch (err) {
         console.error(err);
-        alert("OcurriÃƒÆ’³ un error en la solicitud.");
+        alert("Ocurrió un error en la solicitud.");
     } finally {
         btn.disabled = false;
     }

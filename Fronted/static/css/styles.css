@@ -459,6 +459,26 @@ body {
     color: var(--accent-purple);
 }
 
+.role-gerente-de-operaciones {
+    background: rgba(14, 165, 233, 0.2);
+    color: #0ea5e9;
+}
+
+.role-gerente-administrativo-y-financiero {
+    background: rgba(225, 29, 72, 0.2);
+    color: #e11d48;
+}
+
+.role-encargado-de-compras-y-proveedores {
+    background: rgba(132, 204, 22, 0.2);
+    color: #84cc16;
+}
+
+.role-responsable-de-recursos-humanos {
+    background: rgba(99, 102, 241, 0.2);
+    color: #6366f1;
+}
+
 /* Main Area */
 .main-content {
     flex: 1;

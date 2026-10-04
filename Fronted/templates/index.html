@@ -17,6 +17,7 @@
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
+        window.usuarioRol = '{{ usuario.rol }}';
     </script>
 </head>
 <body>
@@ -39,28 +40,28 @@
                     <span>Panel Principal</span>
                 </a>
 
-                {% if usuario.rol in ['Administrador', 'Vendedor', 'Encargado de Inventario', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
                 <a href="#inventario" class="nav-item" data-tab="tab-inventario">
                     <i class="ph-bold ph-package"></i>
                     <span>Inventario</span>
                 </a>
                 {% endif %}
 
-                {% if usuario.rol in ['Administrador', 'Vendedor', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
                 <a href="#ventas" class="nav-item" data-tab="tab-ventas">
                     <i class="ph-bold ph-shopping-cart"></i>
                     <span>Ventas / POS</span>
                 </a>
                 {% endif %}
 
-                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores'] %}
                 <a href="#compras" class="nav-item" data-tab="tab-compras">
                     <i class="ph-bold ph-truck"></i>
                     <span>Compras / Proveedores</span>
                 </a>
                 {% endif %}
 
-                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <a href="#reportes" class="nav-item" data-tab="tab-reportes">
                     <i class="ph-bold ph-chart-line-up"></i>
                     <span>Reportes Operativos</span>
@@ -79,7 +80,7 @@
                 </a>
                 {% endif %}
 
-                {% if usuario.rol in ['Administrador', 'Responsable de Recursos Humanos'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Responsable de Recursos Humanos'] %}
                 <a href="#rrhh" class="nav-item" data-tab="tab-rrhh">
                     <i class="ph-bold ph-users"></i>
                     <span>Recursos Humanos</span>
@@ -219,14 +220,14 @@
                                 </button>
                                 {% endif %}
 
-                                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
                                 <button class="action-tile" onclick="switchTab('tab-reportes')">
                                     <i class="ph-bold ph-chart-line-up"></i>
                                     <span>Reportes y Contabilidad</span>
                                 </button>
                                 {% endif %}
 
-                                {% if usuario.rol in ['Administrador', 'Responsable de Recursos Humanos'] %}
+                                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Responsable de Recursos Humanos'] %}
                                 <button class="action-tile" onclick="switchTab('tab-rrhh')">
                                     <i class="ph-bold ph-users"></i>
                                     <span>Recursos Humanos</span>
@@ -249,7 +250,7 @@
                 </section>
 
                 <!-- TAB 2: INVENTARIO -->
-                {% if usuario.rol in ['Administrador', 'Vendedor', 'Encargado de Inventario', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
                 <section id="tab-inventario" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -345,7 +346,7 @@
                 {% endif %}
 
                 <!-- TAB 3: VENTAS (POS & HISTORIAL) -->
-                {% if usuario.rol in ['Administrador', 'Vendedor', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
                 <section id="tab-ventas" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -361,12 +362,16 @@
                             <i class="ph-bold ph-shopping-cart"></i> Caja / Punto de Venta (POS)
                         </button>
                         {% endif %}
-                        <button class="subnav-btn {% if usuario.rol == 'Contador' %}active{% endif %}" onclick="switchVentasSubtab('historial-ventas', this)">
+                        {% if usuario.rol != 'Vendedor' %}
+<button class="subnav-btn {% if usuario.rol == 'Contador' %}active{% endif %}" onclick="switchVentasSubtab('historial-ventas', this)">
                             <i class="ph-bold ph-receipt"></i> Historial de Ventas Realizadas
                         </button>
-                        <button class="subnav-btn" onclick="switchVentasSubtab('pedidos-web', this)">
+{% endif %}
+                        {% if usuario.rol != 'Vendedor' %}
+<button class="subnav-btn" onclick="switchVentasSubtab('pedidos-web', this)">
                             <i class="ph-bold ph-globe"></i> Pedidos Web
                         </button>
+{% endif %}
                     </div>
 
                     <!-- VISTA 1: POS -->
@@ -515,7 +520,7 @@
                 {% endif %}
 
                 <!-- TAB 4: COMPRAS Y PROVEEDORES -->
-                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores'] %}
                 <section id="tab-compras" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -587,7 +592,7 @@
                 {% endif %}
 
                 <!-- TAB 5: REPORTES Y CONTABILIDAD -->
-                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <section id="tab-reportes" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -710,7 +715,7 @@
                 {% endif %}
 
                 <!-- TAB: ESTADOS FINANCIEROS Y CONTABILIDAD -->
-                {% if usuario.rol in ['Administrador', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <section id="tab-finanzas" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -724,9 +729,11 @@
                                 <label style="font-size: 0.85rem; font-weight: bold; margin: 0; margin-left: 0.5rem;">Hasta:</label>
                                 <input type="date" id="fin-fecha-fin" class="form-control" style="padding: 0.2rem 0.5rem; height: auto;">
                             </div>
-                            <button class="btn btn-primary" onclick="openModal('modal-asiento')">
+                            {% if usuario.rol != 'Contador' %}
+<button class="btn btn-primary" onclick="openModal('modal-asiento')">
                                 <i class="ph-bold ph-plus"></i> Nuevo Asiento
                             </button>
+{% endif %}
                             <button class="btn btn-secondary" onclick="cargarDatosFinanzas()">
                                 <i class="ph-bold ph-funnel"></i> Filtrar / Refrescar
                             </button>
@@ -741,6 +748,9 @@
                         <button class="btn btn-outline" onclick="switchFinanzasTab('fin-asientos', this)">
                             <i class="ph-bold ph-book-open"></i> Libro Diario (Asientos)
                         </button>
+                        <button class="btn btn-outline" onclick="switchFinanzasTab('fin-mayor', this)">
+                            <i class="ph-bold ph-books"></i> Libro Mayor
+                        </button>
                         <button class="btn btn-outline" onclick="switchFinanzasTab('fin-resultados', this)">
                             <i class="ph-bold ph-trend-up"></i> Estado de Resultados
                         </button>
@@ -754,9 +764,11 @@
                         <div class="card">
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3>Catálogo de Cuentas Contables</h3>
-                                <button class="btn btn-primary btn-sm" onclick="openModal('modal-cuenta')">
+                                {% if usuario.rol != 'Contador' %}
+<button class="btn btn-primary btn-sm" onclick="openModal('modal-cuenta')">
                                     <i class="ph-bold ph-plus"></i> Nueva Cuenta
                                 </button>
+{% endif %}
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -767,7 +779,7 @@
                                                 <th>Nombre de la Cuenta</th>
                                                 <th>Clasificación</th>
                                                 <th>Naturaleza</th>
-                                                <th>Acciones</th>
+                                                {% if usuario.rol != 'Contador' %}<th>Acciones</th>{% endif %}
                                             </tr>
                                         </thead>
                                         <tbody id="tbody-cuentas">
@@ -808,6 +820,52 @@
                         </div>
                     </div>
 
+                    <!-- CONTENIDO: LIBRO MAYOR -->
+                    <div id="fin-mayor" class="fin-tab-content" style="display: none;">
+                        <div class="card">
+                            <div class="card-header" style="display:flex; gap:10px; align-items:center;">
+                                <div style="flex:1;">
+                                    <label>Seleccionar Cuenta Contable:</label>
+                                    <select id="mayor-cuenta" class="form-control" style="max-width:400px;"></select>
+                                </div>
+                                <div>
+                                    <button class="btn btn-primary" onclick="cargarLibroMayor()">
+                                        <i class="ph-bold ph-magnifying-glass"></i> Consultar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="mayor-info" style="display:none; margin-bottom:15px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                                    <h3 id="mayor-titulo-cuenta" style="margin:0; color:var(--primary);"></h3>
+                                    <p style="margin:5px 0 0 0;">Saldo Inicial: <strong id="mayor-saldo-inicial">C$ 0.00</strong></p>
+                                </div>
+                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                                        <thead style="position: sticky; top: 0; background: #1a1e2d; z-index: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                            <tr>
+                                                <th style="padding: 15px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.1);">Fecha</th>
+                                                <th style="padding: 15px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.1);">Asiento #</th>
+                                                <th style="padding: 15px; text-align: left; border-bottom: 2px solid rgba(255,255,255,0.1);">Concepto</th>
+                                                <th style="padding: 15px; text-align: right; border-bottom: 2px solid rgba(255,255,255,0.1);">Debe</th>
+                                                <th style="padding: 15px; text-align: right; border-bottom: 2px solid rgba(255,255,255,0.1);">Haber</th>
+                                                <th style="padding: 15px; text-align: right; border-bottom: 2px solid rgba(255,255,255,0.1);">Saldo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-mayor">
+                                            <tr><td colspan="6" class="text-center text-muted" style="padding:20px;">Seleccione una cuenta para consultar el Libro Mayor.</td></tr>
+                                        </tbody>
+                                        <tfoot id="tfoot-mayor" style="display:none; position: sticky; bottom: 0; background: #1a1e2d; z-index: 1; box-shadow: 0 -2px 4px rgba(0,0,0,0.2);">
+                                            <tr style="font-weight:bold;">
+                                                <td colspan="5" class="text-right" style="padding: 15px;">Saldo Final:</td>
+                                                <td id="mayor-saldo-final" style="padding: 15px; text-align: right; color: var(--primary);">C$ 0.00</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- CONTENIDO: BALANCE GENERAL -->
                     <div id="fin-balance" class="fin-tab-content" style="display: none;">
                         <div class="card">
@@ -826,7 +884,7 @@
                 {% endif %}
 
                 <!-- TAB RRHH: RECURSOS HUMANOS Y NÓMINA -->
-                {% if usuario.rol in ['Administrador', 'Responsable de Recursos Humanos'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Responsable de Recursos Humanos'] %}
                 <section id="tab-rrhh" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -1418,8 +1476,12 @@
                         <select id="usr-rol" class="form-control">
                             <option value="Administrador">Administrador (Acceso Total)</option>
                             <option value="Vendedor">Vendedor (Punto de Venta)</option>
-                            <option value="Encargado de Inventario">Encargado de Inventario (Existencias/Compras)</option>
+                            <option value="Encargado de Inventario">Encargado de Inventario (Existencias)</option>
                             <option value="Contador">Contador (Consulta Granada/Reportes)</option>
+                            <option value="Gerente de Operaciones">Gerente de Operaciones</option>
+                            <option value="Gerente Administrativo y Financiero">Gerente Administrativo y Financiero</option>
+                            <option value="Encargado de Compras y Proveedores">Encargado de Compras y Proveedores</option>
+                            <option value="Responsable de Recursos Humanos">Responsable de Recursos Humanos</option>
                         </select>
                     </div>
                 </div>
@@ -1625,7 +1687,7 @@
         window.CURRENT_USER_ROLE = "{{ usuario.rol }}";
     </script>
     <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=1.9"></script>
 
     <!-- ========================================================
     MÓDULO RRHH — Modales y JavaScript

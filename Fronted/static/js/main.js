@@ -1,5 +1,5 @@
 // ==============================================================================
-// JehovÃƒÆ’Ã‚Â¡ Jireh Moto Repuestos - LÃƒÆ’Ã‚Â³gica Frontend SPA & ConexiÃƒÆ’Ã‚Â³n con API Flask
+// JehovÃƒÆ’¡ Jireh Moto Repuestos - LÃƒÆ’³gica Frontend SPA & ConexiÃƒÆ’³n con API Flask
 // ==============================================================================
 
 let productosCache = [];
@@ -14,12 +14,12 @@ let chartTopProdsInstance = null;
 let ventaSeleccionadaActual = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('ÃƒÂ¢Ã…Â¡Ã‚Â¡ Inicializando Sistema JehovÃƒÆ’Ã‚Â¡ Jireh Moto Repuestos...');
+    console.log('⚡ Inicializando Sistema JehovÃƒÆ’¡ Jireh Moto Repuestos...');
 
     initNavigation();
     loadDashboardStats();
 
-    // Event listeners para filtros de bÃƒÆ’Ã‚Âºsqueda
+    // Event listeners para filtros de bÃƒÆ’ºsqueda
     const filterInv = document.getElementById('filter-inventario');
     if (filterInv) {
         filterInv.addEventListener('input', (e) => filterInventarioTable(e.target.value));
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==============================================================================
-// NAVEGACIÃƒÆ’Ã¢â‚¬Å“N Y PESTAÃƒÆ’Ã¢â‚¬ËœAS (TABS & SUBTABS)
+// NAVEGACIÃƒÆ’"N Y PESTAÃƒÆ’Ã¢â‚¬ËœAS (TABS & SUBTABS)
 // ==============================================================================
 
 function initNavigation() {
@@ -74,7 +74,7 @@ function switchTab(tabId) {
     if (tabSection) {
         tabSection.classList.add('active');
 
-        // Cargar datos segÃƒÆ’Ã‚Âºn la pestaÃƒÆ’Ã‚Â±a activa
+        // Cargar datos segÃƒÆ’ºn la pestaÃƒÆ’±a activa
         if (tabId === 'tab-inventario') loadInventario();
         if (tabId === 'tab-ventas') {
             loadPOSProducts();
@@ -116,18 +116,18 @@ async function verificarEstadoCaja() {
         const botonCierreDiscreto = document.getElementById('caja-cierre-discreto');
         const infoActiva = document.getElementById('caja-info-activa');
         
-        if(!bannerApertura) return; // Si no estÃƒÆ’Ã‚Â¡ en el DOM
+        if(!bannerApertura) return; // Si no estÃƒÆ’¡ en el DOM
         
         if (data.estado === 'Abierta') {
             // Ocultar banner grande
             bannerApertura.style.display = 'none';
-            // Mostrar botÃƒÆ’Ã‚Â³n discreto
+            // Mostrar botÃƒÆ’³n discreto
             botonCierreDiscreto.style.display = 'block';
             infoActiva.innerHTML = `<strong>CAJA ACTIVA</strong> | Abierta: ${data.fecha_apertura}`;
         } else {
             // Mostrar banner grande
             bannerApertura.style.display = 'block';
-            // Ocultar botÃƒÆ’Ã‚Â³n discreto
+            // Ocultar botÃƒÆ’³n discreto
             botonCierreDiscreto.style.display = 'none';
         }
     } catch (e) {
@@ -208,8 +208,8 @@ async function submitCierreCaja() {
         } else {
             let dif = data.diferencia;
             let msg = `Diferencia encontrada: <strong>C$ ${dif.toFixed(2)}</strong>`;
-            if(dif < 0) msg += "<br><br><span style='color: #ef4444;'><i class='ph-bold ph-warning'></i> Ãƒâ€šÃ‚Â¡FALTANTE DE DINERO! Debes reportarlo.</span>";
-            if(dif > 0) msg += "<br><br><span style='color: #f59e0b;'><i class='ph-bold ph-warning'></i> Ãƒâ€šÃ‚Â¡SOBRANTE DE DINERO!</span>";
+            if(dif < 0) msg += "<br><br><span style='color: #ef4444;'><i class='ph-bold ph-warning'></i> ¡FALTANTE DE DINERO! Debes reportarlo.</span>";
+            if(dif > 0) msg += "<br><br><span style='color: #f59e0b;'><i class='ph-bold ph-warning'></i> ¡SOBRANTE DE DINERO!</span>";
             if(dif === 0) msg += "<br><br><span style='color: #10b981;'><i class='ph-bold ph-check'></i> CAJA CUADRADA EXACTAMENTE.</span>";
             
             document.getElementById('msg-caja-cerrada-exito-text').innerHTML = msg;
@@ -289,7 +289,7 @@ async function guardarCuenta(e) {
 }
 
 async function eliminarCuenta(id) {
-    if (!confirm("Ãƒâ€šÃ‚Â¿EstÃƒÆ’Ã‚Â¡s seguro de que deseas eliminar esta cuenta?")) return;
+    if (!confirm("Ãƒâ€š¿EstÃƒÆ’¡s seguro de que deseas eliminar esta cuenta?")) return;
     
     try {
         const resp = await fetch(`/api/finanzas/cuentas/${id}`, {
@@ -355,7 +355,7 @@ function renderRecentSalesList(ventas) {
     if (!container) return;
 
     if (!Array.isArray(ventas) || ventas.length === 0) {
-        container.innerHTML = `<div class="empty-state"><p>No hay ventas registradas aÃƒÆ’Ã‚Âºn.</p></div>`;
+        container.innerHTML = `<div class="empty-state"><p>No hay ventas registradas aÃƒÆ’ºn.</p></div>`;
         return;
     }
 
@@ -385,7 +385,7 @@ function renderRecentSalesList(ventas) {
 }
 
 // ==============================================================================
-// MÃƒÆ’Ã¢â‚¬Å“DULO 1: INVENTARIO & KARDEX
+// MÃƒÆ’"DULO 1: INVENTARIO & KARDEX
 // ==============================================================================
 
 async function loadInventario() {
@@ -453,9 +453,9 @@ function filterInventarioTable(query) {
     renderInventarioTable(filtrados);
 }
 
-// --- EDICIÃƒÆ’Ã¢â‚¬Å“N Y BORRADO DE PRODUCTO ---
+// --- EDICIÃƒÆ’"N Y BORRADO DE PRODUCTO ---
 async function borrarProducto(prodId) {
-    if(!confirm("Ãƒâ€šÃ‚Â¿EstÃƒÆ’Ã‚Â¡s seguro de que deseas eliminar este repuesto? (Los registros histÃƒÆ’Ã‚Â³ricos se mantendrÃƒÆ’Ã‚Â¡n por integridad)")) return;
+    if(!confirm("Ãƒâ€š¿EstÃƒÆ’¡s seguro de que deseas eliminar este repuesto? (Los registros histÃƒÆ’³ricos se mantendrÃƒÆ’¡n por integridad)")) return;
     try {
         const res = await fetch(`/api/productos/${prodId}`, { method: 'DELETE' });
         const data = await res.json();
@@ -467,7 +467,7 @@ async function borrarProducto(prodId) {
         }
     } catch(e) {
         console.error(e);
-        alert("Error de conexiÃƒÆ’Ã‚Â³n al eliminar producto");
+        alert("Error de conexiÃƒÆ’³n al eliminar producto");
     }
 }
 
@@ -506,7 +506,7 @@ async function guardarEdicionProducto(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('Ãƒâ€šÃ‚Â¡Repuesto actualizado con ÃƒÆ’Ã‚Â©xito!');
+            alert('¡Repuesto actualizado con ÃƒÆ’©xito!');
             closeModal('modal-editar-producto');
             loadInventario();
             loadDashboardStats();
@@ -593,13 +593,13 @@ function toggleMotivoStockAlert() {
         alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
         alertBox.style.color = 'var(--accent-red)';
         alertBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-        alertBox.innerHTML = `<i class="ph-bold ph-warning"></i> <strong>Modo Producto Defectuoso / DaÃƒÆ’Ã‚Â±ado:</strong> El registro en Kardex se actualizarÃƒÆ’Ã‚Â¡ con esta devoluciÃƒÆ’Ã‚Â³n, pero el stock disponible en catÃƒÆ’Ã‚Â¡logo <strong>NO se incrementarÃƒÆ’Ã‚Â¡</strong> (el repuesto defectuoso no vuelve a estar a la venta).`;
+        alertBox.innerHTML = `<i class="ph-bold ph-warning"></i> <strong>Modo Producto Defectuoso / DaÃƒÆ’±ado:</strong> El registro en Kardex se actualizarÃƒÆ’¡ con esta devoluciÃƒÆ’³n, pero el stock disponible en catÃƒÆ’¡logo <strong>NO se incrementarÃƒÆ’¡</strong> (el repuesto defectuoso no vuelve a estar a la venta).`;
     } else {
         alertBox.className = 'alert alert-info';
         alertBox.style.background = 'rgba(245, 158, 11, 0.12)';
         alertBox.style.color = 'var(--primary)';
         alertBox.style.border = '1px solid rgba(245, 158, 11, 0.3)';
-        alertBox.innerHTML = `<i class="ph-bold ph-info"></i> <strong>Modo Ajuste por Producto de MÃƒÆ’Ã‚Â¡s / Cantidad:</strong> Las existencias en el inventario actual <strong>SÃƒÆ’Ã‚Â se recalcularÃƒÆ’Ã‚Â¡n y actualizarÃƒÆ’Ã‚Â¡n</strong> en tiempo real.`;
+        alertBox.innerHTML = `<i class="ph-bold ph-info"></i> <strong>Modo Ajuste por Producto de MÃƒÆ’¡s / Cantidad:</strong> Las existencias en el inventario actual <strong>SÃƒÆ’ se recalcularÃƒÆ’¡n y actualizarÃƒÆ’¡n</strong> en tiempo real.`;
     }
 }
 
@@ -659,7 +659,7 @@ async function guardarEdicionMovimiento(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert(`Ãƒâ€šÃ‚Â¡Movimiento #MOV-${movId} guardado con ÃƒÆ’Ã‚Â©xito!\n${data.mensaje}`);
+            alert(`¡Movimiento #MOV-${movId} guardado con ÃƒÆ’©xito!\n${data.mensaje}`);
             closeModal('modal-editar-movimiento');
             loadMovimientos();
             loadInventario();
@@ -690,7 +690,7 @@ async function guardarProducto(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('Ãƒâ€šÃ‚Â¡Repuesto guardado con ÃƒÆ’Ã‚Â©xito!');
+            alert('¡Repuesto guardado con ÃƒÆ’©xito!');
             closeModal('modal-producto');
             document.getElementById('form-producto').reset();
             loadInventario();
@@ -704,7 +704,7 @@ async function guardarProducto(e) {
 }
 
 // ==============================================================================
-// MÃƒÆ’Ã¢â‚¬Å“DULO 2: VENTAS (POS, HISTORIAL & COMPROBANTES)
+// MÃƒÆ’"DULO 2: VENTAS (POS, HISTORIAL & COMPROBANTES)
 // ==============================================================================
 
 async function loadPOSProducts() {
@@ -714,7 +714,7 @@ async function loadPOSProducts() {
         productosCache = productos;
         renderPOSProductsGrid(productos);
     } catch (err) {
-        console.error('Error al cargar catÃƒÆ’Ã‚Â¡logo POS:', err);
+        console.error('Error al cargar catÃƒÆ’¡logo POS:', err);
     }
 }
 
@@ -744,7 +744,7 @@ function renderPOSProductsGrid(productos) {
                 </div>
                 <div>
                     <div class="pos-prod-price">$${p.precio.toFixed(2)}</div>
-                    <div class="pos-prod-stock" style="${sinStock ? 'color: #ef4444; font-weight: bold;' : ''}">${sinStock ? 'ÃƒÂ¢Ã‚ÂÃ…â€™ AGOTADO' : `Stock: ${stockDisponible}`}</div>
+                    <div class="pos-prod-stock" style="${sinStock ? 'color: #ef4444; font-weight: bold;' : ''}">${sinStock ? '❌ AGOTADO' : `Stock: ${stockDisponible}`}</div>
                 </div>
             </div>
         `;
@@ -779,7 +779,7 @@ function addToCartPOS(prodId) {
         if (itemEnCarrito.cantidad < prod.stock) {
             itemEnCarrito.cantidad++;
         } else {
-            alert(`No puedes agregar mÃƒÆ’Ã‚Â¡s unidades de '${prod.nombre}'. Stock disponible: ${prod.stock}`);
+            alert(`No puedes agregar mÃƒÆ’¡s unidades de '${prod.nombre}'. Stock disponible: ${prod.stock}`);
         }
     } else {
         cartPOS.push({
@@ -827,7 +827,7 @@ function renderCartPOS() {
     if (!tbody || !totalEl) return;
 
     if (cartPOS.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">El carrito estÃƒÆ’Ã‚Â¡ vacÃƒÆ’Ã‚Â­o.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">El carrito estÃƒÆ’¡ vacÃƒÆ’­o.</td></tr>`;
         totalEl.textContent = '$0.00';
         return;
     }
@@ -928,7 +928,7 @@ function renderHistorialVentasTable(ventas) {
             <td><strong>${v.codigo_venta}</strong></td>
             <td>${v.fecha}</td>
             <td>${v.cliente || 'Invitado'}</td>
-            <td>${v.vendedor || 'Sistema AutomÃƒÆ’Ã‚Â¡tico'}</td>
+            <td>${v.vendedor || 'Sistema AutomÃƒÆ’¡tico'}</td>
             <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${v.forma_pago}</span></td>
             <td style="font-weight: 700; color: var(--accent-green);">$${v.total.toFixed(2)}</td>
             <td style="display: flex; gap: 5px; align-items: center;">
@@ -994,7 +994,7 @@ function verComprobanteVenta(ventaId) {
         renderTicketComprobante(venta, false);
         openModal('modal-comprobante');
     } else {
-        console.error('Error: Venta no encontrada en cachÃƒÆ’Ã‚Â©.');
+        console.error('Error: Venta no encontrada en cachÃƒÆ’©.');
         alert('No se pudo cargar el comprobante.');
     }
 }
@@ -1009,7 +1009,7 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
     if (esNuevaVenta) {
         bannerExito = `
             <div style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; text-align: center; font-size: 0.92rem;">
-                <i class="ph-bold ph-check-circle" style="font-size: 1.2rem; vertical-align: middle;"></i> Ãƒâ€šÃ‚Â¡Venta ${v.codigo_venta} procesada exitosamente por un total de $${v.total.toFixed(2)}!
+                <i class="ph-bold ph-check-circle" style="font-size: 1.2rem; vertical-align: middle;"></i> ¡Venta ${v.codigo_venta} procesada exitosamente por un total de $${v.total.toFixed(2)}!
             </div>
         `;
     }
@@ -1032,9 +1032,9 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
         ${bannerExito}
         <div style="font-family: monospace, sans-serif; background: #ffffff; color: #0f172a; padding: 1.5rem; border-radius: 8px; max-width: 750px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 55vh; overflow-y: auto;">
             <div style="text-align: center; border-bottom: 2px dashed #94a3b8; padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
-                <h2 style="font-size: 1.3rem; margin-bottom: 0.2rem; color: #0f172a;">JEHOVÃƒÆ’Ã‚Â JIREH</h2>
+                <h2 style="font-size: 1.3rem; margin-bottom: 0.2rem; color: #0f172a;">JEHOVÃƒÆ’ JIREH</h2>
                 <div style="font-size: 0.8rem; font-weight: 700; color: #475569;">MOTO REPUESTOS - MASATEPE</div>
-                <div style="font-size: 0.75rem; color: #64748b;">AtenciÃƒÆ’Ã‚Â³n de Calidad y Repuestos Originales</div>
+                <div style="font-size: 0.75rem; color: #64748b;">AtenciÃƒÆ’³n de Calidad y Repuestos Originales</div>
                 <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.2rem;">Tel: +505 8899-0000 | Masatepe, Masaya</div>
             </div>
 
@@ -1065,7 +1065,7 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
             </div>
 
             <div style="text-align: center; font-size: 0.75rem; color: #64748b; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 0.5rem;">
-                Ãƒâ€šÃ‚Â¡Gracias por su compra en JehovÃƒÆ’Ã‚Â¡ Jireh! ÃƒÂ°Ã…Â¸Ã¢â€žÂ¢Ã‚Â<br>
+                ¡Gracias por su compra en JehovÃƒÆ’¡ Jireh! í°Ã…Â¸Ã¢â€žÂ¢<br>
                 Conserve este comprobante para cualquier reclamo.
             </div>
         </div>
@@ -1093,7 +1093,7 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
 }
 
 function concluirSinImprimirTicket(codigoVenta) {
-    alert(`ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Â° Ãƒâ€šÃ‚Â¡Venta ${codigoVenta} realizada exitosamente!`);
+    alert(`🎉 ¡Venta ${codigoVenta} realizada exitosamente!`);
     closeModal('modal-comprobante');
 }
 
@@ -1102,7 +1102,7 @@ function imprimirTicketActual() {
 }
 
 // ==============================================================================
-// MÃƒÆ’Ã¢â‚¬Å“DULO 3: COMPRAS Y PROVEEDORES
+// MÃƒÆ’"DULO 3: COMPRAS Y PROVEEDORES
 // ==============================================================================
 
 async function toggleProveedorEstado(id, activar) {
@@ -1212,7 +1212,7 @@ async function guardarCompra(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('Ãƒâ€šÃ‚Â¡Compra registrada! El stock del producto ha sido incrementado.');
+            alert('¡Compra registrada! El stock del producto ha sido incrementado.');
             closeModal('modal-compra');
             loadComprasYProveedores();
             loadDashboardStats();
@@ -1239,7 +1239,7 @@ async function guardarProveedor(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('Ãƒâ€šÃ‚Â¡Proveedor registrado!');
+            alert('¡Proveedor registrado!');
             closeModal('modal-proveedor');
             document.getElementById('form-proveedor').reset();
             loadComprasYProveedores();
@@ -1252,7 +1252,7 @@ async function guardarProveedor(e) {
 }
 
 // ==============================================================================
-// MÃƒÆ’Ã¢â‚¬Å“DULO 4: REPORTES Y ANÃƒÆ’Ã‚ÂLISIS CON CHART.JS
+// MÃƒÆ’"DULO 4: REPORTES Y ANÃƒÆ’LISIS CON CHART.JS
 // ==============================================================================
 
 async function loadReportesContabilidad() {
@@ -1273,7 +1273,7 @@ async function loadReportesContabilidad() {
         document.getElementById('rep-margen').textContent = `$${data.margen_bruto_estimado.toFixed(2)}`;
         document.getElementById('rep-rotacion').textContent = `${data.rotacion_inventario || 0.00}x`;
 
-        // Render GrÃƒÆ’Ã‚Â¡ficos Chart.js
+        // Render GrÃƒÆ’¡ficos Chart.js
         renderCharts(data);
 
         // Render Tabla Top Productos
@@ -1437,7 +1437,7 @@ async function guardarUsuario(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert(`Ãƒâ€šÃ‚Â¡Usuario '${username}' registrado con rol '${rol}'!`);
+            alert(`¡Usuario '${username}' registrado con rol '${rol}'!`);
             closeModal('modal-usuario');
             document.getElementById('form-usuario').reset();
             loadUsuarios();
@@ -1462,7 +1462,7 @@ async function loadCategorias() {
         if (!tbody) return;
 
         if (categorias.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No hay categorÃƒÆ’Ã‚Â­as registradas.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No hay categorÃƒÆ’­as registradas.</td></tr>`;
             return;
         }
 
@@ -1480,7 +1480,7 @@ async function loadCategorias() {
             </tr>
         `).join('');
     } catch (err) {
-        console.error('Error al cargar categorÃƒÆ’Ã‚Â­as:', err);
+        console.error('Error al cargar categorÃƒÆ’­as:', err);
     }
 }
 
@@ -1497,8 +1497,8 @@ function openCategoriaForm(id = null, nombre = '', descripcion = '') {
     document.getElementById('cat-descripcion').value = descripcion;
     
     document.getElementById('cat-form-title').innerHTML = id 
-        ? '<i class="ph-bold ph-pencil-simple"></i> Editar CategorÃƒÆ’Ã‚Â­a'
-        : '<i class="ph-bold ph-plus"></i> Registrar CategorÃƒÆ’Ã‚Â­a';
+        ? '<i class="ph-bold ph-pencil-simple"></i> Editar CategorÃƒÆ’­a'
+        : '<i class="ph-bold ph-plus"></i> Registrar CategorÃƒÆ’­a';
         
     openModal('modal-categoria-form');
 }
@@ -1528,16 +1528,16 @@ async function guardarCategoria(e) {
             if(typeof loadInventario === 'function') loadInventario();
             openModalCategorias();
         } else {
-            alert(data.error || 'Error al guardar la categorÃƒÆ’Ã‚Â­a.');
+            alert(data.error || 'Error al guardar la categorÃƒÆ’­a.');
         }
     } catch (err) {
-        console.error('Error al guardar categorÃƒÆ’Ã‚Â­a:', err);
-        alert('OcurriÃƒÆ’Ã‚Â³ un error inesperado al guardar la categorÃƒÆ’Ã‚Â­a.');
+        console.error('Error al guardar categorÃƒÆ’­a:', err);
+        alert('OcurriÃƒÆ’³ un error inesperado al guardar la categorÃƒÆ’­a.');
     }
 }
 
 // ==============================================================================
-// MÃƒÆ’Ã¢â‚¬Å“DULO DE ESTADOS FINANCIEROS Y CONTABILIDAD
+// MÃƒÆ’"DULO DE ESTADOS FINANCIEROS Y CONTABILIDAD
 // ==============================================================================
 
 function switchFinanzasTab(subtab, btn) {
@@ -1592,17 +1592,24 @@ async function loadCatalogoCuentas() {
                     <td>${cta.nombre}</td>
                     <td><span class="badge ${cta.clasificacion.includes('Activo') ? 'bg-blue' : cta.clasificacion.includes('Pasivo') ? 'bg-red' : cta.clasificacion.includes('Patrimonio') ? 'bg-orange' : 'bg-green'}">${cta.clasificacion}</span></td>
                     <td>${cta.naturaleza}</td>
-                    <td>
+                    ${window.usuarioRol === 'Contador' ? '' : `<td>
                         <button class="btn" style="background-color: #ef4444; color: white; padding: 0.25rem 0.5rem; border: none; border-radius: 4px;" onclick="eliminarCuenta(${cta.id})">
                             <i class="ph-bold ph-trash"></i>
                         </button>
-                    </td>
+                    </td>`}
                 </tr>
             `;
         });
         
         // Cargar para el select del modal de asiento
         window.cuentasDisponibles = data;
+        
+        // Populate Libro Mayor select
+        const mayorSelect = document.getElementById('mayor-cuenta');
+        if (mayorSelect) {
+            mayorSelect.innerHTML = '<option value="">-- Seleccione una cuenta --</option>' + 
+                data.map(c => `<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`).join('');
+        }
     } catch (e) {
         console.error(e);
     }
@@ -1666,7 +1673,7 @@ async function loadAsientosContables() {
                     <p style="margin-bottom: 1rem; color: var(--text-muted); font-style: italic;">"${a.concepto}"</p>
                     <table class="data-table" style="font-size: 0.9rem;">
                         <thead style="background: var(--bg-dark);">
-                            <tr><th>CÃƒÆ’Ã‚Â³digo</th><th>Cuenta</th><th class="text-right">Debe</th><th class="text-right">Haber</th></tr>
+                            <tr><th>Código</th><th>Cuenta</th><th class="text-right">Debe</th><th class="text-right">Haber</th></tr>
                         </thead>
                         <tbody>${movsHtml}</tbody>
                         <tfoot>
@@ -1709,14 +1716,14 @@ async function loadEstadoResultados() {
 
         let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
-        // Las variables start y end ya fueron declaradas al inicio de la funciÃƒÆ’Ã‚Â³n.
+        // Las variables start y end ya fueron declaradas al inicio de la funciÃƒÆ’³n.
         let subtitle = "Del 01 de Enero a la fecha actual";
         if (start && end) subtitle = `Del ${start} al ${end}`;
         else if (start) subtitle = `A partir del ${start}`;
         else if (end) subtitle = `Hasta el ${end}`;
         
         let html = `<div style="max-width: 800px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÃƒÆ’Ã‚Â JIREH MOTO REPUESTOS</h2>`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÃƒÆ’ JIREH MOTO REPUESTOS</h2>`;
         html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE RESULTADOS INTEGRAL<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
         
         html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
@@ -1774,12 +1781,12 @@ async function loadBalanceGeneral() {
 
         let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
-        // La variable end ya fue declarada al inicio de la funciÃƒÆ’Ã‚Â³n.
+        // La variable end ya fue declarada al inicio de la funciÃƒÆ’³n.
         let subtitle = end ? `Al ${end}` : "A la fecha actual";
         
         let html = `<div style="max-width: 900px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÃƒÆ’Ã‚Â JIREH MOTO REPUESTOS</h2>`;
-        html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE SITUACIÃƒÆ’Ã¢â‚¬Å“N FINANCIERA<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÃƒÆ’ JIREH MOTO REPUESTOS</h2>`;
+        html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE SITUACIÃƒÆ’"N FINANCIERA<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
         
         html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">`;
         
@@ -1902,13 +1909,13 @@ async function guardarAsiento(e) {
     });
     
     if (Math.abs(tDebe - tHaber) > 0.01) {
-        alert("El asiento no estÃƒÆ’Ã‚Â¡ cuadrado. Debe y Haber deben sumar lo mismo.");
+        alert("El asiento no estÃƒÆ’¡ cuadrado. Debe y Haber deben sumar lo mismo.");
         btn.disabled = false;
         return;
     }
     
     if (movimientos.length < 2) {
-        alert("Debe incluir al menos 2 movimientos vÃƒÆ’Ã‚Â¡lidos.");
+        alert("Debe incluir al menos 2 movimientos vÃƒÆ’¡lidos.");
         btn.disabled = false;
         return;
     }
@@ -1935,7 +1942,7 @@ async function guardarAsiento(e) {
         }
     } catch (err) {
         console.error(err);
-        alert("OcurriÃƒÆ’Ã‚Â³ un error en la solicitud.");
+        alert("OcurriÃƒÆ’³ un error en la solicitud.");
     } finally {
         btn.disabled = false;
     }
@@ -1966,7 +1973,7 @@ async function cargarSesionesCaja() {
         tbody.innerHTML = sesiones.map(s => {
             return `
             <tr>
-                <td><strong>SesiÃ³n ${s.id}</strong></td>
+                <td><strong>Sesión ${s.id}</strong></td>
                 <td style="text-align: right;">
                     ${s.estado === 'Cerrada' ? `<button class="btn btn-sm btn-primary" onclick="verReporteCaja(${s.id})" title="Ver Reporte"><i class="ph-bold ph-eye"></i> Ver Reporte</button>` : `<span class="text-muted text-sm" style="display: inline-block; padding: 0.3rem 0.6rem;">En curso</span>`}
                 </td>
@@ -2010,7 +2017,7 @@ async function verReporteCaja(id) {
         openModal('modal-reporte-caja');
     } catch (e) {
         console.error("Error al cargar reporte de caja:", e);
-        alert("OcurriÃƒÂ³ un error al cargar el reporte.");
+        alert("Ocurrió un error al cargar el reporte.");
     }
 }
 
@@ -2050,3 +2057,61 @@ async function anularVenta(v_id) {
     }
 }
 
+
+
+// ==============================================================================
+// LIBRO MAYOR
+// ==============================================================================
+async function cargarLibroMayor() {
+    const cuentaId = document.getElementById('mayor-cuenta').value;
+    if (!cuentaId) {
+        alert("Seleccione una cuenta contable");
+        return;
+    }
+    
+    const desde = document.getElementById('fin-fecha-inicio').value;
+    const hasta = document.getElementById('fin-fecha-fin').value;
+    
+    let url = `/api/finanzas/libro_mayor?cuenta_id=${cuentaId}`;
+    if (desde) url += `&fecha_inicio=${desde}`;
+    if (hasta) url += `&fecha_fin=${hasta}`;
+    
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (!res.ok) {
+            alert(data.error || "Error al cargar el libro mayor");
+            return;
+        }
+        
+        const formatNum = (num) => parseFloat(num).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        document.getElementById('mayor-info').style.display = 'block';
+        document.getElementById('mayor-titulo-cuenta').innerText = `Cuenta: ${data.cuenta.codigo} - ${data.cuenta.nombre} (${data.cuenta.naturaleza})`;
+        document.getElementById('mayor-saldo-inicial').innerText = `C$ ${formatNum(data.saldo_inicial)}`;
+        
+        const tbody = document.getElementById('tbody-mayor');
+        if (data.movimientos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding: 20px;">No hay movimientos en este periodo.</td></tr>`;
+        } else {
+            tbody.innerHTML = data.movimientos.map(m => `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.3s;">
+                    <td style="padding: 12px 15px;">${m.fecha.substring(0, 16).replace('T', ' ')}</td>
+                    <td style="padding: 12px 15px;"><strong>#${m.asiento_id}</strong></td>
+                    <td style="padding: 12px 15px;">${m.concepto}</td>
+                    <td class="text-accent-green" style="padding: 12px 15px; text-align: right;">C$ ${formatNum(m.debe)}</td>
+                    <td class="text-accent-red" style="padding: 12px 15px; text-align: right;">C$ ${formatNum(m.haber)}</td>
+                    <td style="font-weight:bold; color:var(--primary); padding: 12px 15px; text-align: right;">C$ ${formatNum(m.saldo)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        document.getElementById('tfoot-mayor').style.display = 'table-footer-group';
+        document.getElementById('mayor-saldo-final').innerText = `C$ ${formatNum(data.saldo_final)}`;
+        
+    } catch (e) {
+        console.error(e);
+        alert("Error de conexión");
+    }
+}

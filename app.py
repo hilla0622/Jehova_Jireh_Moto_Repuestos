@@ -265,7 +265,7 @@ def api_categorias():
         return jsonify(categorias)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
             return jsonify({"error": "No tienes permiso para registrar categorÃ­as."}), 403
         
         data = request.json or {}
@@ -288,7 +288,7 @@ def api_categorias():
 @app.route('/api/categorias/<int:cat_id>', methods=['PUT'])
 @login_required
 def api_categoria_editar(cat_id):
-    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
         return jsonify({"error": "No tienes permiso para modificar categorÃ­as."}), 403
     
     data = request.json or {}
@@ -327,7 +327,7 @@ def api_productos():
         return jsonify(productos)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
             return jsonify({"error": "No tienes permiso para registrar productos."}), 403
         
         data = request.json or {}
@@ -377,7 +377,7 @@ def api_productos():
 @app.route('/api/productos/<int:prod_id>', methods=['PUT', 'DELETE'])
 @login_required
 def api_producto_editar(prod_id):
-    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
         return jsonify({"error": "No tienes permiso para modificar productos."}), 403
     
     try:
@@ -458,7 +458,7 @@ def api_movimientos():
         return jsonify(movs)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
             return jsonify({"error": "No tienes permiso para registrar movimientos de inventario."}), 403
 
         data = request.json or {}
@@ -684,7 +684,7 @@ def api_ventas():
         return jsonify(ventas)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Vendedor']:
+        if session['user']['rol'] not in ['Administrador', 'Vendedor', 'Gerente de Operaciones']:
             return jsonify({"error": "No tienes permiso para procesar ventas."}), 403
         
         data = request.json or {}
@@ -1018,7 +1018,7 @@ def api_proveedores():
         return jsonify(provs)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
             return jsonify({"error": "No tienes permisos."}), 403
             
         data = request.json or {}
@@ -1040,7 +1040,7 @@ def api_proveedores():
 @app.route('/api/proveedores/<int:prov_id>/estado', methods=['PUT'])
 @login_required
 def api_proveedor_estado(prov_id):
-    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
         return jsonify({"error": "No tienes permisos."}), 403
     
     data = request.json or {}
@@ -1083,7 +1083,7 @@ def api_compras():
         return jsonify(compras)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario']:
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
             return jsonify({"error": "No tienes permiso para registrar compras."}), 403
         
         data = request.json or {}
@@ -1166,7 +1166,7 @@ def api_compras():
 @app.route('/api/reportes', methods=['GET'])
 @login_required
 def api_reportes():
-    if session['user']['rol'] not in ['Administrador', 'Contador']:
+    if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado."}), 403
 
     try:
@@ -1231,7 +1231,7 @@ def api_reportes():
 @app.route('/api/finanzas/cuentas', methods=['GET', 'POST'])
 @login_required
 def api_cuentas_contables():
-    if session['user']['rol'] not in ['Administrador', 'Contador']:
+    if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     
     if request.method == 'GET':
@@ -1242,6 +1242,8 @@ def api_cuentas_contables():
             return jsonify({"error": str(e)}), 500
 
     if request.method == 'POST':
+        if session['user']['rol'] == 'Contador':
+            return jsonify({"error": "No tienes permiso para crear cuentas."}), 403
         data = request.json or {}
         codigo = data.get('codigo')
         nombre = data.get('nombre')
@@ -1262,7 +1264,7 @@ def api_cuentas_contables():
 @app.route('/api/finanzas/cuentas/<int:id>', methods=['DELETE'])
 @login_required
 def api_cuentas_contables_delete(id):
-    if session['user']['rol'] not in ['Administrador', 'Contador']:
+    if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     try:
         movs = execute_query("SELECT TOP 1 id FROM movimientos_contables WHERE cuenta_id = ?", (id,), fetchall=True)
@@ -1277,7 +1279,7 @@ def api_cuentas_contables_delete(id):
 @app.route('/api/finanzas/asientos', methods=['GET', 'POST'])
 @login_required
 def api_asientos_contables():
-    if session['user']['rol'] not in ['Administrador', 'Contador']:
+    if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     
     if request.method == 'GET':
@@ -1321,6 +1323,8 @@ def api_asientos_contables():
             return jsonify({"error": str(e)}), 500
 
     if request.method == 'POST':
+        if session['user']['rol'] == 'Contador':
+            return jsonify({"error": "No tienes permiso para crear cuentas."}), 403
         data = request.json or {}
         fecha = data.get('fecha')
         concepto = data.get('concepto')
@@ -1367,10 +1371,98 @@ def api_asientos_contables():
         finally:
             if 'conn' in locals(): conn.close()
 
+
+@app.route('/api/finanzas/libro_mayor', methods=['GET'])
+@login_required
+@role_required('Administrador', 'Gerente Administrativo y Financiero', 'Contador')
+def api_libro_mayor():
+    cuenta_id = request.args.get('cuenta_id')
+    fecha_inicio = request.args.get('fecha_inicio')
+    fecha_fin = request.args.get('fecha_fin')
+    
+    if not cuenta_id:
+        return jsonify({"error": "Debe especificar una cuenta."}), 400
+        
+    try:
+        # Get account details
+        cta = execute_query("SELECT id, codigo, nombre, naturaleza FROM cuentas_contables WHERE id = ?", (cuenta_id,), fetchone=True)
+        if not cta:
+            return jsonify({"error": "Cuenta no encontrada."}), 404
+            
+        naturaleza = cta['naturaleza']
+        
+        # Calculate initial balance before fecha_inicio
+        saldo_inicial = 0.0
+        if fecha_inicio:
+            query_inicial = '''
+                SELECT ISNULL(SUM(m.debe), 0) as total_debe, ISNULL(SUM(m.haber), 0) as total_haber 
+                FROM movimientos_contables m
+                INNER JOIN asientos_contables a ON a.id = m.asiento_id
+                WHERE m.cuenta_id = ? AND a.fecha < ?
+            '''
+            inicial_result = execute_query(query_inicial, (cuenta_id, fecha_inicio), fetchone=True)
+            if naturaleza == 'Deudora':
+                saldo_inicial = float(inicial_result['total_debe']) - float(inicial_result['total_haber'])
+            else:
+                saldo_inicial = float(inicial_result['total_haber']) - float(inicial_result['total_debe'])
+                
+        # Get movements in range
+        where_clause = "m.cuenta_id = ?"
+        params = [cuenta_id]
+        if fecha_inicio:
+            where_clause += " AND a.fecha >= ?"
+            params.append(fecha_inicio)
+        if fecha_fin:
+            where_clause += " AND a.fecha <= ?"
+            params.append(fecha_fin)
+            
+        query_movs = f'''
+            SELECT a.id as asiento_id, a.fecha, a.concepto, m.debe, m.haber
+            FROM movimientos_contables m
+            INNER JOIN asientos_contables a ON a.id = m.asiento_id
+            WHERE {where_clause}
+            ORDER BY a.fecha ASC, a.id ASC
+        '''
+        movimientos = execute_query(query_movs, tuple(params), fetchall=True)
+        
+        saldo_actual = saldo_inicial
+        movs_list = []
+        for m in movimientos:
+            debe = float(m['debe'])
+            haber = float(m['haber'])
+            if naturaleza == 'Deudora':
+                saldo_actual += (debe - haber)
+            else:
+                saldo_actual += (haber - debe)
+                
+            movs_list.append({
+                "asiento_id": m['asiento_id'],
+                "fecha": m['fecha'].isoformat() if hasattr(m['fecha'], 'isoformat') else str(m['fecha']),
+                "concepto": m['concepto'],
+                "debe": debe,
+                "haber": haber,
+                "saldo": saldo_actual
+            })
+            
+        return jsonify({
+            "cuenta": {
+                "codigo": cta['codigo'],
+                "nombre": cta['nombre'],
+                "naturaleza": naturaleza
+            },
+            "saldo_inicial": saldo_inicial,
+            "movimientos": movs_list,
+            "saldo_final": saldo_actual
+        })
+    except Exception as e:
+        print("Error en libro mayor:", e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/finanzas/balance_comprobacion', methods=['GET'])
 @login_required
 def api_balance_comprobacion():
-    if session['user']['rol'] not in ['Administrador', 'Contador']:
+    if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     try:
         query = """
@@ -1427,7 +1519,7 @@ def api_balance_comprobacion():
 @app.route('/api/finanzas/estado_resultados', methods=['GET'])
 @login_required
 def api_estado_resultados():
-    if session['user']['rol'] not in ['Administrador', 'Contador']:
+    if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     try:
         start_date = request.args.get('start')
@@ -1498,7 +1590,7 @@ def api_estado_resultados():
 @app.route('/api/finanzas/balance_general', methods=['GET'])
 @login_required
 def api_balance_general():
-    if session['user']['rol'] not in ['Administrador', 'Contador']:
+    if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     try:
         end_date = request.args.get('end')
@@ -1750,6 +1842,8 @@ def api_movimientos_laborales():
         return jsonify(movimientos)
 
     if request.method == 'POST':
+        if session['user']['rol'] == 'Contador':
+            return jsonify({"error": "No tienes permiso para crear cuentas."}), 403
         data = request.json or {}
         empleado_id  = data.get('empleado_id')
         tipo         = data.get('tipo', '')

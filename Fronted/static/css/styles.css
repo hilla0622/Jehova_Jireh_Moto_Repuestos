@@ -1051,9 +1051,12 @@ body {
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(4px);
-    z-index: 100;
+    z-index: 1050;
     align-items: center;
     justify-content: center;
+    padding: 1.25rem;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 .modal.active {
@@ -1064,10 +1067,16 @@ body {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    width: 90%;
-    max-width: 500px;
-    box-shadow: var(--shadow-soft);
+    width: 95%;
+    max-width: 520px;
+    max-height: calc(100vh - 2.5rem);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
     animation: modalIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    margin: auto;
 }
 
 @keyframes modalIn {
@@ -1083,11 +1092,13 @@ body {
 }
 
 .modal-header {
-    padding: 1.2rem 1.5rem;
+    padding: 1rem 1.4rem;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
+    background: var(--bg-card);
 }
 
 .modal-header h3 {
@@ -1096,29 +1107,45 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    margin: 0;
 }
 
 .modal-close {
     background: transparent;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
+    line-height: 1;
     color: var(--text-muted);
     cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.modal-close:hover {
+    color: var(--primary);
+    transform: scale(1.1);
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .modal-body {
-    padding: 1.5rem;
+    padding: 1.25rem 1.4rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
-    padding: 1rem 1.5rem;
+    padding: 0.85rem 1.4rem;
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
+    flex-shrink: 0;
+    background: var(--bg-card);
 }
 
 /* Utilities */
@@ -1417,3 +1444,346 @@ body {
         box-shadow: none !important;
     }
 }
+
+/* ==========================================================================
+   MÓDULO RRHH — Rediseño con Pestañas Internas
+   ========================================================================== */
+
+/* ─── CABECERA DEL MÓDULO ─── */
+.rrhh-module-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem 1.75rem;
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(245,158,11,0.05) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.rrhh-module-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-hover) 100%);
+    border-radius: 4px 0 0 4px;
+}
+
+.rrhh-title-block {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.rrhh-title-icon {
+    width: 48px; height: 48px;
+    background: var(--primary-light);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.rrhh-title-block h2 {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 0.2rem 0;
+    line-height: 1.2;
+}
+
+.rrhh-title-block p {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+/* ─── BOTONES DE LEGISLACIÓN ─── */
+.rrhh-ley-buttons {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.btn-ley {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.9rem;
+    background: transparent;
+    border: 1.5px solid rgba(99,102,241,0.4);
+    border-radius: 8px;
+    color: #818cf8;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: var(--font-main);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.btn-ley span {
+    display: flex;
+    flex-direction: column;
+}
+
+.btn-ley small {
+    font-size: 0.67rem;
+    font-weight: 400;
+    opacity: 0.75;
+    line-height: 1;
+}
+
+.btn-ley i {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.btn-ley:hover {
+    background: rgba(99,102,241,0.12);
+    border-color: #818cf8;
+    color: #a5b4fc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99,102,241,0.2);
+}
+
+.btn-ley-alt {
+    border-color: rgba(16,185,129,0.4);
+    color: #34d399;
+}
+
+.btn-ley-alt:hover {
+    background: rgba(16,185,129,0.1);
+    border-color: #34d399;
+    color: #6ee7b7;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.2);
+}
+
+/* ─── TARJETAS DE RESUMEN RRHH ─── */
+.rrhh-stats {
+    margin-bottom: 1.5rem;
+}
+
+.rrhh-stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.rrhh-stat-badge {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+}
+
+.rrhh-stat-card:hover .rrhh-stat-badge { opacity: 0.6; }
+
+.blue-badge   { background: rgba(56,189,248,0.15); color: #38bdf8; }
+.green-badge  { background: rgba(16,185,129,0.15); color: #10b981; }
+.orange-badge { background: rgba(251,146,60,0.15); color: #fb923c; }
+
+/* ─── CONTENEDOR DE PESTAÑAS RRHH ─── */
+.rrhh-tabs-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ─── BARRA DE NAVEGACIÓN DE PESTAÑAS ─── */
+.rrhh-tabs-nav {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-table-th);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.rrhh-tabs-nav::-webkit-scrollbar { display: none; }
+
+.rrhh-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.15rem;
+    background: transparent;
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: var(--font-main);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+}
+
+.rrhh-tab-btn i {
+    font-size: 1rem;
+}
+
+.rrhh-tab-btn:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+.rrhh-tab-btn.active {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.rrhh-tab-btn.active i {
+    color: var(--primary);
+}
+
+
+/* ─── PANELES DE CONTENIDO ─── */
+.rrhh-tab-panel {
+    display: none;
+    padding: 1.5rem;
+    animation: rrhh-fade-in 0.25s ease;
+}
+
+.rrhh-tab-panel.active {
+    display: block;
+}
+
+/* Divisor entre paneles cuando están todos visibles en Vista General */
+.rrhh-tabs-wrapper.mode-all .rrhh-tab-panel.active + .rrhh-tab-panel.active {
+    border-top: 1px dashed var(--border-color);
+    margin-top: 0;
+    padding-top: 1.5rem;
+}
+
+@keyframes rrhh-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ─── TOOLBAR DE CADA PANEL ─── */
+.rrhh-panel-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.rrhh-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.rrhh-panel-title i {
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.rrhh-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.rrhh-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.83rem;
+    padding: 0.45rem 1rem;
+    white-space: nowrap;
+}
+
+.rrhh-btn-nomina {
+    background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 4px 14px rgba(239,68,68,0.3) !important;
+}
+
+.rrhh-btn-nomina:hover {
+    box-shadow: 0 6px 20px rgba(239,68,68,0.5) !important;
+    transform: translateY(-2px);
+}
+
+.rrhh-select {
+    height: 36px;
+    font-size: 0.82rem;
+    padding: 0 0.75rem;
+    min-width: 150px;
+}
+
+.rrhh-panel-card {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.rrhh-panel-card .card-body {
+    padding: 0 !important;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+    .rrhh-module-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.2rem;
+    }
+
+    .rrhh-ley-buttons {
+        width: 100%;
+    }
+
+    .btn-ley {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .rrhh-panel-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .rrhh-panel-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .rrhh-tab-btn span {
+        display: none;
+    }
+
+    .rrhh-tab-btn {
+        padding: 0.6rem 0.9rem;
+        font-size: 1rem;
+    }
+}

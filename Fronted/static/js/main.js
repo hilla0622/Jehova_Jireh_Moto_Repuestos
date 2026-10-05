@@ -313,6 +313,21 @@ function closeModal(modalId) {
     if (modal) modal.classList.remove('active');
 }
 
+// Cerrar cualquier modal al hacer clic en el fondo oscuro (backdrop)
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('modal') && e.target.classList.contains('active')) {
+        e.target.classList.remove('active');
+    }
+});
+
+// Cerrar modal al presionar la tecla Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal.active');
+        if (activeModal) activeModal.classList.remove('active');
+    }
+});
+
 // ==============================================================================
 // CARGA Y RENDERS DE DATOS: DASHBOARD & STATS
 // ==============================================================================

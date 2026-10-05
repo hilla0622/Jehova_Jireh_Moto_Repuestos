@@ -886,136 +886,217 @@
                 <!-- TAB RRHH: RECURSOS HUMANOS Y NÓMINA -->
                 {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Responsable de Recursos Humanos'] %}
                 <section id="tab-rrhh" class="tab-content">
-                    <div class="section-header">
-                        <div>
-                            <h2>Recursos Humanos y Nómina</h2>
-                            <p>Administra empleados, vacaciones, permisos y genera la nómina mensual (Ley 185 + Ley 822).</p>
+
+                    <!-- CABECERA DEL MÓDULO RRHH -->
+                    <div class="rrhh-module-header">
+                        <div class="rrhh-title-block">
+                            <div class="rrhh-title-icon">
+                                <i class="ph-bold ph-users-three"></i>
+                            </div>
+                            <div>
+                                <h2>Recursos Humanos y Nómina</h2>
+                                <p>Gestión de personal, planillas y cumplimiento normativo nicaragüense</p>
+                            </div>
                         </div>
-                        <div class="header-actions">
-                            <button class="btn btn-secondary" onclick="openModal('modal-empleado')">
-                                <i class="ph-bold ph-user-plus"></i> Nuevo Empleado
-                            </button>
-                            <button class="btn btn-secondary" onclick="openModal('modal-movimiento-laboral')">
-                                <i class="ph-bold ph-calendar-blank"></i> Registrar Vacaciones/Permiso
-                            </button>
-                            <button class="btn btn-primary" onclick="openModal('modal-generar-nomina')">
-                                <i class="ph-bold ph-money"></i> Generar Nómina
-                            </button>
+                        <div class="rrhh-ley-buttons">
+                            <a href="https://www.poderjudicial.gob.ni/cjnejapa/pdf/codigo-trabajo.pdf" target="_blank" rel="noopener noreferrer" class="btn-ley" title="Ver Código del Trabajo completo">
+                                <i class="ph-bold ph-scales"></i>
+                                <span>Ley 185 <small>Código del Trabajo</small></span>
+                            </a>
+                            <a href="http://legislacion.asamblea.gob.ni/normaweb.nsf/b92aaea87dac762406257265005d21f7/b39837c79f7eaf4206257afb0052c524?OpenDocument" target="_blank" rel="noopener noreferrer" class="btn-ley btn-ley-alt" title="Ver Ley de Concertación Tributaria">
+                                <i class="ph-bold ph-receipt"></i>
+                                <span>Ley 822 <small>Concertación Tributaria</small></span>
+                            </a>
                         </div>
                     </div>
 
-                    <!-- Stats rápidos RRHH -->
-                    <div class="stats-grid" id="rrhh-stats-grid">
-                        <div class="stat-card">
+                    <!-- TARJETAS DE RESUMEN (SIEMPRE VISIBLES) -->
+                    <div class="stats-grid rrhh-stats" id="rrhh-stats-grid">
+                        <div class="stat-card rrhh-stat-card">
                             <div class="stat-icon blue"><i class="ph-bold ph-users"></i></div>
                             <div class="stat-data">
                                 <span class="stat-title">Empleados Activos</span>
                                 <span class="stat-value" id="rrhh-stat-empleados">0</span>
-                                <span class="stat-subtext">En planilla</span>
+                                <span class="stat-subtext">En planilla activa</span>
+                            </div>
+                            <div class="rrhh-stat-badge blue-badge">
+                                <i class="ph-bold ph-trend-up"></i>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-icon green"><i class="ph-bold ph-money"></i></div>
+                        <div class="stat-card rrhh-stat-card">
+                            <div class="stat-icon green"><i class="ph-bold ph-currency-dollar"></i></div>
                             <div class="stat-data">
                                 <span class="stat-title">Masa Salarial Total</span>
                                 <span class="stat-value" id="rrhh-stat-masa-salarial">C$0.00</span>
-                                <span class="stat-subtext">Salarios base/mes</span>
+                                <span class="stat-subtext">Salarios base / mes</span>
+                            </div>
+                            <div class="rrhh-stat-badge green-badge">
+                                <i class="ph-bold ph-money"></i>
                             </div>
                         </div>
-                        <div class="stat-card">
+                        <div class="stat-card rrhh-stat-card">
                             <div class="stat-icon orange"><i class="ph-bold ph-calendar-check"></i></div>
                             <div class="stat-data">
                                 <span class="stat-title">Nóminas Generadas</span>
                                 <span class="stat-value" id="rrhh-stat-nominas">0</span>
-                                <span class="stat-subtext">En historial</span>
+                                <span class="stat-subtext">En historial total</span>
+                            </div>
+                            <div class="rrhh-stat-badge orange-badge">
+                                <i class="ph-bold ph-files"></i>
                             </div>
                         </div>
                     </div>
 
-                    <!-- TABLA DE EMPLEADOS -->
-                    <div class="card" style="margin-top:1.5rem;">
-                        <div class="card-header">
-                            <h3><i class="ph-bold ph-users"></i> Listado de Empleados</h3>
-                            <div style="display:flex;gap:.5rem;">
-                                <select id="rrhh-filtro-estado" class="form-control" style="width:140px;" onchange="cargarEmpleadosRRHH()">
-                                    <option value="todos">Todos</option>
-                                    <option value="activos" selected>Solo Activos</option>
-                                    <option value="inactivos">Solo Inactivos</option>
-                                </select>
+                    <!-- SISTEMA DE PESTAÑAS INTERNO RRHH -->
+                    <div class="rrhh-tabs-wrapper mode-all">
+                        <nav class="rrhh-tabs-nav" role="tablist" aria-label="Secciones de Recursos Humanos">
+                            <button class="rrhh-tab-btn active" data-rrhh-tab="all" role="tab" aria-selected="true" id="rrhh-tab-btn-all" onclick="switchRrhhTab('all')">
+                                <i class="ph-bold ph-squares-four"></i>
+                                <span>Vista General</span>
+                            </button>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-directorio" role="tab" aria-selected="false" id="rrhh-tab-btn-directorio" onclick="switchRrhhTab('rrhh-directorio')">
+                                <i class="ph-bold ph-address-book"></i>
+                                <span>Directorio de Empleados</span>
+                            </button>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-historial" role="tab" aria-selected="false" id="rrhh-tab-btn-historial" onclick="switchRrhhTab('rrhh-historial')">
+                                <i class="ph-bold ph-clipboard-text"></i>
+                                <span>Historial de Planillas</span>
+                            </button>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-ausencias" role="tab" aria-selected="false" id="rrhh-tab-btn-ausencias" onclick="switchRrhhTab('rrhh-ausencias')">
+                                <i class="ph-bold ph-calendar-x"></i>
+                                <span>Control de Ausencias</span>
+                            </button>
+                        </nav>
+
+                        <!-- ═══ PANEL 1: DIRECTORIO DE EMPLEADOS ═══ -->
+                        <div class="rrhh-tab-panel active" id="rrhh-directorio" role="tabpanel" aria-labelledby="rrhh-tab-btn-directorio">
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-address-book"></i>
+                                    <span>Listado de Empleados</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <select id="rrhh-filtro-estado" class="form-control rrhh-select" onchange="cargarEmpleadosRRHH()">
+                                        <option value="todos">Todos los empleados</option>
+                                        <option value="activos" selected>Solo Activos</option>
+                                        <option value="inactivos">Solo Inactivos</option>
+                                    </select>
+                                    <button class="btn btn-secondary rrhh-action-btn" onclick="abrirModalCargos()">
+                                        <i class="ph-bold ph-briefcase"></i>
+                                        <span>Gestionar Cargos</span>
+                                    </button>
+                                    <button class="btn btn-primary rrhh-action-btn" onclick="abrirModalNuevoEmpleado()">
+                                        <i class="ph-bold ph-user-plus"></i>
+                                        <span>Nuevo Empleado</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table" id="tabla-empleados">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Nombre Completo</th>
+                                                <th>Cédula</th>
+                                                <th>Nº INSS</th>
+                                                <th>Cargo</th>
+                                                <th>Salario Base</th>
+                                                <th>Días Vac.</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-empleados">
+                                            <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem;">
+                                                <i class="ph-bold ph-spinner" style="font-size:1.5rem;opacity:0.4;"></i><br>Cargando empleados...
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <table class="data-table" id="tabla-empleados">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nombre Completo</th>
-                                        <th>Cédula</th>
-                                        <th>Nº INSS</th>
-                                        <th>Cargo</th>
-                                        <th>Salario Base</th>
-                                        <th>Días Vac.</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-empleados"></tbody>
-                            </table>
-                        </div>
-                    </div>
 
-                    <!-- TABLA MOVIMIENTOS LABORALES -->
-                    <div class="card" style="margin-top:1.5rem;">
-                        <div class="card-header">
-                            <h3><i class="ph-bold ph-calendar-blank"></i> Vacaciones y Permisos</h3>
-                            <select id="rrhh-filtro-emp-movimiento" class="form-control" style="width:220px;" onchange="cargarMovimientosLaborales()">
-                                <option value="">Todos los empleados</option>
-                            </select>
+                        <!-- ═══ PANEL 2: HISTORIAL DE PLANILLAS ═══ -->
+                        <div class="rrhh-tab-panel active" id="rrhh-historial" role="tabpanel" aria-labelledby="rrhh-tab-btn-historial">
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-clipboard-text"></i>
+                                    <span>Historial de Nóminas Generadas</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <button class="btn btn-primary rrhh-action-btn rrhh-btn-nomina" onclick="openModal('modal-generar-nomina')">
+                                        <i class="ph-bold ph-calculator"></i>
+                                        <span>Generar Nómina</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Período</th>
+                                                <th>Fecha Generación</th>
+                                                <th>Total Bruto</th>
+                                                <th>Total Deducciones</th>
+                                                <th>Total Neto</th>
+                                                <th>INSS Patronal</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-historial-nominas">
+                                            <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">
+                                                <i class="ph-bold ph-clipboard-text" style="font-size:1.5rem;opacity:0.4;"></i><br>No hay nóminas generadas.
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Empleado</th>
-                                        <th>Tipo</th>
-                                        <th>Fecha Inicio</th>
-                                        <th>Fecha Fin</th>
-                                        <th>Días Tomados</th>
-                                        <th>Observación</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-movimientos-laborales">
-                                    <tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Sin registros de movimientos laborales.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
 
-                    <!-- HISTORIAL DE NÓMINAS -->
-                    <div class="card" style="margin-top:1.5rem;">
-                        <div class="card-header">
-                            <h3><i class="ph-bold ph-clipboard-text"></i> Historial de Nóminas</h3>
+                        <!-- ═══ PANEL 3: CONTROL DE AUSENCIAS ═══ -->
+                        <div class="rrhh-tab-panel active" id="rrhh-ausencias" role="tabpanel" aria-labelledby="rrhh-tab-btn-ausencias">
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-calendar-x"></i>
+                                    <span>Vacaciones, Permisos y Ausencias</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <select id="rrhh-filtro-emp-movimiento" class="form-control rrhh-select" onchange="cargarMovimientosLaborales()">
+                                        <option value="">Todos los empleados</option>
+                                    </select>
+                                    <button class="btn btn-secondary rrhh-action-btn" onclick="openModal('modal-movimiento-laboral')">
+                                        <i class="ph-bold ph-calendar-plus"></i>
+                                        <span>Registrar Vacaciones/Permiso</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Empleado</th>
+                                                <th>Tipo de Movimiento</th>
+                                                <th>Fecha Inicio</th>
+                                                <th>Fecha Fin</th>
+                                                <th>Días Tomados</th>
+                                                <th>Observación</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-movimientos-laborales">
+                                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">
+                                                <i class="ph-bold ph-calendar-blank" style="font-size:1.5rem;opacity:0.4;"></i><br>Sin registros de movimientos laborales.
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Período</th>
-                                        <th>Fecha Generación</th>
-                                        <th>Total Bruto</th>
-                                        <th>Total Deducciones</th>
-                                        <th>Total Neto</th>
-                                        <th>INSS Patronal</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-historial-nominas">
-                                    <tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No hay nóminas generadas.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+
+                    </div><!-- /rrhh-tabs-wrapper -->
                 </section>
                 {% endif %}
 
@@ -1718,8 +1799,16 @@
                             <input type="text" id="emp-num-inss" class="form-control" placeholder="Ej. 1234567">
                         </div>
                         <div class="form-group">
-                            <label>Cargo / Puesto:</label>
-                            <input type="text" id="emp-cargo" class="form-control" placeholder="Ej. Vendedor, Bodeguero">
+                            <label>Cargo / Puesto: *</label>
+                            <div style="display:flex; gap:0.4rem;">
+                                <select id="emp-cargo-select" class="form-control" onchange="alSeleccionarCargo()" required>
+                                    <option value="">-- Seleccionar Cargo --</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="abrirModalCargos()" title="Crear o gestionar cargos" style="padding:0 0.75rem;">
+                                    <i class="ph-bold ph-plus"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="emp-cargo">
                         </div>
                     </div>
                     <div class="grid-2col">
@@ -1775,14 +1864,22 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Empleado: *</label>
-                        <select id="mov-empleado-id" class="form-control" required>
+                        <select id="mov-empleado-id" class="form-control" required onchange="actualizarInfoEmpleadoMovimiento()">
                             <option value="">-- Seleccionar empleado --</option>
                         </select>
+                        <!-- Información y saldo de vacaciones en tiempo real (RF68) -->
+                        <div id="mov-emp-saldo-container" style="display:none; margin-top:0.4rem; padding:0.5rem 0.8rem; background:rgba(99,102,241,0.08); border-radius:6px; font-size:0.82rem; color:var(--text-main);">
+                            <i class="ph-bold ph-calendar-check" style="color:var(--primary);"></i>
+                            Saldo acumulado de vacaciones: <strong id="mov-emp-saldo-vac" style="color:var(--primary);">0.00</strong> días disponibles.
+                        </div>
+                        <div id="mov-alerta-saldo" style="display:none; margin-top:0.4rem; padding:0.5rem 0.8rem; background:rgba(239,68,68,0.12); border-left:3px solid #ef4444; border-radius:4px; font-size:0.8rem; color:#ef4444;">
+                            ⚠️ Los días solicitados superan el saldo acumulado disponible de este trabajador.
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Tipo de Movimiento: *</label>
-                        <select id="mov-tipo" class="form-control" required>
-                            <option value="VACACIONES">🏞️ Vacaciones</option>
+                        <select id="mov-tipo" class="form-control" required onchange="validarSaldoVacaciones()">
+                            <option value="VACACIONES">🏖️ Vacaciones</option>
                             <option value="PERMISO_CON_GOCE">✅ Permiso con Goce de Salario</option>
                             <option value="PERMISO_SIN_GOCE">❌ Permiso sin Goce de Salario</option>
                             <option value="FALTA">⚠️ Falta Injustificada</option>
@@ -1800,8 +1897,8 @@
                     </div>
                     <div class="form-group">
                         <label>Días Tomados: *</label>
-                        <input type="number" step="0.5" id="mov-dias" class="form-control" min="0.5" required>
-                        <small style="color:var(--text-muted);">Se calcula automáticamente según las fechas.</small>
+                        <input type="number" step="0.5" id="mov-dias" class="form-control" min="0.5" required oninput="validarSaldoVacaciones()">
+                        <small style="color:var(--text-muted);"><i class="ph-bold ph-magic-wand"></i> Se calcula automáticamente según las fechas seleccionadas.</small>
                     </div>
                     <div class="form-group">
                         <label>Observación:</label>
@@ -1810,9 +1907,72 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modal-movimiento-laboral')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Movimiento</button>
+                    <button type="submit" class="btn btn-primary" id="btn-guardar-movimiento">Guardar Movimiento</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: GESTIÓN DE CARGOS (RF63) -->
+    <div class="modal" id="modal-cargos">
+        <div class="modal-content" style="max-width:680px; width:95%;">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-briefcase"></i> <span id="modal-cargos-titulo">Gestión de Cargos y Puestos</span></h3>
+                <button class="modal-close" onclick="closeModal('modal-cargos')" title="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:1rem 1.25rem;">
+                <!-- Formulario de creación / edición de cargo -->
+                <form id="form-cargo" onsubmit="guardarCargo(event)" style="background:var(--bg-table-th); padding:0.85rem 1rem; border-radius:8px; margin-bottom:1rem; border:1px solid var(--border-color);">
+                    <input type="hidden" id="cargo-id">
+                    <div style="font-weight:700; font-size:0.88rem; margin-bottom:0.5rem; color:var(--text-main); display:flex; justify-content:space-between; align-items:center;">
+                        <span id="form-cargo-lbl"><i class="ph-bold ph-plus-circle"></i> Nuevo Cargo / Puesto</span>
+                        <button type="button" class="btn btn-secondary" id="btn-cancelar-cargo" onclick="resetFormCargo()" style="display:none; font-size:0.75rem; padding:2px 8px;">Cancelar Edición</button>
+                    </div>
+                    <div class="grid-2col" style="gap:0.75rem; margin-bottom:0.5rem;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:0.8rem; margin-bottom:2px;">Nombre del Cargo: *</label>
+                            <input type="text" id="cargo-nombre" class="form-control" placeholder="Ej. Asesor de Ventas" required style="padding:0.45rem 0.65rem; font-size:0.85rem;">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:0.8rem; margin-bottom:2px;">Salario Base Sugerido (C$):</label>
+                            <input type="number" step="0.01" id="cargo-salario" class="form-control" placeholder="Ej. 12000.00" style="padding:0.45rem 0.65rem; font-size:0.85rem;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0.6rem;">
+                        <label style="font-size:0.8rem; margin-bottom:2px;">Descripción / Funciones:</label>
+                        <input type="text" id="cargo-descripcion" class="form-control" placeholder="Responsabilidades clave del puesto" style="padding:0.45rem 0.65rem; font-size:0.85rem;">
+                    </div>
+                    <div style="text-align:right;">
+                        <button type="submit" class="btn btn-primary" id="btn-submit-cargo" style="padding:0.4rem 0.9rem; font-size:0.83rem;">
+                            <i class="ph-bold ph-floppy-disk"></i> Guardar Cargo
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Listado de cargos existentes -->
+                <div style="font-weight:700; font-size:0.88rem; margin-bottom:0.4rem; color:var(--text-main);">
+                    <i class="ph-bold ph-list-dashes"></i> Catálogo de Cargos Registrados
+                </div>
+                <div style="overflow-x:auto; max-height:180px; overflow-y:auto; border:1px solid var(--border-color); border-radius:6px;">
+                    <table class="data-table" id="tabla-cargos" style="margin:0; font-size:0.82rem;">
+                        <thead>
+                            <tr>
+                                <th>Cargo</th>
+                                <th>Descripción</th>
+                                <th>Salario Sugerido</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-cargos">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:0.8rem;">Cargando cargos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:0.65rem 1.25rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-cargos')">Cerrar</button>
+            </div>
         </div>
     </div>
 
@@ -1979,7 +2139,9 @@
     <script>
         // ---- Variables globales RRHH ----
         let _empleadosCache = [];
+        let _cargosCache = [];
         let _nominaDetalleId = null;
+        let _currentRrhhTab = 'all';
         const MESES_ES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
             'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -1994,13 +2156,215 @@
             if (empSalario) empSalario.addEventListener('input', previsualizarCalculo);
         });
 
+        /**
+         * Activa la pestaña del módulo RRHH indicada.
+         * - 'all': Muestra los 3 paneles juntos (Vista General sin filtros).
+         * - 'rrhh-directorio': Muestra ÚNICAMENTE el Directorio de Empleados.
+         * - 'rrhh-historial': Muestra ÚNICAMENTE el Historial de Planillas/Nóminas.
+         * - 'rrhh-ausencias': Muestra ÚNICAMENTE el Control de Ausencias/Vacaciones.
+         * - Si se pulsa de nuevo la pestaña ya activa, vuelve a 'all' (Vista General).
+         */
+        function switchRrhhTab(targetId) {
+            if (targetId !== 'all' && _currentRrhhTab === targetId) {
+                targetId = 'all';
+            }
+            _currentRrhhTab = targetId;
+
+            // Actualizar botones de navegación
+            document.querySelectorAll('.rrhh-tab-btn').forEach(btn => {
+                const btnTab = btn.getAttribute('data-rrhh-tab');
+                const isActive = (btnTab === targetId);
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            // Actualizar estilo del contenedor
+            const wrapper = document.querySelector('.rrhh-tabs-wrapper');
+            if (wrapper) {
+                wrapper.classList.toggle('mode-all', targetId === 'all');
+            }
+
+            // Mostrar u ocultar paneles correspondientes
+            document.querySelectorAll('.rrhh-tab-panel').forEach(panel => {
+                if (targetId === 'all') {
+                    panel.classList.add('active');
+                } else {
+                    panel.classList.toggle('active', panel.id === targetId);
+                }
+            });
+        }
+
         function inicializarRRHH() {
+            switchRrhhTab('all');
+            cargarCargosRRHH();
             cargarEmpleadosRRHH();
             cargarHistorialNominas();
             cargarMovimientosLaborales();
         }
 
-        // EMPLEADOS
+        // =========================================================================
+        // GESTIÓN DE CARGOS (RF63)
+        // =========================================================================
+        async function cargarCargosRRHH() {
+            try {
+                const res = await fetch('/api/cargos');
+                const cargos = await res.json();
+                _cargosCache = cargos;
+
+                // Actualizar dropdown en modal de empleados
+                const cargoSelect = document.getElementById('emp-cargo-select');
+                if (cargoSelect) {
+                    const currentVal = cargoSelect.value || document.getElementById('emp-cargo')?.value;
+                    cargoSelect.innerHTML = '<option value="">-- Seleccionar Cargo --</option>';
+                    cargos.filter(c => c.activo).forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.nombre_cargo;
+                        opt.textContent = `${c.nombre_cargo} (Base sugerido: ${cs(c.salario_base_sugerido)})`;
+                        opt.dataset.salario = c.salario_base_sugerido;
+                        cargoSelect.appendChild(opt);
+                    });
+                    if (currentVal) cargoSelect.value = currentVal;
+                }
+
+                // Actualizar tabla en modal-cargos
+                const tbody = document.getElementById('tbody-cargos');
+                if (tbody) {
+                    if (cargos.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:1rem;">No hay cargos registrados.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = cargos.map(c => `
+                        <tr style="opacity:${c.activo ? '1' : '0.55'}">
+                            <td><strong>${c.nombre_cargo}</strong></td>
+                            <td style="color:var(--text-muted); font-size:0.83rem;">${c.descripcion || '—'}</td>
+                            <td>${cs(c.salario_base_sugerido)}</td>
+                            <td>
+                                <span style="background:${c.activo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}; color:${c.activo ? '#22c55e' : '#ef4444'}; padding:2px 8px; border-radius:12px; font-size:0.75rem;">
+                                    ${c.activo ? 'Activo' : 'Inactivo'}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex; gap:4px;">
+                                    <button class="btn btn-secondary" style="padding:3px 7px; font-size:0.75rem;" onclick="editarCargo(${c.id})" title="Editar cargo">
+                                        <i class="ph-bold ph-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-secondary" style="padding:3px 7px; font-size:0.75rem; color:${c.activo ? '#ef4444' : '#22c55e'};" onclick="toggleEstadoCargo(${c.id}, ${!c.activo})" title="${c.activo ? 'Desactivar' : 'Activar'}">
+                                        <i class="ph-bold ph-${c.activo ? 'eye-slash' : 'check'}"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) { console.error('Error cargando cargos:', e); }
+        }
+
+        function abrirModalCargos() {
+            resetFormCargo();
+            cargarCargosRRHH();
+            openModal('modal-cargos');
+        }
+
+        function resetFormCargo() {
+            document.getElementById('cargo-id').value = '';
+            document.getElementById('cargo-nombre').value = '';
+            document.getElementById('cargo-salario').value = '';
+            document.getElementById('cargo-descripcion').value = '';
+            document.getElementById('form-cargo-lbl').innerHTML = '<i class="ph-bold ph-plus-circle"></i> Nuevo Cargo / Puesto';
+            document.getElementById('btn-submit-cargo').innerHTML = '<i class="ph-bold ph-floppy-disk"></i> Guardar Cargo';
+            document.getElementById('btn-cancelar-cargo').style.display = 'none';
+        }
+
+        function editarCargo(id) {
+            const cargo = _cargosCache.find(c => c.id === id);
+            if (!cargo) return;
+            document.getElementById('cargo-id').value = cargo.id;
+            document.getElementById('cargo-nombre').value = cargo.nombre_cargo || '';
+            document.getElementById('cargo-salario').value = cargo.salario_base_sugerido || '';
+            document.getElementById('cargo-descripcion').value = cargo.descripcion || '';
+            document.getElementById('form-cargo-lbl').innerHTML = '<i class="ph-bold ph-pencil-simple"></i> Editar Cargo';
+            document.getElementById('btn-submit-cargo').innerHTML = '<i class="ph-bold ph-check"></i> Actualizar Cargo';
+            document.getElementById('btn-cancelar-cargo').style.display = 'inline-block';
+        }
+
+        async function guardarCargo(event) {
+            event.preventDefault();
+            const id = document.getElementById('cargo-id').value;
+            const payload = {
+                nombre_cargo: document.getElementById('cargo-nombre').value.trim(),
+                salario_base_sugerido: parseFloat(document.getElementById('cargo-salario').value) || 0,
+                descripcion: document.getElementById('cargo-descripcion').value.trim()
+            };
+            try {
+                const url = id ? `/api/cargos/${id}` : '/api/cargos';
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    mostrarNotificacionRRHH(data.mensaje, 'success');
+                    resetFormCargo();
+                    cargarCargosRRHH();
+                } else {
+                    mostrarNotificacionRRHH(data.error || 'Error al guardar cargo.', 'error');
+                }
+            } catch (e) {
+                mostrarNotificacionRRHH('Error de conexión al guardar cargo.', 'error');
+            }
+        }
+
+        async function toggleEstadoCargo(id, nuevoEstado) {
+            try {
+                const res = await fetch(`/api/cargos/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activo: nuevoEstado })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    cargarCargosRRHH();
+                    mostrarNotificacionRRHH(data.mensaje, 'success');
+                } else {
+                    mostrarNotificacionRRHH(data.error, 'error');
+                }
+            } catch (e) {
+                mostrarNotificacionRRHH('Error de conexión.', 'error');
+            }
+        }
+
+        function alSeleccionarCargo() {
+            const select = document.getElementById('emp-cargo-select');
+            const hiddenCargo = document.getElementById('emp-cargo');
+            const empSalario = document.getElementById('emp-salario');
+            if (!select) return;
+            const val = select.value;
+            hiddenCargo.value = val;
+            const selectedOpt = select.options[select.selectedIndex];
+            const salarioSugerido = selectedOpt?.dataset?.salario;
+            // Si el salario está vacío o en 0, sugerir el salario base del cargo
+            if (salarioSugerido && (!empSalario.value || parseFloat(empSalario.value) === 0)) {
+                empSalario.value = salarioSugerido;
+                previsualizarCalculo();
+            }
+        }
+
+        function abrirModalNuevoEmpleado() {
+            document.getElementById('form-empleado').reset();
+            document.getElementById('emp-id').value = '';
+            document.getElementById('emp-cargo').value = '';
+            document.getElementById('modal-empleado-titulo').textContent = 'Registrar Nuevo Empleado';
+            document.getElementById('btn-guardar-empleado').textContent = 'Guardar Empleado';
+            document.getElementById('emp-preview-calculo').style.display = 'none';
+            cargarCargosRRHH();
+            openModal('modal-empleado');
+        }
+
+        // =========================================================================
+        // EMPLEADOS (RF58, RF59, RF60, RF61, RF62)
+        // =========================================================================
         async function cargarEmpleadosRRHH() {
             try {
                 const res = await fetch('/api/empleados');
@@ -2016,6 +2380,7 @@
                 const statMasa = document.getElementById('rrhh-stat-masa-salarial');
                 if (statEmp) statEmp.textContent = activos.length;
                 if (statMasa) statMasa.textContent = cs(masaSalarial);
+
                 ['mov-empleado-id', 'rrhh-filtro-emp-movimiento', 'nomina-empleado'].forEach(id => {
                     const sel = document.getElementById(id);
                     if (!sel) return;
@@ -2025,10 +2390,11 @@
                     activos.forEach(e => {
                         const opt = document.createElement('option');
                         opt.value = e.id;
-                        opt.textContent = e.nombre_completo;
+                        opt.textContent = `${e.nombre_completo} (${e.cargo || 'Sin cargo'})`;
                         sel.appendChild(opt);
                     });
                 });
+
                 const tbody = document.getElementById('tbody-empleados');
                 if (!tbody) return;
                 if (lista.length === 0) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">No hay empleados registrados.</td></tr>'; return; }
@@ -2038,9 +2404,9 @@
                     <td><strong>${e.nombre_completo}</strong></td>
                     <td>${e.identificacion || '—'}</td>
                     <td>${e.num_inss || '—'}</td>
-                    <td>${e.cargo || '—'}</td>
+                    <td><span class="badge" style="background:rgba(99,102,241,0.1); color:var(--primary); font-weight:600;">${e.cargo || '—'}</span></td>
                     <td>${cs(e.salario_base)}</td>
-                    <td>${parseFloat(e.dias_vacaciones_disponibles).toFixed(1)} días</td>
+                    <td><strong style="color:${parseFloat(e.dias_vacaciones_disponibles) > 0 ? '#16a34a' : 'inherit'}">${parseFloat(e.dias_vacaciones_disponibles).toFixed(1)} días</strong></td>
                     <td><span style="background:${e.activo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}; color:${e.activo ? '#22c55e' : '#ef4444'}; padding:2px 8px; border-radius:20px; font-size:0.75rem;">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
                     <td><div style="display:flex;gap:4px;">
                         <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="editarEmpleado(${e.id})" title="Editar"><i class="ph-bold ph-pencil"></i></button>
@@ -2050,14 +2416,36 @@
             } catch (e) { console.error('Error cargando empleados RRHH:', e); }
         }
 
-        function editarEmpleado(id) {
+        async function editarEmpleado(id) {
             const emp = _empleadosCache.find(e => e.id === id);
             if (!emp) return;
+            await cargarCargosRRHH();
             document.getElementById('emp-id').value = emp.id;
             document.getElementById('emp-nombre').value = emp.nombre_completo || '';
             document.getElementById('emp-identificacion').value = emp.identificacion || '';
             document.getElementById('emp-num-inss').value = emp.num_inss || '';
             document.getElementById('emp-cargo').value = emp.cargo || '';
+            
+            // Seleccionar cargo en el select o crear la opción si es histórica
+            const selectCargo = document.getElementById('emp-cargo-select');
+            if (selectCargo && emp.cargo) {
+                let existe = false;
+                for (let i = 0; i < selectCargo.options.length; i++) {
+                    if (selectCargo.options[i].value === emp.cargo) {
+                        selectCargo.selectedIndex = i;
+                        existe = true;
+                        break;
+                    }
+                }
+                if (!existe) {
+                    const opt = document.createElement('option');
+                    opt.value = emp.cargo;
+                    opt.textContent = emp.cargo;
+                    selectCargo.appendChild(opt);
+                    selectCargo.value = emp.cargo;
+                }
+            }
+            
             document.getElementById('emp-salario').value = emp.salario_base || '';
             document.getElementById('emp-fecha-ingreso').value = emp.fecha_ingreso ? emp.fecha_ingreso.split('T')[0] : '';
             document.getElementById('emp-telefono').value = emp.telefono || '';
@@ -2072,11 +2460,12 @@
         async function guardarEmpleado(event) {
             event.preventDefault();
             const id = document.getElementById('emp-id').value;
+            const cargo = document.getElementById('emp-cargo-select').value || document.getElementById('emp-cargo').value;
             const payload = {
                 nombre_completo: document.getElementById('emp-nombre').value.trim(),
                 identificacion: document.getElementById('emp-identificacion').value.trim(),
                 num_inss: document.getElementById('emp-num-inss').value.trim(),
-                cargo: document.getElementById('emp-cargo').value.trim(),
+                cargo: cargo,
                 salario_base: parseFloat(document.getElementById('emp-salario').value) || 0,
                 fecha_ingreso: document.getElementById('emp-fecha-ingreso').value,
                 telefono: document.getElementById('emp-telefono').value.trim(),
@@ -2124,7 +2513,9 @@
             document.getElementById('emp-preview-calculo').style.display = 'block';
         }
 
-        // MOVIMIENTOS LABORALES
+        // =========================================================================
+        // MOVIMIENTOS LABORALES Y CONTROL DE SALDO (RF64, RF65, RF66, RF67, RF68, RF70)
+        // =========================================================================
         async function cargarMovimientosLaborales() {
             const empFiltro = document.getElementById('rrhh-filtro-emp-movimiento')?.value || '';
             const url = empFiltro ? `/api/movimientos-laborales?empleado_id=${empFiltro}` : '/api/movimientos-laborales';
@@ -2133,18 +2524,67 @@
                 const data = await res.json();
                 const tbody = document.getElementById('tbody-movimientos-laborales');
                 if (!tbody) return;
-                if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Sin movimientos registrados.</td></tr>'; return; }
-                const tipoLabel = { VACACIONES: '🏖️ Vacaciones', PERMISO_CON_GOCE: '✅ Permiso c/Goce', PERMISO_SIN_GOCE: '❌ Permiso s/Goce', FALTA: '⚠️ Falta' };
-                tbody.innerHTML = data.map(m => `<tr><td>${m.empleado}</td><td>${tipoLabel[m.tipo] || m.tipo}</td><td>${m.fecha_inicio}</td><td>${m.fecha_fin}</td><td>${m.dias_tomados} día(s)</td><td>${m.observacion || '—'}</td></tr>`).join('');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted); padding:1.5rem;">Sin movimientos registrados.</td></tr>'; return; }
+                const tipoLabel = { VACACIONES: '🏖️ Vacaciones', PERMISO_CON_GOCE: '✅ Permiso c/Goce', PERMISO_SIN_GOCE: '❌ Permiso s/Goce', FALTA: '⚠️ Falta Injustificada' };
+                tbody.innerHTML = data.map(m => `<tr><td><strong>${m.empleado}</strong></td><td>${tipoLabel[m.tipo] || m.tipo}</td><td>${m.fecha_inicio}</td><td>${m.fecha_fin}</td><td><strong>${m.dias_tomados} día(s)</strong></td><td>${m.observacion || '—'}</td></tr>`).join('');
             } catch (e) { console.error(e); }
+        }
+
+        function actualizarInfoEmpleadoMovimiento() {
+            const empId = parseInt(document.getElementById('mov-empleado-id')?.value);
+            const container = document.getElementById('mov-emp-saldo-container');
+            const saldoSpan = document.getElementById('mov-emp-saldo-vac');
+            if (!empId || !_empleadosCache.length) {
+                if (container) container.style.display = 'none';
+                return;
+            }
+            const emp = _empleadosCache.find(e => e.id === empId);
+            if (emp && container && saldoSpan) {
+                const saldo = parseFloat(emp.dias_vacaciones_disponibles) || 0;
+                saldoSpan.textContent = saldo.toFixed(2);
+                container.style.display = 'block';
+            }
+            validarSaldoVacaciones();
         }
 
         function calcularDiasMovimiento() {
             const fi = document.getElementById('mov-fecha-inicio')?.value;
             const ff = document.getElementById('mov-fecha-fin')?.value;
             if (!fi || !ff) return;
-            const dias = Math.ceil((new Date(ff) - new Date(fi)) / (1000 * 60 * 60 * 24)) + 1;
-            if (dias > 0) document.getElementById('mov-dias').value = dias;
+            const d1 = new Date(fi + 'T00:00:00');
+            const d2 = new Date(ff + 'T00:00:00');
+            if (d2 < d1) {
+                mostrarNotificacionRRHH('La fecha de fin no puede ser anterior a la de inicio.', 'error');
+                document.getElementById('mov-dias').value = '';
+                return;
+            }
+            const diffTime = Math.abs(d2 - d1);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            document.getElementById('mov-dias').value = diffDays;
+            validarSaldoVacaciones();
+        }
+
+        function validarSaldoVacaciones() {
+            const tipo = document.getElementById('mov-tipo')?.value;
+            const dias = parseFloat(document.getElementById('mov-dias')?.value) || 0;
+            const empId = parseInt(document.getElementById('mov-empleado-id')?.value);
+            const alerta = document.getElementById('mov-alerta-saldo');
+            const btnSubmit = document.getElementById('btn-guardar-movimiento');
+
+            if (tipo === 'VACACIONES' && empId && dias > 0) {
+                const emp = _empleadosCache.find(e => e.id === empId);
+                const saldo = parseFloat(emp?.dias_vacaciones_disponibles) || 0;
+                if (dias > saldo) {
+                    if (alerta) {
+                        alerta.textContent = `⚠️ Saldo insuficiente: ${emp?.nombre_completo} cuenta con ${saldo.toFixed(2)} días disponibles y solicitó ${dias} días.`;
+                        alerta.style.display = 'block';
+                    }
+                    if (btnSubmit) btnSubmit.disabled = true;
+                    return;
+                }
+            }
+            if (alerta) alerta.style.display = 'none';
+            if (btnSubmit) btnSubmit.disabled = false;
         }
 
         async function guardarMovimientoLaboral(event) {
@@ -2163,6 +2603,8 @@
                 if (data.success) {
                     closeModal('modal-movimiento-laboral');
                     document.getElementById('form-movimiento-laboral').reset();
+                    document.getElementById('mov-emp-saldo-container').style.display = 'none';
+                    document.getElementById('mov-alerta-saldo').style.display = 'none';
                     cargarMovimientosLaborales();
                     cargarEmpleadosRRHH();
                     mostrarNotificacionRRHH(data.mensaje, 'success');

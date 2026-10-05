@@ -12,7 +12,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_supe
 # CONFIGURACIÃ“N DE BASE DE DATOS SQL SERVER
 # ==============================================================================
 # Cambia 'LAPTOP-CNR3S3I3' por tu nombre de servidor SQL Server.
-DB_SERVER = os.environ.get('DB_SERVER', r'HILLARY')
+DB_SERVER = os.environ.get('DB_SERVER', r'LAPTOP-CNR3S3I3')
 DB_NAME = 'jehova_jireh_db'
 
 def get_db_connection():
@@ -1696,6 +1696,87 @@ def api_balance_general():
 ROLES_RRHH = ['Administrador', 'Responsable de Recursos Humanos']
 
 
+# --- GESTIÓN DE CARGOS (RF63) ---
+@app.route('/api/cargos', methods=['GET', 'POST'])
+@login_required
+def api_cargos():
+    """GET: Lista cargos disponibles. POST: Registrar nuevo cargo."""
+    if request.method == 'GET':
+        query = """
+            SELECT id, nombre_cargo, ISNULL(descripcion, '') AS descripcion,
+                   ISNULL(salario_base_sugerido, 0.00) AS salario_base_sugerido,
+                   activo
+            FROM cargos
+            ORDER BY nombre_cargo ASC
+        """
+        cargos = execute_query(query, fetchall=True)
+        for c in cargos:
+            c['salario_base_sugerido'] = float(c['salario_base_sugerido'])
+            c['activo'] = bool(c['activo'])
+        return jsonify(cargos)
+
+    if request.method == 'POST':
+        if session['user']['rol'] not in ROLES_RRHH:
+            return jsonify({"error": "No tienes permisos para gestionar cargos."}), 403
+
+        data = request.json or {}
+        nombre_cargo = data.get('nombre_cargo', '').strip()
+        descripcion = data.get('descripcion', '').strip()
+        salario = float(data.get('salario_base_sugerido', 0))
+
+        if not nombre_cargo:
+            return jsonify({"error": "El nombre del cargo es obligatorio."}), 400
+
+        try:
+            execute_query(
+                "INSERT INTO cargos (nombre_cargo, descripcion, salario_base_sugerido, activo) VALUES (?, ?, ?, 1)",
+                (nombre_cargo, descripcion, salario),
+                commit=True
+            )
+            return jsonify({"success": True, "mensaje": f"Cargo '{nombre_cargo}' registrado exitosamente."}), 201
+        except Exception as e:
+            return jsonify({"error": f"Error registrando cargo: {str(e)}"}), 500
+
+
+@app.route('/api/cargos/<int:cargo_id>', methods=['PUT', 'PATCH'])
+@login_required
+def api_cargo_editar(cargo_id):
+    """PUT: Actualizar cargo. PATCH: Cambiar estado activo/inactivo."""
+    if session['user']['rol'] not in ROLES_RRHH:
+        return jsonify({"error": "No tienes permisos."}), 403
+
+    if request.method == 'PUT':
+        data = request.json or {}
+        nombre_cargo = data.get('nombre_cargo', '').strip()
+        descripcion = data.get('descripcion', '').strip()
+        salario = float(data.get('salario_base_sugerido', 0))
+
+        if not nombre_cargo:
+            return jsonify({"error": "El nombre del cargo es obligatorio."}), 400
+
+        try:
+            rows = execute_query(
+                "UPDATE cargos SET nombre_cargo=?, descripcion=?, salario_base_sugerido=? WHERE id=?",
+                (nombre_cargo, descripcion, salario, cargo_id),
+                commit=True
+            )
+            if rows == 0:
+                return jsonify({"error": "Cargo no encontrado."}), 404
+            return jsonify({"success": True, "mensaje": "Cargo actualizado exitosamente."})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    if request.method == 'PATCH':
+        data = request.json or {}
+        nuevo_estado = 1 if data.get('activo', True) else 0
+        try:
+            execute_query("UPDATE cargos SET activo=? WHERE id=?", (nuevo_estado, cargo_id), commit=True)
+            estado_txt = 'activado' if nuevo_estado else 'desactivado'
+            return jsonify({"success": True, "mensaje": f"Cargo {estado_txt} correctamente."})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/empleados', methods=['GET', 'POST'])
 @login_required
 def api_empleados():
@@ -1842,8 +1923,9 @@ def api_movimientos_laborales():
         return jsonify(movimientos)
 
     if request.method == 'POST':
-        if session['user']['rol'] == 'Contador':
-            return jsonify({"error": "No tienes permiso para crear cuentas."}), 403
+        if session['user']['rol'] not in ROLES_RRHH:
+            return jsonify({"error": "No tienes permisos para registrar movimientos laborales."}), 403
+
         data = request.json or {}
         empleado_id  = data.get('empleado_id')
         tipo         = data.get('tipo', '')
@@ -1853,13 +1935,27 @@ def api_movimientos_laborales():
         observacion  = data.get('observacion', '').strip()
 
         if not empleado_id or not tipo or not fecha_inicio or not fecha_fin or dias_tomados <= 0:
-            return jsonify({"error": "Todos los campos son obligatorios y los dÃ­as deben ser mayores a 0."}), 400
+            return jsonify({"error": "Todos los campos son obligatorios y los días deben ser mayores a 0."}), 400
 
         tipos_validos = ['VACACIONES', 'PERMISO_CON_GOCE', 'PERMISO_SIN_GOCE', 'FALTA']
         if tipo not in tipos_validos:
-            return jsonify({"error": f"Tipo invÃ¡lido. Use: {tipos_validos}"}), 400
+            return jsonify({"error": f"Tipo inválido. Use: {tipos_validos}"}), 400
 
         try:
+            # Control de saldo de vacaciones (RF68)
+            if tipo == 'VACACIONES':
+                emp = execute_query(
+                    "SELECT nombre_completo, ISNULL(dias_vacaciones_disponibles, 0) AS saldo FROM empleados WHERE id = ?",
+                    (empleado_id,), fetchone=True
+                )
+                if not emp:
+                    return jsonify({"error": "Empleado no encontrado."}), 404
+                saldo_actual = float(emp['saldo'])
+                if dias_tomados > saldo_actual:
+                    return jsonify({
+                        "error": f"Saldo insuficiente: {emp['nombre_completo']} solo tiene {saldo_actual:.2f} días de vacaciones disponibles (solicitó {dias_tomados:.1f} días)."
+                    }), 400
+
             execute_query(
                 """INSERT INTO movimientos_laborales
                    (empleado_id, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion)
@@ -1867,13 +1963,14 @@ def api_movimientos_laborales():
                 (empleado_id, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion),
                 commit=True
             )
-            # Si es vacaciones, descontar dÃ­as disponibles del empleado
+
+            # Si es vacaciones, descontar días disponibles del empleado
             if tipo == 'VACACIONES':
                 execute_query(
                     "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles - ? WHERE id = ?",
                     (dias_tomados, empleado_id), commit=True
                 )
-            return jsonify({"success": True, "mensaje": "Movimiento registrado exitosamente."}), 201
+            return jsonify({"success": True, "mensaje": "Movimiento laboral registrado exitosamente."}), 201
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 

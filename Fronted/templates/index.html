@@ -61,7 +61,7 @@
                 </a>
                 {% endif %}
 
-                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <a href="#reportes" class="nav-item" data-tab="tab-reportes">
                     <i class="ph-bold ph-chart-line-up"></i>
                     <span>Reportes Operativos</span>
@@ -199,7 +199,7 @@
                                 <h3><i class="ph-bold ph-lightning"></i> Módulos Disponibles para tu Perfil</h3>
                             </div>
                             <div class="card-body quick-actions-list">
-                                {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
                                 <button class="action-tile" onclick="switchTab('tab-ventas')">
                                     <i class="ph-bold ph-shopping-cart"></i>
                                     <span>Punto de Venta (POS)</span>
@@ -213,14 +213,14 @@
                                 </button>
                                 {% endif %}
 
-                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
                                 <button class="action-tile" onclick="switchTab('tab-compras')">
                                     <i class="ph-bold ph-arrow-down-left"></i>
                                     <span>Ingreso de Compras</span>
                                 </button>
                                 {% endif %}
 
-                                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
+                                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
                                 <button class="action-tile" onclick="switchTab('tab-reportes')">
                                     <i class="ph-bold ph-chart-line-up"></i>
                                     <span>Reportes y Contabilidad</span>
@@ -258,7 +258,7 @@
                             <p>Administra repuestos, precios, existencias e historial de movimientos (Kardex).</p>
                         </div>
                         <div class="header-actions">
-                            {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                            {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
                             <button class="btn btn-secondary" onclick="openModalCategorias()" style="margin-right: 10px;">
                                 <i class="ph-bold ph-list"></i> Categorías
                             </button>
@@ -297,7 +297,7 @@
                                             <th>Costo Compra</th>
                                             <th>Existencias</th>
                                             <th>Estado Stock</th>
-                                            {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                            {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
                                             <th>Acción</th>
                                             {% endif %}
                                         </tr>
@@ -329,7 +329,7 @@
                                                 <th>Cantidad</th>
                                                 <th>Motivo / Referencia</th>
                                                 <th>Usuario</th>
-                                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                                                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
                                                 <th>Acción</th>
                                                 {% endif %}
                                             </tr>
@@ -357,25 +357,21 @@
 
                     <!-- Sub-navegación de ventas -->
                     <div class="subnav-pills">
-                        {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                        {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
                         <button class="subnav-btn active" onclick="switchVentasSubtab('pos', this)">
                             <i class="ph-bold ph-shopping-cart"></i> Caja / Punto de Venta (POS)
                         </button>
                         {% endif %}
-                        {% if usuario.rol != 'Vendedor' %}
-<button class="subnav-btn {% if usuario.rol == 'Contador' %}active{% endif %}" onclick="switchVentasSubtab('historial-ventas', this)">
+                        <button class="subnav-btn {% if usuario.rol == 'Contador' %}active{% endif %}" onclick="switchVentasSubtab('historial-ventas', this)">
                             <i class="ph-bold ph-receipt"></i> Historial de Ventas Realizadas
                         </button>
-{% endif %}
-                        {% if usuario.rol != 'Vendedor' %}
-<button class="subnav-btn" onclick="switchVentasSubtab('pedidos-web', this)">
+                        <button class="subnav-btn" onclick="switchVentasSubtab('pedidos-web', this)">
                             <i class="ph-bold ph-globe"></i> Pedidos Web
                         </button>
-{% endif %}
                     </div>
 
                     <!-- VISTA 1: POS -->
-                    {% if usuario.rol in ['Administrador', 'Vendedor'] %}
+                    {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
                     <div id="subtab-pos" class="subtab-view active">
                         
                         <!-- ESTADO DE CAJA (Se oculta al abrir) -->
@@ -527,7 +523,7 @@
                             <h2>Gestión de Compras y Proveedores</h2>
                             <p>Registra compras a proveedores para aumentar automáticamente el stock en inventario.</p>
                         </div>
-                        {% if usuario.rol in ['Administrador', 'Encargado de Inventario'] %}
+                        {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario', 'Encargado de Compras y Proveedores'] %}
                         <div class="header-actions">
                             <button class="btn btn-secondary" onclick="openModal('modal-proveedor')">
                                 <i class="ph-bold ph-user-plus"></i> Nuevo Proveedor
@@ -592,7 +588,7 @@
                 {% endif %}
 
                 <!-- TAB 5: REPORTES Y CONTABILIDAD -->
-                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <section id="tab-reportes" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -715,7 +711,7 @@
                 {% endif %}
 
                 <!-- TAB: ESTADOS FINANCIEROS Y CONTABILIDAD -->
-                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Gerente Administrativo y Financiero', 'Contador'] %}
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <section id="tab-finanzas" class="tab-content">
                     <div class="section-header">
                         <div>
@@ -730,9 +726,13 @@
                                 <input type="date" id="fin-fecha-fin" class="form-control" style="padding: 0.2rem 0.5rem; height: auto;">
                             </div>
                             {% if usuario.rol != 'Contador' %}
-<button class="btn btn-primary" onclick="openModal('modal-asiento')">
+{% if usuario.rol != 'Contador' %}
+{% if usuario.rol != 'Contador' %}
+                            <button class="btn btn-primary" onclick="openModal('modal-asiento')">
                                 <i class="ph-bold ph-plus"></i> Nuevo Asiento
                             </button>
+                            {% endif %}
+{% endif %}
 {% endif %}
                             <button class="btn btn-secondary" onclick="cargarDatosFinanzas()">
                                 <i class="ph-bold ph-funnel"></i> Filtrar / Refrescar
@@ -765,9 +765,13 @@
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3>Catálogo de Cuentas Contables</h3>
                                 {% if usuario.rol != 'Contador' %}
-<button class="btn btn-primary btn-sm" onclick="openModal('modal-cuenta')">
+{% if usuario.rol != 'Contador' %}
+{% if usuario.rol != 'Contador' %}
+                                <button class="btn btn-primary btn-sm" onclick="openModal('modal-cuenta')">
                                     <i class="ph-bold ph-plus"></i> Nueva Cuenta
                                 </button>
+                                {% endif %}
+{% endif %}
 {% endif %}
                             </div>
                             <div class="card-body">
@@ -1135,6 +1139,121 @@
 
             </div>
         </main>
+    </div>
+    <!-- MODAL: DEVOLUCION DE PRODUCTOS -->
+    <div class="modal" id="modal-devolucion">
+        <div class="modal-content" style="max-width: 850px;">
+            <div class="modal-header">
+                <h2 style="font-size: 1.35rem; margin: 0;"><i class="ph-bold ph-arrow-counter-clockwise"></i> Devolución de Productos</h2>
+                <button class="modal-close" onclick="closeModal('modal-devolucion')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 1rem; margin-top: -0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Código de Venta</label>
+                        <p style="font-weight: 700; font-size: 1.1rem; margin: 0;" id="dev-codigo-venta">-</p>
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Cliente</label>
+                        <p style="font-weight: 600; margin: 0;" id="dev-cliente">-</p>
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted);">Total Original</label>
+                        <p style="font-weight: 700; color: var(--accent-green); margin: 0;" id="dev-total-original">$0.00</p>
+                    </div>
+                </div>
+
+                <input type="hidden" id="dev-venta-id" value="">
+
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    <i class="ph-bold ph-info"></i> Selecciona los productos a devolver y la cantidad. Solo se pueden devolver productos no devueltos previamente.
+                </p>
+
+                <div class="table-responsive" style="min-height: 250px; max-height: 450px; overflow-y: auto; margin-bottom: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <table class="data-table" style="font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="dev-select-all" onchange="toggleSelectAllDevolucion(this)"></th>
+                                <th>Producto</th>
+                                <th>Vendidas</th>
+                                <th>Ya Devueltas</th>
+                                <th>Disponibles</th>
+                                <th style="width: 80px;">A Devolver</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-devolucion-items">
+                            <!-- Render dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label for="dev-motivo-select"><i class="ph-bold ph-list-dashes"></i> Causa / Motivo de la Devolución <span style="color: var(--danger);">*</span></label>
+                    <select id="dev-motivo-select" class="form-control" onchange="cambiarMotivoDevolucion()" required>
+                        <option value="" disabled selected>Seleccione un motivo...</option>
+                        <option value="exceso">📦 Producto agregado de más / Ajuste de cantidad (SÍ actualiza el stock)</option>
+                        <option value="defectuoso">⚠️ Producto Defectuoso / Dañado (NO actualiza el stock)</option>
+                        <option value="otro">📝 Otro motivo (Especificar...)</option>
+                    </select>
+                </div>
+
+                <div id="dev-otro-container" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div class="form-group">
+                        <label for="dev-motivo-texto"><i class="ph-bold ph-note"></i> Especificar Justificación <span style="color: var(--danger);">*</span></label>
+                        <textarea id="dev-motivo-texto" class="form-control" rows="2" placeholder="Describe brevemente el motivo..."></textarea>
+                    </div>
+                    <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 0;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="dev-actualiza-stock-check" checked style="width: 18px; height: 18px; accent-color: var(--accent-green);">
+                            <span style="font-weight: 600; color: var(--text-color);">¿Devolver producto al stock disponible? (SÍ actualiza catálogo)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="dev-alerta-defectuoso" style="display: none; margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(255, 77, 79, 0.1); border: 1px solid rgba(255, 77, 79, 0.3); border-radius: 8px; color: var(--accent-red); font-size: 0.85rem;">
+                    <i class="ph-bold ph-warning-circle"></i> <strong>Aviso:</strong> El registro quedará en el Kardex, pero el stock disponible <strong>NO</strong> se incrementará porque el producto está defectuoso.
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-dark); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">Total a Devolver:</span>
+                    <span id="dev-total-devolver" style="font-size: 1.1rem; font-weight: 700; color: var(--warning, #f59e0b);">$0.00</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-devolucion')">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="procesarDevolucion()" style="background: var(--warning, #f59e0b); border-color: var(--warning, #f59e0b);">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i> Procesar Devolución
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRMAR ANULACIÓN -->
+    <div class="modal" id="modal-anular-venta">
+        <div class="modal-content" style="max-width: 450px; text-align: center;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+                <button class="modal-close" onclick="closeModal('modal-anular-venta')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding-top: 0;">
+                <div style="font-size: 3.5rem; color: var(--danger); margin-bottom: 0.5rem;">
+                    <i class="ph-bold ph-warning-circle"></i>
+                </div>
+                <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem; color: var(--text-color);">Anular Venta</h2>
+                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.4;">
+                    ¿Estás seguro de que deseas anular esta venta? <br>
+                    <strong style="color: var(--accent-red);">Esta acción regresará el stock al catálogo y no se puede deshacer.</strong>
+                </p>
+                <input type="hidden" id="anular-venta-id" value="">
+                
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-anular-venta')" style="min-width: 130px; font-weight: 600;">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="procesarAnulacionVenta()" style="min-width: 130px; font-weight: 600;">
+                        <i class="ph-bold ph-trash"></i> Sí, Anular
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL: APERTURA DE CAJA -->

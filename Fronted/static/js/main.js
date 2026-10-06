@@ -419,7 +419,7 @@ function renderInventarioTable(productos) {
     if (!tbody) return;
 
     const userRole = window.CURRENT_USER_ROLE || '';
-    const canEdit = ['Administrador', 'Encargado de Inventario'].includes(userRole);
+    const canEdit = ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones'].includes(userRole);
     const colSpanCount = canEdit ? 8 : 7;
 
     if (!Array.isArray(productos) || productos.length === 0) {
@@ -550,7 +550,7 @@ function renderMovimientosTable(movs) {
     if (!tbody) return;
 
     const userRole = window.CURRENT_USER_ROLE || '';
-    const canEdit = ['Administrador', 'Encargado de Inventario'].includes(userRole);
+    const canEdit = ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones'].includes(userRole);
     const colSpanCount = canEdit ? 8 : 7;
 
     if (!Array.isArray(movs) || movs.length === 0) {
@@ -946,11 +946,11 @@ function renderHistorialVentasTable(ventas) {
             <td>${v.vendedor || 'Sistema Automático'}</td>
             <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${v.forma_pago}</span></td>
             <td style="font-weight: 700; color: var(--accent-green);">$${v.total.toFixed(2)}</td>
-            <td style="display: flex; gap: 5px; align-items: center;">
+            <td style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="verComprobanteVenta(${v.id})">
                     <i class="ph-bold ph-receipt"></i> Ticket
                 </button>
-                ${v.estado === 'Anulada' ? '<span class="text-accent-red font-bold" style="font-size:0.8rem;"><i class="ph-bold ph-x-circle"></i> Anulada</span>' : `<button class="btn btn-danger icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="anularVenta(${v.id})"><i class="ph-bold ph-trash"></i> Anular</button>`}
+                ${v.estado === 'Anulada' ? '<span class="text-accent-red font-bold" style="font-size:0.8rem;"><i class="ph-bold ph-x-circle"></i> Anulada</span>' : `<button class="btn icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; background: #f59e0b; border-color: #f59e0b; color: #000;" onclick="abrirModalDevolucion(${v.id})"><i class="ph-bold ph-arrow-counter-clockwise"></i> Devolución</button><button class="btn btn-danger icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="anularVenta(${v.id})"><i class="ph-bold ph-trash"></i> Anular</button>`}
             </td>
         </tr>
     `).join('');
@@ -973,10 +973,14 @@ function renderPedidosWebTable(ventas) {
             <td>${v.cliente || 'Invitado'}</td>
             <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${v.forma_pago}</span></td>
             <td style="font-weight: 700; color: var(--accent-green);">$${v.total.toFixed(2)}</td>
-            <td>
+            <td style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="verComprobanteVenta(${v.id})">
                     <i class="ph-bold ph-receipt"></i> Ver Factura
                 </button>
+                ${v.estado === 'Anulada' ? '<span class="text-accent-red font-bold" style="font-size:0.8rem;"><i class="ph-bold ph-x-circle"></i> Anulada</span>' : `
+                <button class="btn btn-danger icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="anularVenta(${v.id})"><i class="ph-bold ph-trash"></i> Anular</button>
+                <button class="btn icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; background: #f59e0b; border-color: #f59e0b; color: #000;" onclick="abrirModalDevolucion(${v.id})"><i class="ph-bold ph-arrow-counter-clockwise"></i> Devolución</button>
+                `}
             </td>
         </tr>
     `).join('');
@@ -1001,6 +1005,202 @@ function filterPedidosWebTable(query) {
         (v.cliente && v.cliente.toLowerCase().includes(q))
     );
     renderPedidosWebTable(filtrados);
+}
+
+// --- DEVOLUCION DE PRODUCTOS ---
+async function abrirModalDevolucion(ventaId) {
+    const venta = ventasCache.find(v => v.id === ventaId);
+    if (!venta) {
+        alert('Venta no encontrada en caché.');
+        return;
+    }
+
+    document.getElementById('dev-venta-id').value = ventaId;
+    document.getElementById('dev-codigo-venta').textContent = venta.codigo_venta;
+    document.getElementById('dev-cliente').textContent = venta.cliente || 'Invitado';
+    document.getElementById('dev-total-original').textContent = `$${venta.total.toFixed(2)}`;
+    document.getElementById('dev-motivo-select').value = '';
+    document.getElementById('dev-motivo-texto').value = '';
+    document.getElementById('dev-actualiza-stock-check').checked = true;
+    document.getElementById('dev-otro-container').style.display = 'none';
+    document.getElementById('dev-alerta-defectuoso').style.display = 'none';
+    document.getElementById('dev-select-all').checked = false;
+
+    // Fetch already returned items for this sale
+    let yaDevueltos = {};
+    try {
+        const resDev = await fetch(`/api/ventas/${ventaId}/productos_devueltos`);
+        if (resDev.ok) {
+            yaDevueltos = await resDev.json();
+        }
+    } catch (e) {
+        console.error("Error fetching yaDevueltos:", e);
+    }
+
+    const detalles = venta.detalles || [];
+    const tbody = document.getElementById('tbody-devolucion-items');
+    
+    if (detalles.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No hay detalles disponibles para esta venta.</td></tr>`;
+        openModal('modal-devolucion');
+        return;
+    }
+
+    tbody.innerHTML = detalles.map(d => {
+        const yaDevuelto = yaDevueltos[d.producto_id] || 0;
+        const disponible = d.cantidad - yaDevuelto;
+        
+        if (disponible <= 0) {
+            return `
+                <tr style="opacity: 0.6; background: rgba(0,0,0,0.05);">
+                    <td><input type="checkbox" disabled></td>
+                    <td><strong style="text-decoration: line-through;">${d.producto_nombre}</strong></td>
+                    <td style="text-align: center;">${d.cantidad}</td>
+                    <td style="text-align: center; color: var(--accent-red); font-weight: bold;">${yaDevuelto}</td>
+                    <td style="text-align: center;">0</td>
+                    <td><input type="number" class="form-control" disabled value="0" style="width: 65px; padding: 0.2rem 0.4rem; text-align: center; font-size: 0.85rem;"></td>
+                    <td style="font-weight: 600; color: var(--text-muted);">$0.00</td>
+                </tr>
+            `;
+        }
+
+        return `
+            <tr>
+                <td><input type="checkbox" class="dev-item-check" data-producto-id="${d.producto_id}" data-precio="${d.precio_unitario}" data-max="${disponible}" onchange="calcularTotalDevolucion()"></td>
+                <td><strong>${d.producto_nombre}</strong></td>
+                <td style="text-align: center;">${d.cantidad}</td>
+                <td style="text-align: center; color: ${yaDevuelto > 0 ? 'var(--warning)' : 'var(--text-muted)'};">${yaDevuelto > 0 ? yaDevuelto : '-'}</td>
+                <td style="text-align: center; font-weight: 600;">${disponible}</td>
+                <td><input type="number" class="form-control dev-item-qty" min="1" max="${disponible}" value="${disponible}" style="width: 65px; padding: 0.2rem 0.4rem; text-align: center; font-size: 0.85rem;" onchange="calcularTotalDevolucion()" oninput="calcularTotalDevolucion()"></td>
+                <td class="dev-item-subtotal" style="font-weight: 600; color: var(--warning, #f59e0b);">$0.00</td>
+            </tr>
+        `;
+    }).join('');
+
+    calcularTotalDevolucion();
+    openModal('modal-devolucion');
+}
+
+function cambiarMotivoDevolucion() {
+    const sel = document.getElementById('dev-motivo-select').value;
+    const otroContainer = document.getElementById('dev-otro-container');
+    const alertaDefectuoso = document.getElementById('dev-alerta-defectuoso');
+    const txt = document.getElementById('dev-motivo-texto');
+
+    otroContainer.style.display = 'none';
+    alertaDefectuoso.style.display = 'none';
+    txt.required = false;
+
+    if (sel === 'otro') {
+        otroContainer.style.display = 'block';
+        txt.required = true;
+    } else if (sel === 'defectuoso') {
+        alertaDefectuoso.style.display = 'block';
+    }
+}
+
+function toggleSelectAllDevolucion(masterCheckbox) {
+    const checks = document.querySelectorAll('.dev-item-check');
+    checks.forEach(cb => { cb.checked = masterCheckbox.checked; });
+    calcularTotalDevolucion();
+}
+
+function calcularTotalDevolucion() {
+    const rows = document.querySelectorAll('#tbody-devolucion-items tr');
+    let total = 0;
+    rows.forEach(row => {
+        const cb = row.querySelector('.dev-item-check');
+        const qtyInput = row.querySelector('.dev-item-qty');
+        const subtotalCell = row.querySelector('.dev-item-subtotal');
+        if (!cb || !qtyInput || !subtotalCell) return;
+
+        if (cb.checked) {
+            const precio = parseFloat(cb.dataset.precio) || 0;
+            const maxQty = parseInt(cb.dataset.max) || 0;
+            let qty = parseInt(qtyInput.value) || 0;
+            if (qty > maxQty) { qty = maxQty; qtyInput.value = maxQty; }
+            if (qty < 1) { qty = 1; qtyInput.value = 1; }
+            const subtotal = precio * qty;
+            subtotalCell.textContent = `$${subtotal.toFixed(2)}`;
+            total += subtotal;
+        } else {
+            subtotalCell.textContent = '$0.00';
+        }
+    });
+    document.getElementById('dev-total-devolver').textContent = `$${total.toFixed(2)}`;
+}
+
+async function procesarDevolucion() {
+    const ventaId = document.getElementById('dev-venta-id').value;
+    const select = document.getElementById('dev-motivo-select').value;
+    const textoOtro = document.getElementById('dev-motivo-texto').value.trim();
+    
+    if (!select) {
+        alert('Debes seleccionar la causa / motivo de la devolución.');
+        return;
+    }
+
+    let motivoFinal = '';
+    let actualizaStock = true;
+
+    if (select === 'exceso') {
+        motivoFinal = 'Producto agregado de más / Ajuste de cantidad';
+        actualizaStock = true;
+    } else if (select === 'defectuoso') {
+        motivoFinal = 'Producto Defectuoso / Dañado';
+        actualizaStock = false;
+    } else if (select === 'otro') {
+        if (!textoOtro) {
+            alert('Debes especificar la justificación para este motivo.');
+            return;
+        }
+        motivoFinal = 'Otro motivo: ' + textoOtro;
+        actualizaStock = document.getElementById('dev-actualiza-stock-check').checked;
+    }
+
+    const items = [];
+    const rows = document.querySelectorAll('#tbody-devolucion-items tr');
+    rows.forEach(row => {
+        const cb = row.querySelector('.dev-item-check');
+        const qtyInput = row.querySelector('.dev-item-qty');
+        if (cb && cb.checked && qtyInput) {
+            items.push({
+                producto_id: parseInt(cb.dataset.productoId),
+                cantidad: parseInt(qtyInput.value) || 0
+            });
+        }
+    });
+
+    if (items.length === 0) {
+        alert('Debes seleccionar al menos un producto para devolver.');
+        return;
+    }
+
+    const mnsjStock = actualizaStock ? "(SÍ volverán al stock del catálogo)" : "(NO volverán al stock del catálogo)";
+    if (!confirm(`¿Estás seguro de procesar esta devolución?\n\nProductos a devolver: ${items.length} ${mnsjStock}\nTotal a descontar: ${document.getElementById('dev-total-devolver').textContent}\nMotivo: ${motivoFinal}`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/ventas/${ventaId}/devolucion`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ motivo: motivoFinal, items: items, actualiza_stock: actualizaStock })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            alert('✅ ' + data.mensaje);
+            closeModal('modal-devolucion');
+            loadHistorialVentas();
+            if (typeof loadInventario === 'function') loadInventario();
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    } catch (err) {
+        alert('Error de conexión al procesar la devolución.');
+        console.error(err);
+    }
 }
 
 function verComprobanteVenta(ventaId) {
@@ -2053,15 +2253,23 @@ function imprimirReporteCaja() {
 
 
 
-async function anularVenta(v_id) {
-    if (!confirm('¿Estás seguro de que deseas anular esta venta? Esta acción regresará el stock y no se puede deshacer.')) return;
+function anularVenta(v_id) {
+    document.getElementById('anular-venta-id').value = v_id;
+    openModal('modal-anular-venta');
+}
+
+async function procesarAnulacionVenta() {
+    const v_id = document.getElementById('anular-venta-id').value;
+    if (!v_id) return;
+    
     try {
         const response = await fetch(`/api/ventas/${v_id}/anular`, { method: 'POST' });
         const data = await response.json();
         if (data.error) {
             alert(data.error);
         } else {
-            alert(data.mensaje);
+            alert('✅ ' + data.mensaje);
+            closeModal('modal-anular-venta');
             loadHistorialYWeb();
             if (typeof loadInventario === 'function') loadInventario();
             if (typeof loadDashboardStats === 'function') loadDashboardStats();

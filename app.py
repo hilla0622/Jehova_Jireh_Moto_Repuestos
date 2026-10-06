@@ -12,7 +12,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_supe
 # CONFIGURACIÃ“N DE BASE DE DATOS SQL SERVER
 # ==============================================================================
 # Cambia 'LAPTOP-CNR3S3I3' por tu nombre de servidor SQL Server.
-DB_SERVER = os.environ.get('DB_SERVER', r'LAPTOP-CNR3S3I3')
+DB_SERVER = os.environ.get('DB_SERVER', r'HILLARY')
 DB_NAME = 'jehova_jireh_db'
 
 def get_db_connection():
@@ -1009,6 +1009,194 @@ def api_venta_anular(v_id):
         conn.close()
 
 
+# --- DEVOLUCIONES PARCIALES ---
+@app.route('/api/ventas/<int:v_id>/devolucion', methods=['POST'])
+@role_required('Administrador', 'Vendedor', 'Gerente de Operaciones')
+def api_venta_devolucion(v_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        data = request.json or {}
+        motivo = (data.get('motivo') or '').strip()
+        items = data.get('items', [])
+
+        if not motivo:
+            return jsonify({"error": "Debes ingresar un motivo para la devolución."}), 400
+        if not items:
+            return jsonify({"error": "Debes seleccionar al menos un producto a devolver."}), 400
+
+        # Validate venta exists and is not anulada
+        cursor.execute("SELECT id, estado, codigo_venta FROM ventas WHERE id = ?", (v_id,))
+        venta = cursor.fetchone()
+        if not venta:
+            return jsonify({"error": "Venta no encontrada."}), 404
+        if venta.estado == 'Anulada':
+            return jsonify({"error": "No se puede devolver productos de una venta anulada."}), 400
+
+        # Get original sale details
+        cursor.execute("""
+            SELECT d.producto_id, d.cantidad, d.precio_unitario, p.costo
+            FROM detalle_ventas d
+            INNER JOIN productos p ON d.producto_id = p.id
+            WHERE d.venta_id = ?
+        """, (v_id,))
+        detalles_originales = {row.producto_id: {'cantidad_vendida': row.cantidad, 'precio': float(row.precio_unitario), 'costo': float(row.costo)} for row in cursor.fetchall()}
+
+        # Get already returned quantities for this sale
+        cursor.execute("""
+            SELECT dd.producto_id, SUM(dd.cantidad) AS ya_devuelto
+            FROM detalle_devoluciones dd
+            INNER JOIN devoluciones dev ON dd.devolucion_id = dev.id
+            WHERE dev.venta_id = ?
+            GROUP BY dd.producto_id
+        """, (v_id,))
+        ya_devueltos = {row.producto_id: row.ya_devuelto for row in cursor.fetchall()}
+
+        actualiza_stock = data.get('actualiza_stock', True)
+
+        # Validate each item
+        total_devuelto = 0.0
+        detalles_a_devolver = []
+        for item in items:
+            p_id = int(item.get('producto_id'))
+            cant = int(item.get('cantidad', 0))
+
+            if cant <= 0:
+                continue
+
+            if p_id not in detalles_originales:
+                return jsonify({"error": f"El producto ID {p_id} no pertenece a esta venta."}), 400
+
+            disponible = detalles_originales[p_id]['cantidad_vendida'] - ya_devueltos.get(p_id, 0)
+            if cant > disponible:
+                return jsonify({"error": f"Solo puedes devolver {disponible} unidades del producto ID {p_id}. Ya se devolvieron {ya_devueltos.get(p_id, 0)} anteriormente."}), 400
+
+            precio = detalles_originales[p_id]['precio']
+            costo = detalles_originales[p_id]['costo']
+            subtotal = precio * cant
+            total_devuelto += subtotal
+            detalles_a_devolver.append((p_id, cant, precio, costo, subtotal))
+
+        if not detalles_a_devolver:
+            return jsonify({"error": "No se seleccionaron cantidades válidas para devolver."}), 400
+
+        # Generate devolucion code
+        import random, string
+        random_str = ''.join(random.choices(string.digits, k=4))
+        codigo_dev = f"DEV-{random_str}"
+
+        # Insert devolucion header
+        cursor.execute("""
+            INSERT INTO devoluciones (venta_id, codigo_devolucion, motivo, total_devuelto, usuario_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (v_id, codigo_dev, motivo, total_devuelto, session['user']['id']))
+        cursor.execute("SELECT @@IDENTITY AS id")
+        dev_id = cursor.fetchone().id
+
+        # Insert details, return stock, log inventory movements
+        total_costo_devuelto = 0.0
+        for (p_id, cant, precio, costo, subtotal) in detalles_a_devolver:
+            cursor.execute("""
+                INSERT INTO detalle_devoluciones (devolucion_id, producto_id, cantidad, precio_unitario, subtotal)
+                VALUES (?, ?, ?, ?, ?)
+            """, (dev_id, p_id, cant, precio, subtotal))
+
+            # Return stock
+            cursor.execute("SELECT stock_actual FROM productos WHERE id = ?", (p_id,))
+            prod = cursor.fetchone()
+            stock_anterior = prod.stock_actual
+            
+            if actualiza_stock:
+                stock_posterior = stock_anterior + cant
+                cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (stock_posterior, p_id))
+            else:
+                stock_posterior = stock_anterior
+
+            # Log inventory movement
+            cursor.execute("""
+                INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, motivo, usuario_id)
+                VALUES (?, 'DEVOLUCION_CLIENTE', ?, ?, ?, ?, ?)
+            """, (p_id, cant, stock_anterior, stock_posterior, f"Devolucion {codigo_dev} de venta {venta.codigo_venta}: {motivo}", session['user']['id']))
+
+            total_costo_devuelto += costo * cant
+
+        # --- ASIENTO CONTABLE DE REVERSION PARCIAL ---
+        try:
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'")
+            cta_caja = cursor.fetchone()
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'")
+            cta_ventas = cursor.fetchone()
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '5.1.01'")
+            cta_costo = cursor.fetchone()
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.04'")
+            cta_inv = cursor.fetchone()
+
+            if cta_caja and cta_ventas:
+                cursor.execute("""
+                    INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                    VALUES (GETDATE(), ?, 'DEVOLUCION', ?, ?)
+                """, (f"Devolucion {codigo_dev} de Venta {venta.codigo_venta}", v_id, session['user']['id']))
+                cursor.execute("SELECT @@IDENTITY AS id")
+                asiento_id = cursor.fetchone().id
+
+                # Reverse the sale amount: Debit Ventas, Credit Caja
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_ventas.id, total_devuelto))
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_caja.id, total_devuelto))
+
+                # Reverse the cost: Debit Inventario, Credit Costo de Ventas
+                if total_costo_devuelto > 0 and cta_costo and cta_inv:
+                    cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_inv.id, total_costo_devuelto))
+                    cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_costo.id, total_costo_devuelto))
+        except Exception:
+            pass  # Don't fail the entire devolucion if accounting entries fail
+
+        conn.commit()
+        return jsonify({"success": True, "mensaje": f"Devolución {codigo_dev} procesada correctamente. {len(detalles_a_devolver)} producto(s) devuelto(s). Total: ${total_devuelto:.2f}", "codigo": codigo_dev})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# Get devoluciones for a specific sale
+@app.route('/api/ventas/<int:v_id>/devoluciones', methods=['GET'])
+@login_required
+def api_venta_devoluciones(v_id):
+    devoluciones = execute_query("""
+        SELECT d.id, d.codigo_devolucion, d.fecha, d.motivo, d.total_devuelto, u.nombre_completo AS usuario
+        FROM devoluciones d
+        LEFT JOIN usuarios u ON d.usuario_id = u.id
+        WHERE d.venta_id = ?
+        ORDER BY d.fecha DESC
+    """, (v_id,), fetchall=True)
+    for dev in devoluciones:
+        if hasattr(dev['fecha'], 'strftime'):
+            dev['fecha'] = dev['fecha'].strftime('%Y-%m-%d %H:%M')
+        dev['total_devuelto'] = float(dev['total_devuelto'])
+    return jsonify(devoluciones)
+
+
+@app.route('/api/ventas/<int:v_id>/productos_devueltos', methods=['GET'])
+@login_required
+def api_venta_productos_devueltos(v_id):
+    # Returns a map of producto_id -> total_cantidad_devuelta
+    devueltos = execute_query("""
+        SELECT dd.producto_id, SUM(dd.cantidad) as total_devuelto
+        FROM detalle_devoluciones dd
+        INNER JOIN devoluciones d ON dd.devolucion_id = d.id
+        WHERE d.venta_id = ?
+        GROUP BY dd.producto_id
+    """, (v_id,), fetchall=True)
+    
+    resultado = {}
+    for item in devueltos:
+        resultado[item['producto_id']] = item['total_devuelto']
+        
+    return jsonify(resultado)
+
+
 # --- COMPRAS Y PROVEEDORES ---
 @app.route('/api/proveedores', methods=['GET', 'POST'])
 @login_required
@@ -1018,7 +1206,7 @@ def api_proveedores():
         return jsonify(provs)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores']:
             return jsonify({"error": "No tienes permisos."}), 403
             
         data = request.json or {}
@@ -1040,7 +1228,7 @@ def api_proveedores():
 @app.route('/api/proveedores/<int:prov_id>/estado', methods=['PUT'])
 @login_required
 def api_proveedor_estado(prov_id):
-    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
+    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores']:
         return jsonify({"error": "No tienes permisos."}), 403
     
     data = request.json or {}
@@ -1083,7 +1271,7 @@ def api_compras():
         return jsonify(compras)
 
     if request.method == 'POST':
-        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores']:
             return jsonify({"error": "No tienes permiso para registrar compras."}), 403
         
         data = request.json or {}

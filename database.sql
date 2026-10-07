@@ -1,6 +1,8 @@
 -- ==============================================================================
 -- BASE DE DATOS: JEHOVA JIREH MOTO REPUESTOS
+-- VERSIÓN INTEGRAL Y ACTUALIZADA — SISTEMA COMPLETO 2026
 -- COMPATIBLE 100% CON MICROSOFT SQL SERVER (T-SQL / SSMS)
+-- MÓDULOS: SEGURIDAD, INVENTARIO, POS, KARDEX, RECURSOS HUMANOS, NÓMINA Y CONTABILIDAD
 -- ==============================================================================
 
 USE master;
@@ -16,10 +18,22 @@ GO
 USE jehova_jireh_db;
 GO
 
--- Limpieza previa de tablas (en orden de dependencias)
+-- Limpieza previa de tablas (en orden de dependencias para evitar conflictos de claves foráneas)
+IF OBJECT_ID('movimientos_contables', 'U') IS NOT NULL DROP TABLE movimientos_contables;
+IF OBJECT_ID('detalle_asientos', 'U') IS NOT NULL DROP TABLE detalle_asientos;
+IF OBJECT_ID('asientos_contables', 'U') IS NOT NULL DROP TABLE asientos_contables;
+IF OBJECT_ID('cuentas_contables', 'U') IS NOT NULL DROP TABLE cuentas_contables;
+
+IF OBJECT_ID('movimientos_laborales', 'U') IS NOT NULL DROP TABLE movimientos_laborales;
+IF OBJECT_ID('detalle_nomina', 'U') IS NOT NULL DROP TABLE detalle_nomina;
+IF OBJECT_ID('nomina', 'U') IS NOT NULL DROP TABLE nomina;
+IF OBJECT_ID('empleados', 'U') IS NOT NULL DROP TABLE empleados;
+IF OBJECT_ID('cargos', 'U') IS NOT NULL DROP TABLE cargos;
+
 IF OBJECT_ID('movimientos_inventario', 'U') IS NOT NULL DROP TABLE movimientos_inventario;
 IF OBJECT_ID('detalle_ventas', 'U') IS NOT NULL DROP TABLE detalle_ventas;
 IF OBJECT_ID('ventas', 'U') IS NOT NULL DROP TABLE ventas;
+IF OBJECT_ID('sesiones_caja', 'U') IS NOT NULL DROP TABLE sesiones_caja;
 IF OBJECT_ID('detalle_compras', 'U') IS NOT NULL DROP TABLE detalle_compras;
 IF OBJECT_ID('compras', 'U') IS NOT NULL DROP TABLE compras;
 IF OBJECT_ID('productos', 'U') IS NOT NULL DROP TABLE productos;
@@ -69,14 +83,14 @@ CREATE TABLE categorias (
 );
 GO
 
--- Tabla: CLIENTES (Exclusiva para usuarios registrados en la Web)
+-- Tabla: CLIENTES (Web y Mostrador)
 CREATE TABLE clientes (
     id INT IDENTITY(1,1) PRIMARY KEY,
     nombre_completo VARCHAR(150) NOT NULL,
     identificacion VARCHAR(30) NULL,
     telefono VARCHAR(25) NULL,
-    email VARCHAR(100) NOT NULL UNIQUE, -- Obligatorio y único para iniciar sesión
-    password_hash VARCHAR(255) NOT NULL, -- Contraseña del usuario web
+    email VARCHAR(100) NULL,
+    password_hash VARCHAR(255) NULL,
     direccion VARCHAR(MAX) NULL,
     tipo_cliente VARCHAR(30) DEFAULT 'General' CHECK (tipo_cliente IN ('General', 'Taller', 'Frecuente', 'Mayorista')),
     created_at DATETIME DEFAULT GETDATE()
@@ -165,7 +179,7 @@ GO
 
 CREATE TABLE sesiones_caja (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    usuario_id INT NOT NULL, -- El cajero o vendedor
+    usuario_id INT NOT NULL,
     fecha_apertura DATETIME NOT NULL DEFAULT GETDATE(),
     monto_inicial DECIMAL(12, 2) NOT NULL,
     fecha_cierre DATETIME NULL,
@@ -181,10 +195,10 @@ GO
 CREATE TABLE ventas (
     id INT IDENTITY(1,1) PRIMARY KEY,
     codigo_venta VARCHAR(30) NOT NULL UNIQUE,
-    cliente_id INT NULL, -- NULL si es cliente físico o invitado web
-    nombre_cliente_invitado VARCHAR(150) NULL, -- Guardará el nombre del cliente físico o web que no se registró
-    usuario_id INT NULL, -- NULL si la venta se hizo sola desde la web, o el ID del vendedor si fue física
-    sesion_caja_id INT NULL, -- ID de la caja abierta
+    cliente_id INT NULL,
+    nombre_cliente_invitado VARCHAR(150) NULL,
+    usuario_id INT NULL,
+    sesion_caja_id INT NULL,
     fecha_venta DATE NOT NULL,
     subtotal DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     descuento DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
@@ -243,7 +257,153 @@ CREATE TABLE movimientos_inventario (
 GO
 
 -- ==============================================================================
--- 7. ÍNDICES DE RENDIMIENTO
+-- 7. MÓDULO DE RECURSOS HUMANOS Y NÓMINA (LEYES LABORALES DE NICARAGUA)
+-- ==============================================================================
+
+-- 7.1 Catálogo de Cargos
+CREATE TABLE cargos (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre_cargo VARCHAR(100) NOT NULL UNIQUE,
+    descripcion VARCHAR(255) NULL,
+    salario_base_sugerido DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    activo BIT DEFAULT 1,
+    created_at DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 7.2 Empleados
+CREATE TABLE empleados (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre_completo VARCHAR(150) NOT NULL,
+    identificacion VARCHAR(30) UNIQUE NOT NULL,
+    num_inss VARCHAR(20) NULL,
+    cargo VARCHAR(100) NOT NULL,
+    salario_base DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    fecha_ingreso DATE NOT NULL,
+    activo BIT DEFAULT 1,
+    dias_vacaciones_disponibles DECIMAL(5,1) NOT NULL DEFAULT 0.0,
+    telefono VARCHAR(25) NULL,
+    email VARCHAR(100) NULL,
+    observaciones VARCHAR(500) NULL,
+    created_at DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 7.3 Movimientos Laborales (Vacaciones, Permisos, Faltas)
+CREATE TABLE movimientos_laborales (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    empleado_id INT NOT NULL,
+    tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('VACACIONES', 'PERMISO_CON_GOCE', 'PERMISO_SIN_GOCE', 'FALTA')),
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    dias_tomados DECIMAL(4,1) NOT NULL,
+    observacion VARCHAR(255) NULL,
+    afecta_septimo_dia BIT DEFAULT 0,
+    created_at DATETIME DEFAULT GETDATE(),
+    CONSTRAINT fk_movlab_empleado FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+);
+GO
+
+-- 7.4 Cabecera de Nómina
+CREATE TABLE nomina (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    periodo_mes INT NOT NULL,
+    periodo_anio INT NOT NULL,
+    fecha_generacion DATETIME DEFAULT GETDATE(),
+    total_ingresos DECIMAL(12, 2) DEFAULT 0.00,
+    total_deducciones DECIMAL(12, 2) DEFAULT 0.00,
+    total_neto DECIMAL(12, 2) DEFAULT 0.00,
+    inss_patronal_total DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    inatec_patronal_total DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    provision_vac_total DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    provision_agui_total DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    estado VARCHAR(20) NOT NULL DEFAULT 'CERRADA' CHECK (estado IN ('ABIERTA', 'CERRADA', 'ANULADA'))
+);
+GO
+
+-- 7.5 Detalle de Nómina por Empleado
+CREATE TABLE detalle_nomina (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nomina_id INT NOT NULL,
+    empleado_id INT NOT NULL,
+    salario_base DECIMAL(12, 2) NOT NULL,
+    ingresos_extra DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    inss_laboral DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    ir DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    otras_deducciones DECIMAL(12, 2) DEFAULT 0.00,
+    neto_pagar DECIMAL(12, 2) NOT NULL,
+    inss_patronal DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    inatec_patronal DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    provision_vacaciones DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    provision_aguinaldo DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    kpi_comision DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    adelanto_salarial DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    dias_trabajados DECIMAL(4, 1) NOT NULL DEFAULT 15.0,
+    vac_acumulada DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    vac_mes DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    vac_descansados DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    vac_saldo_final DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    dias_falta DECIMAL(4, 1) NOT NULL DEFAULT 0.0,
+    monto_falta DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    dias_permiso_sin_goce DECIMAL(4, 1) NOT NULL DEFAULT 0.0,
+    monto_permiso_sin_goce DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    dias_septimo_dia DECIMAL(4, 1) NOT NULL DEFAULT 0.0,
+    monto_septimo_dia DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    CONSTRAINT fk_detnomina_nomina FOREIGN KEY (nomina_id) REFERENCES nomina(id) ON DELETE CASCADE,
+    CONSTRAINT fk_detnomina_empleado FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+);
+GO
+
+-- Índices únicos para garantizar integridad y evitar duplicidad de procesamiento en el mismo período
+CREATE UNIQUE INDEX UQ_nomina_periodo ON nomina (periodo_mes, periodo_anio);
+CREATE UNIQUE INDEX UQ_detalle_nomina_emp ON detalle_nomina (nomina_id, empleado_id);
+GO
+
+-- ==============================================================================
+-- 8. MÓDULO DE CONTABILIDAD Y ESTADOS FINANCIEROS
+-- ==============================================================================
+
+-- 8.1 Catálogo de Cuentas Contables
+CREATE TABLE cuentas_contables (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    codigo VARCHAR(20) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    clasificacion VARCHAR(50) NOT NULL,
+    naturaleza VARCHAR(20) NOT NULL CHECK (naturaleza IN ('Deudora', 'Acreedora')),
+    descripcion VARCHAR(255) NULL,
+    activo BIT DEFAULT 1,
+    created_at DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 8.2 Asientos Contables (Libro Diario)
+CREATE TABLE asientos_contables (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    fecha DATE NOT NULL,
+    concepto VARCHAR(255) NOT NULL,
+    modulo_origen VARCHAR(50) NULL,
+    referencia_id INT NULL,
+    usuario_id INT NOT NULL,
+    created_at DATETIME DEFAULT GETDATE(),
+    CONSTRAINT fk_asientos_usuarios FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+GO
+
+-- 8.3 Movimientos Contables (Partida Doble)
+CREATE TABLE movimientos_contables (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    asiento_id INT NOT NULL,
+    cuenta_id INT NOT NULL,
+    debe DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    haber DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    CONSTRAINT fk_movimientos_asientos FOREIGN KEY (asiento_id) REFERENCES asientos_contables(id) ON DELETE CASCADE,
+    CONSTRAINT fk_movimientos_cuentas FOREIGN KEY (cuenta_id) REFERENCES cuentas_contables(id),
+    CONSTRAINT chk_debe_haber CHECK (debe >= 0 AND haber >= 0 AND (debe > 0 OR haber > 0))
+);
+GO
+
+-- ==============================================================================
+-- 9. ÍNDICES DE RENDIMIENTO
 -- ==============================================================================
 
 CREATE NONCLUSTERED INDEX idx_productos_sku ON productos(codigo_sku);
@@ -252,10 +412,12 @@ CREATE NONCLUSTERED INDEX idx_productos_categoria ON productos(categoria_id);
 CREATE NONCLUSTERED INDEX idx_ventas_fecha ON ventas(fecha_venta);
 CREATE NONCLUSTERED INDEX idx_compras_fecha ON compras(fecha_compra);
 CREATE NONCLUSTERED INDEX idx_movimientos_producto ON movimientos_inventario(producto_id);
+CREATE NONCLUSTERED INDEX idx_empleados_cedula ON empleados(identificacion);
+CREATE NONCLUSTERED INDEX idx_asientos_fecha ON asientos_contables(fecha);
 GO
 
 -- ==============================================================================
--- 8. VISTAS SQL PARA REPORTES Y DASHBOARDS
+-- 10. VISTAS SQL PARA DASHBOARD Y REPORTES GERENCIALES
 -- ==============================================================================
 
 CREATE OR ALTER VIEW vista_stock_bajo AS
@@ -324,31 +486,48 @@ FROM productos p
 WHERE p.activo = 1;
 GO
 
+CREATE OR ALTER VIEW vista_resumen_rrhh AS
+SELECT 
+    e.id AS empleado_id,
+    e.nombre_completo,
+    e.identificacion,
+    e.cargo,
+    e.salario_base,
+    e.dias_vacaciones_disponibles,
+    e.activo,
+    COUNT(ml.id) AS total_incidencias_registradas
+FROM empleados e
+LEFT JOIN movimientos_laborales ml ON e.id = ml.empleado_id
+GROUP BY e.id, e.nombre_completo, e.identificacion, e.cargo, e.salario_base, e.dias_vacaciones_disponibles, e.activo;
+GO
+
 -- ==============================================================================
--- 9. INSERCIÓN DE DATOS INICIALES (CON IDENTITY_INSERT HABILITADO)
+-- 11. INSERCIÓN DE DATOS INICIALES (SEMILLAS / SEED DATA)
 -- ==============================================================================
 
--- 1. Roles
+-- 11.1 Roles de Seguridad
 SET IDENTITY_INSERT roles ON;
 INSERT INTO roles (id, nombre, descripcion) VALUES
-(1, 'Administrador', 'Control total administrativo y reportes'),
+(1, 'Administrador', 'Control total administrativo, contabilidad y auditoría'),
 (2, 'Vendedor', 'Atención al cliente y facturación en caja'),
 (3, 'Encargado de Inventario', 'Ingreso de compras, bodega y Kardex'),
-(4, 'Contador', 'Balances contables y reportes de rentabilidad');
+(4, 'Contador', 'Balances contables y reportes de rentabilidad'),
+(5, 'Responsable de Recursos Humanos', 'Gestión de empleados, vacaciones, permisos y nómina');
 SET IDENTITY_INSERT roles OFF;
 GO
 
--- 2. Usuarios
+-- 11.2 Usuarios del Sistema
 SET IDENTITY_INSERT usuarios ON;
 INSERT INTO usuarios (id, rol_id, username, password_hash, nombre_completo, email, telefono) VALUES
 (1, 1, 'admin', '123', 'Gilda Pérez', 'admin@jehovajireh.com', '+505 8888-0001'),
 (2, 2, 'vendedor', '123', 'Ana Gómez', 'ventas@jehovajireh.com', '+505 8888-0002'),
 (3, 3, 'inventario', '123', 'Roberto Silva', 'bodega@jehovajireh.com', '+505 8888-0003'),
-(4, 4, 'contador', '123', 'Lic. Fernando Rivas (Granada)', 'contabilidad@jehovajireh.com', '+505 8888-0004');
+(4, 4, 'contador', '123', 'Lic. Fernando Rivas', 'contabilidad@jehovajireh.com', '+505 8888-0004'),
+(5, 5, 'rrhh', '123', 'Lic. María Elena Calero', 'rrhh@jehovajireh.com', '+505 8888-0005');
 SET IDENTITY_INSERT usuarios OFF;
 GO
 
--- 3. Categorías
+-- 11.3 Categorías
 SET IDENTITY_INSERT categorias ON;
 INSERT INTO categorias (id, nombre, descripcion) VALUES
 (1, 'Motor y Partes Internas', 'Cilindros completos, pistones, anillos de pistón, bielas, válvulas, árbol de levas, balancines, empaques de motor, cadenas de tiempo y bombas de lubricación.'),
@@ -363,20 +542,21 @@ INSERT INTO categorias (id, nombre, descripcion) VALUES
 SET IDENTITY_INSERT categorias OFF;
 GO
 
--- 4. Clientes
+-- 11.4 Clientes
 SET IDENTITY_INSERT clientes ON;
 INSERT INTO clientes (id, nombre_completo, tipo_cliente) VALUES
 (1, 'Cliente General (Mostrador)', 'General');
 SET IDENTITY_INSERT clientes OFF;
 GO
 
--- 5. Proveedores
+-- 11.5 Proveedores
 SET IDENTITY_INSERT proveedores ON;
 INSERT INTO proveedores (id, nombre_empresa, telefono) VALUES
 (1, 'Proveedor Local General', 'N/A');
 SET IDENTITY_INSERT proveedores OFF;
 GO
 
+-- 11.6 Catálogo Oficial de Repuestos (235 Productos con SKU y Precios)
 -- 6. Catálogo de Repuestos
 SET IDENTITY_INSERT productos ON;
 INSERT INTO productos (id, codigo_sku, categoria_id, nombre, costo, precio_venta, stock_actual, stock_minimo) VALUES
@@ -617,59 +797,274 @@ INSERT INTO productos (id, codigo_sku, categoria_id, nombre, costo, precio_venta
 (235, 'VAR017', 4, 'VARILLAS DE EMPUJE ALUMINIO CG-GY200-XM 200 VINI', 68.0, 95.2, 20, 5);
 SET IDENTITY_INSERT productos OFF;
 GO
-
--- =========================================
--- 7. Compras (VACIO)
--- =========================================
-
--- =========================================
--- 8. Ventas (VACIO)
--- =========================================
-
--- ==============================================================================
--- 10. MÓDULO DE CONTABILIDAD Y ESTADOS FINANCIEROS
--- ==============================================================================
-
--- 10.1 Catálogo de Cuentas
-CREATE TABLE cuentas_contables (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    codigo VARCHAR(20) NOT NULL UNIQUE,
-    nombre VARCHAR(100) NOT NULL,
-    clasificacion VARCHAR(50) NOT NULL,
-    naturaleza VARCHAR(20) NOT NULL CHECK (naturaleza IN ('Deudora', 'Acreedora')),
-    descripcion VARCHAR(255) NULL,
-    activo BIT DEFAULT 1,
-    created_at DATETIME DEFAULT GETDATE()
-);
 GO
 
--- 10.2 Asientos Contables
-CREATE TABLE asientos_contables (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    fecha DATE NOT NULL,
-    concepto VARCHAR(255) NOT NULL,
-    modulo_origen VARCHAR(50) NULL,
-    referencia_id INT NULL,
-    usuario_id INT NOT NULL,
-    created_at DATETIME DEFAULT GETDATE(),
-    CONSTRAINT fk_asientos_usuarios FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-);
+-- 11.7 Movimientos Iniciales de Kardex (Carga Inicial para los 235 Repuestos)
+SET IDENTITY_INSERT movimientos_inventario ON;
+INSERT INTO movimientos_inventario (id, fecha, producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, referencia_origen, motivo, usuario_id) VALUES
+(1, '2026-08-17T08:00:00', 1, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(2, '2026-08-17T08:00:00', 2, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(3, '2026-08-17T08:00:00', 3, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(4, '2026-08-17T08:00:00', 4, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(5, '2026-08-17T08:00:00', 5, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(6, '2026-08-17T08:00:00', 6, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(7, '2026-08-17T08:00:00', 7, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(8, '2026-08-17T08:00:00', 8, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(9, '2026-08-17T08:00:00', 9, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(10, '2026-08-17T08:00:00', 10, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(11, '2026-08-17T08:00:00', 11, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(12, '2026-08-17T08:00:00', 12, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(13, '2026-08-17T08:00:00', 13, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(14, '2026-08-17T08:00:00', 14, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(15, '2026-08-17T08:00:00', 15, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(16, '2026-08-17T08:00:00', 16, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(17, '2026-08-17T08:00:00', 17, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(18, '2026-08-17T08:00:00', 18, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(19, '2026-08-17T08:00:00', 19, 'ENTRADA_INICIAL', 4, 0, 4, 'INICIO', 'Carga inicial de inventario', 1),
+(20, '2026-08-17T08:00:00', 20, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(21, '2026-08-17T08:00:00', 21, 'ENTRADA_INICIAL', 2, 0, 2, 'INICIO', 'Carga inicial de inventario', 1),
+(22, '2026-08-17T08:00:00', 22, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(23, '2026-08-17T08:00:00', 23, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(24, '2026-08-17T08:00:00', 24, 'ENTRADA_INICIAL', 15, 0, 15, 'INICIO', 'Carga inicial de inventario', 1),
+(25, '2026-08-17T08:00:00', 25, 'ENTRADA_INICIAL', 15, 0, 15, 'INICIO', 'Carga inicial de inventario', 1),
+(26, '2026-08-17T08:00:00', 26, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(27, '2026-08-17T08:00:00', 27, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(28, '2026-08-17T08:00:00', 28, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(29, '2026-08-17T08:00:00', 29, 'ENTRADA_INICIAL', 60, 0, 60, 'INICIO', 'Carga inicial de inventario', 1),
+(30, '2026-08-17T08:00:00', 30, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(31, '2026-08-17T08:00:00', 31, 'ENTRADA_INICIAL', 60, 0, 60, 'INICIO', 'Carga inicial de inventario', 1),
+(32, '2026-08-17T08:00:00', 32, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(33, '2026-08-17T08:00:00', 33, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(34, '2026-08-17T08:00:00', 34, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(35, '2026-08-17T08:00:00', 35, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(36, '2026-08-17T08:00:00', 36, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(37, '2026-08-17T08:00:00', 37, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(38, '2026-08-17T08:00:00', 38, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(39, '2026-08-17T08:00:00', 39, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(40, '2026-08-17T08:00:00', 40, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(41, '2026-08-17T08:00:00', 41, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(42, '2026-08-17T08:00:00', 42, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(43, '2026-08-17T08:00:00', 43, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(44, '2026-08-17T08:00:00', 44, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(45, '2026-08-17T08:00:00', 45, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(46, '2026-08-17T08:00:00', 46, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(47, '2026-08-17T08:00:00', 47, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(48, '2026-08-17T08:00:00', 48, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(49, '2026-08-17T08:00:00', 49, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(50, '2026-08-17T08:00:00', 50, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(51, '2026-08-17T08:00:00', 51, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(52, '2026-08-17T08:00:00', 52, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(53, '2026-08-17T08:00:00', 53, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(54, '2026-08-17T08:00:00', 54, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(55, '2026-08-17T08:00:00', 55, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(56, '2026-08-17T08:00:00', 56, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(57, '2026-08-17T08:00:00', 57, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(58, '2026-08-17T08:00:00', 58, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(59, '2026-08-17T08:00:00', 59, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(60, '2026-08-17T08:00:00', 60, 'ENTRADA_INICIAL', 100, 0, 100, 'INICIO', 'Carga inicial de inventario', 1),
+(61, '2026-08-17T08:00:00', 61, 'ENTRADA_INICIAL', 100, 0, 100, 'INICIO', 'Carga inicial de inventario', 1),
+(62, '2026-08-17T08:00:00', 62, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(63, '2026-08-17T08:00:00', 63, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(64, '2026-08-17T08:00:00', 64, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(65, '2026-08-17T08:00:00', 65, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(66, '2026-08-17T08:00:00', 66, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(67, '2026-08-17T08:00:00', 67, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(68, '2026-08-17T08:00:00', 68, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(69, '2026-08-17T08:00:00', 69, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(70, '2026-08-17T08:00:00', 70, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(71, '2026-08-17T08:00:00', 71, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(72, '2026-08-17T08:00:00', 72, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(73, '2026-08-17T08:00:00', 73, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(74, '2026-08-17T08:00:00', 74, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(75, '2026-08-17T08:00:00', 75, 'ENTRADA_INICIAL', 100, 0, 100, 'INICIO', 'Carga inicial de inventario', 1),
+(76, '2026-08-17T08:00:00', 76, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(77, '2026-08-17T08:00:00', 77, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(78, '2026-08-17T08:00:00', 78, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(79, '2026-08-17T08:00:00', 79, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(80, '2026-08-17T08:00:00', 80, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(81, '2026-08-17T08:00:00', 81, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(82, '2026-08-17T08:00:00', 82, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(83, '2026-08-17T08:00:00', 83, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(84, '2026-08-17T08:00:00', 84, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(85, '2026-08-17T08:00:00', 85, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(86, '2026-08-17T08:00:00', 86, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(87, '2026-08-17T08:00:00', 87, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(88, '2026-08-17T08:00:00', 88, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(89, '2026-08-17T08:00:00', 89, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(90, '2026-08-17T08:00:00', 90, 'ENTRADA_INICIAL', 2, 0, 2, 'INICIO', 'Carga inicial de inventario', 1),
+(91, '2026-08-17T08:00:00', 91, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(92, '2026-08-17T08:00:00', 92, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(93, '2026-08-17T08:00:00', 93, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(94, '2026-08-17T08:00:00', 94, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(95, '2026-08-17T08:00:00', 95, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(96, '2026-08-17T08:00:00', 96, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(97, '2026-08-17T08:00:00', 97, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(98, '2026-08-17T08:00:00', 98, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(99, '2026-08-17T08:00:00', 99, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(100, '2026-08-17T08:00:00', 100, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(101, '2026-08-17T08:00:00', 101, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(102, '2026-08-17T08:00:00', 102, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(103, '2026-08-17T08:00:00', 103, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(104, '2026-08-17T08:00:00', 104, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(105, '2026-08-17T08:00:00', 105, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(106, '2026-08-17T08:00:00', 106, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(107, '2026-08-17T08:00:00', 107, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(108, '2026-08-17T08:00:00', 108, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(109, '2026-08-17T08:00:00', 109, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(110, '2026-08-17T08:00:00', 110, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(111, '2026-08-17T08:00:00', 111, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(112, '2026-08-17T08:00:00', 112, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(113, '2026-08-17T08:00:00', 113, 'ENTRADA_INICIAL', 8, 0, 8, 'INICIO', 'Carga inicial de inventario', 1),
+(114, '2026-08-17T08:00:00', 114, 'ENTRADA_INICIAL', 8, 0, 8, 'INICIO', 'Carga inicial de inventario', 1),
+(115, '2026-08-17T08:00:00', 115, 'ENTRADA_INICIAL', 8, 0, 8, 'INICIO', 'Carga inicial de inventario', 1),
+(116, '2026-08-17T08:00:00', 116, 'ENTRADA_INICIAL', 2, 0, 2, 'INICIO', 'Carga inicial de inventario', 1),
+(117, '2026-08-17T08:00:00', 117, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(118, '2026-08-17T08:00:00', 118, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(119, '2026-08-17T08:00:00', 119, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(120, '2026-08-17T08:00:00', 120, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(121, '2026-08-17T08:00:00', 121, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(122, '2026-08-17T08:00:00', 122, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(123, '2026-08-17T08:00:00', 123, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(124, '2026-08-17T08:00:00', 124, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(125, '2026-08-17T08:00:00', 125, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(126, '2026-08-17T08:00:00', 126, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(127, '2026-08-17T08:00:00', 127, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(128, '2026-08-17T08:00:00', 128, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(129, '2026-08-17T08:00:00', 129, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(130, '2026-08-17T08:00:00', 130, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(131, '2026-08-17T08:00:00', 131, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(132, '2026-08-17T08:00:00', 132, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(133, '2026-08-17T08:00:00', 133, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(134, '2026-08-17T08:00:00', 134, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(135, '2026-08-17T08:00:00', 135, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(136, '2026-08-17T08:00:00', 136, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(137, '2026-08-17T08:00:00', 137, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(138, '2026-08-17T08:00:00', 138, 'ENTRADA_INICIAL', 15, 0, 15, 'INICIO', 'Carga inicial de inventario', 1),
+(139, '2026-08-17T08:00:00', 139, 'ENTRADA_INICIAL', 15, 0, 15, 'INICIO', 'Carga inicial de inventario', 1),
+(140, '2026-08-17T08:00:00', 140, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(141, '2026-08-17T08:00:00', 141, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(142, '2026-08-17T08:00:00', 142, 'ENTRADA_INICIAL', 200, 0, 200, 'INICIO', 'Carga inicial de inventario', 1),
+(143, '2026-08-17T08:00:00', 143, 'ENTRADA_INICIAL', 200, 0, 200, 'INICIO', 'Carga inicial de inventario', 1),
+(144, '2026-08-17T08:00:00', 144, 'ENTRADA_INICIAL', 200, 0, 200, 'INICIO', 'Carga inicial de inventario', 1),
+(145, '2026-08-17T08:00:00', 145, 'ENTRADA_INICIAL', 200, 0, 200, 'INICIO', 'Carga inicial de inventario', 1),
+(146, '2026-08-17T08:00:00', 146, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(147, '2026-08-17T08:00:00', 147, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(148, '2026-08-17T08:00:00', 148, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(149, '2026-08-17T08:00:00', 149, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(150, '2026-08-17T08:00:00', 150, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(151, '2026-08-17T08:00:00', 151, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(152, '2026-08-17T08:00:00', 152, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(153, '2026-08-17T08:00:00', 153, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(154, '2026-08-17T08:00:00', 154, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(155, '2026-08-17T08:00:00', 155, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(156, '2026-08-17T08:00:00', 156, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(157, '2026-08-17T08:00:00', 157, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(158, '2026-08-17T08:00:00', 158, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(159, '2026-08-17T08:00:00', 159, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(160, '2026-08-17T08:00:00', 160, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(161, '2026-08-17T08:00:00', 161, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(162, '2026-08-17T08:00:00', 162, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(163, '2026-08-17T08:00:00', 163, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(164, '2026-08-17T08:00:00', 164, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(165, '2026-08-17T08:00:00', 165, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(166, '2026-08-17T08:00:00', 166, 'ENTRADA_INICIAL', 2, 0, 2, 'INICIO', 'Carga inicial de inventario', 1),
+(167, '2026-08-17T08:00:00', 167, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(168, '2026-08-17T08:00:00', 168, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(169, '2026-08-17T08:00:00', 169, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(170, '2026-08-17T08:00:00', 170, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(171, '2026-08-17T08:00:00', 171, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(172, '2026-08-17T08:00:00', 172, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(173, '2026-08-17T08:00:00', 173, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(174, '2026-08-17T08:00:00', 174, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(175, '2026-08-17T08:00:00', 175, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(176, '2026-08-17T08:00:00', 176, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(177, '2026-08-17T08:00:00', 177, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(178, '2026-08-17T08:00:00', 178, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(179, '2026-08-17T08:00:00', 179, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(180, '2026-08-17T08:00:00', 180, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(181, '2026-08-17T08:00:00', 181, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(182, '2026-08-17T08:00:00', 182, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(183, '2026-08-17T08:00:00', 183, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(184, '2026-08-17T08:00:00', 184, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(185, '2026-08-17T08:00:00', 185, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(186, '2026-08-17T08:00:00', 186, 'ENTRADA_INICIAL', 15, 0, 15, 'INICIO', 'Carga inicial de inventario', 1),
+(187, '2026-08-17T08:00:00', 187, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(188, '2026-08-17T08:00:00', 188, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(189, '2026-08-17T08:00:00', 189, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(190, '2026-08-17T08:00:00', 190, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(191, '2026-08-17T08:00:00', 191, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(192, '2026-08-17T08:00:00', 192, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(193, '2026-08-17T08:00:00', 193, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(194, '2026-08-17T08:00:00', 194, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(195, '2026-08-17T08:00:00', 195, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(196, '2026-08-17T08:00:00', 196, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(197, '2026-08-17T08:00:00', 197, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(198, '2026-08-17T08:00:00', 198, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(199, '2026-08-17T08:00:00', 199, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(200, '2026-08-17T08:00:00', 200, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(201, '2026-08-17T08:00:00', 201, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(202, '2026-08-17T08:00:00', 202, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(203, '2026-08-17T08:00:00', 203, 'ENTRADA_INICIAL', 50, 0, 50, 'INICIO', 'Carga inicial de inventario', 1),
+(204, '2026-08-17T08:00:00', 204, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(205, '2026-08-17T08:00:00', 205, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(206, '2026-08-17T08:00:00', 206, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(207, '2026-08-17T08:00:00', 207, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(208, '2026-08-17T08:00:00', 208, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(209, '2026-08-17T08:00:00', 209, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(210, '2026-08-17T08:00:00', 210, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(211, '2026-08-17T08:00:00', 211, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(212, '2026-08-17T08:00:00', 212, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(213, '2026-08-17T08:00:00', 213, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(214, '2026-08-17T08:00:00', 214, 'ENTRADA_INICIAL', 5, 0, 5, 'INICIO', 'Carga inicial de inventario', 1),
+(215, '2026-08-17T08:00:00', 215, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(216, '2026-08-17T08:00:00', 216, 'ENTRADA_INICIAL', 3, 0, 3, 'INICIO', 'Carga inicial de inventario', 1),
+(217, '2026-08-17T08:00:00', 217, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(218, '2026-08-17T08:00:00', 218, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(219, '2026-08-17T08:00:00', 219, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(220, '2026-08-17T08:00:00', 220, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(221, '2026-08-17T08:00:00', 221, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(222, '2026-08-17T08:00:00', 222, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(223, '2026-08-17T08:00:00', 223, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(224, '2026-08-17T08:00:00', 224, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(225, '2026-08-17T08:00:00', 225, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(226, '2026-08-17T08:00:00', 226, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(227, '2026-08-17T08:00:00', 227, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(228, '2026-08-17T08:00:00', 228, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(229, '2026-08-17T08:00:00', 229, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(230, '2026-08-17T08:00:00', 230, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(231, '2026-08-17T08:00:00', 231, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(232, '2026-08-17T08:00:00', 232, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1),
+(233, '2026-08-17T08:00:00', 233, 'ENTRADA_INICIAL', 10, 0, 10, 'INICIO', 'Carga inicial de inventario', 1),
+(234, '2026-08-17T08:00:00', 234, 'ENTRADA_INICIAL', 30, 0, 30, 'INICIO', 'Carga inicial de inventario', 1),
+(235, '2026-08-17T08:00:00', 235, 'ENTRADA_INICIAL', 20, 0, 20, 'INICIO', 'Carga inicial de inventario', 1);
+SET IDENTITY_INSERT movimientos_inventario OFF;
+GO
 GO
 
--- 10.3 Movimientos Contables
-CREATE TABLE movimientos_contables (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    asiento_id INT NOT NULL,
-    cuenta_id INT NOT NULL,
-    debe DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    haber DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    CONSTRAINT fk_movimientos_asientos FOREIGN KEY (asiento_id) REFERENCES asientos_contables(id) ON DELETE CASCADE,
-    CONSTRAINT fk_movimientos_cuentas FOREIGN KEY (cuenta_id) REFERENCES cuentas_contables(id),
-    CONSTRAINT chk_debe_haber CHECK (debe >= 0 AND haber >= 0 AND (debe > 0 OR haber > 0))
-);
+-- 11.8 Cargos de la Empresa
+SET IDENTITY_INSERT cargos ON;
+INSERT INTO cargos (id, nombre_cargo, descripcion, salario_base_sugerido, activo) VALUES
+(1, 'Administrador General', 'Supervisión de operaciones integrales del negocio', 25000.00, 1),
+(2, 'Vendedor de Mostrador', 'Atención en punto de venta, caja y asesoría de repuestos', 9500.00, 1),
+(3, 'Encargado de Bodega e Inventario', 'Recepción de mercadería, control de stock y despacho', 11000.00, 1),
+(4, 'Contador General', 'Registro contable, estados financieros y declaraciones fiscales', 18000.00, 1),
+(5, 'Responsable de Recursos Humanos', 'Gestión de nómina, control de vacaciones y personal', 15000.00, 1),
+(6, 'Mecánico / Técnico de Taller', 'Mantenimiento, diagnóstico e instalación de piezas de motos', 12000.00, 1);
+SET IDENTITY_INSERT cargos OFF;
 GO
 
--- ==============================================================================
+-- 11.9 Empleados Activos de Jehová Jireh
+SET IDENTITY_INSERT empleados ON;
+INSERT INTO empleados (id, nombre_completo, identificacion, num_inss, cargo, salario_base, fecha_ingreso, activo, dias_vacaciones_disponibles, telefono, email, observaciones) VALUES
+(1, 'Gilda Pérez', '001-150480-0023K', '6543210-1', 'Administrador General', 25000.00, '2022-01-15', 1, 15.0, '+505 8888-0001', 'admin@jehovajireh.com', 'Propietaria y Gerente General'),
+(2, 'Ana Gómez', '401-200595-0012A', '7654321-2', 'Vendedor de Mostrador', 9500.00, '2023-03-01', 1, 8.5, '+505 8888-0002', 'ventas@jehovajireh.com', 'Ventas en mostrador y caja POS'),
+(3, 'Roberto Silva', '401-101192-0044B', '8765432-3', 'Encargado de Bodega e Inventario', 11000.00, '2022-08-10', 1, 10.0, '+505 8888-0003', 'bodega@jehovajireh.com', 'Responsable de almacén y Kardex'),
+(4, 'Lic. Fernando Rivas', '401-050288-0033C', '9876543-4', 'Contador General', 18000.00, '2023-01-10', 1, 12.0, '+505 8888-0004', 'contabilidad@jehovajireh.com', 'Contador público colegiado'),
+(5, 'Lic. María Elena Calero', '401-120790-0019D', '5432109-8', 'Responsable de Recursos Humanos', 15000.00, '2024-02-01', 1, 6.0, '+505 8888-0005', 'rrhh@jehovajireh.com', 'Gestión de personal y nóminas');
+SET IDENTITY_INSERT empleados OFF;
+GO
+
+-- 11.10 Catálogo Oficial de Cuentas Contables (28 Cuentas según Normas de Nicaragua)
 -- 11. INSERCIÓN DEL CATÁLOGO DE CUENTAS (SIMULACIÓN ACADÉMICA)
 -- ==============================================================================
 SET IDENTITY_INSERT cuentas_contables ON;
@@ -704,4 +1099,70 @@ INSERT INTO cuentas_contables (id, codigo, nombre, clasificacion, naturaleza, de
 (28, '6.1.10', 'Comisiones y gastos bancarios', 'Gasto', 'Deudora', 'Comisiones y cargos generados por operaciones bancarias.');
 SET IDENTITY_INSERT cuentas_contables OFF;
 GO
+GO
 
+-- 11.11 Asientos Contables y Saldos Iniciales Balanceados (Agosto 2026)
+DECLARE @UsuarioID INT = 1;
+DECLARE @AsientoID INT;
+
+-- ASIENTO 1: Saldos Iniciales de Apertura (01 de Agosto de 2026)
+INSERT INTO asientos_contables (fecha, concepto, modulo_origen, usuario_id)
+VALUES ('2026-08-01', 'Apertura de saldos iniciales de balance', 'CONTABILIDAD', @UsuarioID);
+SET @AsientoID = SCOPE_IDENTITY();
+
+-- DEBE (Total 565,000)
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 420000.00, 0.00 FROM cuentas_contables WHERE codigo = '1.1.04'; -- Inventario
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 90000.00, 0.00 FROM cuentas_contables WHERE codigo = '1.2.01'; -- Mobiliario
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 55000.00, 0.00 FROM cuentas_contables WHERE codigo = '1.2.02'; -- Cómputo
+
+-- HABER (Total 565,000)
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 250000.00 FROM cuentas_contables WHERE codigo = '3.1.01'; -- Capital
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 250000.00 FROM cuentas_contables WHERE codigo = '2.1.01'; -- Proveedores
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 60000.00 FROM cuentas_contables WHERE codigo = '2.1.02'; -- Doc por pagar
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 5000.00 FROM cuentas_contables WHERE codigo = '3.1.02'; -- Utilidades ac
+
+-- ASIENTO 2: Ventas y Costos Operativos de la Quincena (15 de Agosto de 2026)
+INSERT INTO asientos_contables (fecha, concepto, modulo_origen, usuario_id)
+VALUES ('2026-08-15', 'Registro de ingresos por ventas y servicios de la quincena', 'VENTAS', @UsuarioID);
+SET @AsientoID = SCOPE_IDENTITY();
+
+-- DEBE (Total 1,030,000)
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 650000.00, 0.00 FROM cuentas_contables WHERE codigo = '5.1.01'; -- Costo ventas
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 185000.00, 0.00 FROM cuentas_contables WHERE codigo = '1.1.02'; -- Bancos
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 60000.00, 0.00 FROM cuentas_contables WHERE codigo = '1.1.03'; -- Clientes
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 45000.00, 0.00 FROM cuentas_contables WHERE codigo = '1.1.01'; -- Caja
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 18000.00, 0.00 FROM cuentas_contables WHERE codigo = '1.1.05'; -- IVA acred
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 70000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.01'; -- Sueldos
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 2000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.04'; -- Agua
+
+-- HABER (Total 1,030,000)
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 950000.00 FROM cuentas_contables WHERE codigo = '4.1.01'; -- Ventas rep
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 80000.00 FROM cuentas_contables WHERE codigo = '4.1.02'; -- Ingresos taller
+
+-- ASIENTO 3: Gastos Operativos y Provisiones de Cierre (31 de Agosto de 2026)
+INSERT INTO asientos_contables (fecha, concepto, modulo_origen, usuario_id)
+VALUES ('2026-08-31', 'Provisión de gastos operativos, depreciación y cierres', 'CONTABILIDAD', @UsuarioID);
+SET @AsientoID = SCOPE_IDENTITY();
+
+-- DEBE (Total 103,000)
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 30000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.02'; -- Alquiler
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 12000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.03'; -- Energía
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 5000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.05'; -- Internet
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 10000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.06'; -- Publicidad
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 8000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.07'; -- Mantenimiento
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 3000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.08'; -- Papelería
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 12000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.09'; -- Depreciación gasto
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 22000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.10'; -- Comisiones
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 1000.00, 0.00 FROM cuentas_contables WHERE codigo = '6.1.04'; -- Agua
+
+-- HABER (Total 103,000)
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 12000.00 FROM cuentas_contables WHERE codigo = '1.2.03'; -- Depreciación acum
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 22000.00 FROM cuentas_contables WHERE codigo = '2.1.03'; -- IVA por pagar
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 18000.00 FROM cuentas_contables WHERE codigo = '2.1.04'; -- Sueldos por pagar
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 5000.00 FROM cuentas_contables WHERE codigo = '2.1.05'; -- Servicios por pagar
+INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) SELECT @AsientoID, id, 0.00, 46000.00 FROM cuentas_contables WHERE codigo = '3.1.02'; -- Utilidades acumuladas
+GO
+
+PRINT '==============================================================================';
+PRINT 'BASE DE DATOS jehova_jireh_db CREADA, POBLADA Y ACTUALIZADA EXITOSAMENTE';
+PRINT '==============================================================================';

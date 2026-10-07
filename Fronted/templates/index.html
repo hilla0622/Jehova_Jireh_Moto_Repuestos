@@ -12,6 +12,8 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Chart.js para Gráficos y Análisis Estadístico -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 para Diálogos y Alertas Profesionales -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script>
@@ -1071,7 +1073,11 @@
                                     <select id="rrhh-filtro-emp-movimiento" class="form-control rrhh-select" onchange="cargarMovimientosLaborales()">
                                         <option value="">Todos los empleados</option>
                                     </select>
-                                    <button class="btn btn-secondary rrhh-action-btn" onclick="openModal('modal-movimiento-laboral')">
+                                    <button class="btn btn-secondary rrhh-action-btn" onclick="abrirModalBaseLegalVacaciones()" title="Consultar artículos de la Ley 185 (Código del Trabajo)">
+                                        <i class="ph-bold ph-scales"></i>
+                                        <span>Base Legal (Ley 185)</span>
+                                    </button>
+                                    <button class="btn btn-secondary rrhh-action-btn" onclick="abrirModalNuevoMovimiento()">
                                         <i class="ph-bold ph-calendar-plus"></i>
                                         <span>Registrar Vacaciones/Permiso</span>
                                     </button>
@@ -1088,10 +1094,11 @@
                                                 <th>Fecha Fin</th>
                                                 <th>Días Tomados</th>
                                                 <th>Observación</th>
+                                                <th style="text-align:center;">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tbody-movimientos-laborales">
-                                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">
+                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">
                                                 <i class="ph-bold ph-calendar-blank" style="font-size:1.5rem;opacity:0.4;"></i><br>Sin registros de movimientos laborales.
                                             </td></tr>
                                         </tbody>
@@ -1937,8 +1944,18 @@
                         </div>
                         <div class="form-group">
                             <label>Fecha de Ingreso:</label>
-                            <input type="date" id="emp-fecha-ingreso" class="form-control">
+                            <input type="date" id="emp-fecha-ingreso" class="form-control" onchange="sugerirVacacionesPorAntiguedad()">
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <label style="margin-bottom:0;">Saldo de Vacaciones Disponibles (Días):</label>
+                            <button type="button" class="btn btn-secondary" onclick="calcularSaldoPorAntiguedad()" title="Estimar saldo legal acumulado según fecha de ingreso" style="padding:2px 8px; font-size:0.75rem; font-weight:normal;">
+                                <i class="ph-bold ph-calculator"></i> Calcular por antigüedad
+                            </button>
+                        </div>
+                        <input type="number" step="0.1" id="emp-vacaciones-disponibles" class="form-control" placeholder="0.0">
+                        <small style="color:var(--text-muted); font-size:0.75rem;"><i class="ph-bold ph-info"></i> Días acumulados disponibles para el trabajador (permite corregir saldos negativos o inicializar antigüedad).</small>
                     </div>
                     <div class="grid-2col">
                         <div class="form-group">
@@ -1972,14 +1989,15 @@
         </div>
     </div>
 
-    <!-- MODAL: REGISTRAR MOVIMIENTO LABORAL -->
+    <!-- MODAL: REGISTRAR / ACTUALIZAR MOVIMIENTO LABORAL -->
     <div class="modal" id="modal-movimiento-laboral">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="ph-bold ph-calendar-blank"></i> Registrar Vacaciones / Permiso / Falta</h3>
+                <h3 id="modal-movimiento-titulo"><i class="ph-bold ph-calendar-blank"></i> Registrar Vacaciones / Permiso / Falta</h3>
                 <button class="modal-close" onclick="closeModal('modal-movimiento-laboral')">&times;</button>
             </div>
             <form id="form-movimiento-laboral" onsubmit="guardarMovimientoLaboral(event)">
+                <input type="hidden" id="mov-id">
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Empleado: *</label>
@@ -1996,13 +2014,29 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Tipo de Movimiento: *</label>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <label style="margin-bottom:0;">Tipo de Movimiento: *</label>
+                            <a href="javascript:void(0)" onclick="abrirModalBaseLegalVacaciones()" style="font-size:0.75rem; color:var(--primary); text-decoration:underline; font-weight:600; cursor:pointer;" title="Consultar artículos de la Ley 185">
+                                <i class="ph-bold ph-scales"></i> Base Legal (Ley 185)
+                            </a>
+                        </div>
                         <select id="mov-tipo" class="form-control" required onchange="validarSaldoVacaciones()">
                             <option value="VACACIONES">🏖️ Vacaciones</option>
                             <option value="PERMISO_CON_GOCE">✅ Permiso con Goce de Salario</option>
                             <option value="PERMISO_SIN_GOCE">❌ Permiso sin Goce de Salario</option>
                             <option value="FALTA">⚠️ Falta Injustificada</option>
                         </select>
+                        <div id="mov-tipo-badge-info" style="margin-top:0.4rem; padding:0.45rem 0.8rem; border-radius:6px; font-size:0.8rem; line-height:1.4;"></div>
+                    </div>
+                    <!-- Opción de afectación de Séptimo Día para faltas injustificadas (Art. 64 Ley 185) -->
+                    <div class="form-group" id="mov-afecta-septimo-container" style="display:none; background:rgba(234,179,8,0.08); border-left:3px solid #eab308; padding:0.6rem 0.8rem; border-radius:6px; margin-bottom:1rem;">
+                        <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-weight:600; font-size:0.82rem; color:var(--text-main);">
+                            <input type="checkbox" id="mov-afecta-septimo" style="width:16px; height:16px; cursor:pointer;">
+                            <span>¿Afecta Séptimo Día? (Descontar 1 día adicional de descanso semanal según Art. 64 Ley 185)</span>
+                        </label>
+                        <small style="display:block; margin-top:4px; font-size:0.75rem; color:var(--text-muted);">
+                            Aplica cuando la ausencia injustificada impidió completar la jornada laboral semanal continua.
+                        </small>
                     </div>
                     <div class="grid-2col">
                         <div class="form-group">
@@ -2029,6 +2063,100 @@
                     <button type="submit" class="btn btn-primary" id="btn-guardar-movimiento">Guardar Movimiento</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: BASE LEGAL LEY 185 (CÓDIGO DEL TRABAJO DE NICARAGUA) -->
+    <div class="modal" id="modal-base-legal-vacaciones">
+        <div class="modal-content" style="max-width:740px; width:95%; max-height:88vh; display:flex; flex-direction:column;">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-scales"></i> Base Legal: Vacaciones y Descansos (Ley 185)</h3>
+                <button class="modal-close" onclick="closeModal('modal-base-legal-vacaciones')" title="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y:auto; padding:1.25rem; font-size:0.88rem; line-height:1.6;">
+                <div style="background:rgba(99,102,241,0.08); border-left:4px solid var(--primary); padding:0.75rem 1rem; border-radius:6px; margin-bottom:1.25rem;">
+                    <div style="font-weight:700; color:var(--primary); font-size:0.95rem;">Código del Trabajo de Nicaragua &bull; Ley No. 185</div>
+                    <span style="color:var(--text-muted); font-size:0.82rem;">Título IV (Descansos, Permisos y Vacaciones) &bull; Capítulo III: De las Vacaciones</span>
+                </div>
+
+                <div id="legal-art76" class="legal-card" style="margin-bottom:1rem; padding:0.85rem 1rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:var(--bg-table-th, rgba(30,41,59,0.3));">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                        <span class="badge" style="background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700;">Artículo 76 &bull; Derecho a Vacaciones</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted);">Cómputo Proporcional</span>
+                    </div>
+                    <p style="margin:0 0 0.5rem 0; font-style:italic; color:var(--text-main);">
+                        «Todo trabajador tiene derecho a disfrutar de quince días de descanso continuo y remunerado en concepto de vacaciones, por cada seis meses de trabajo ininterrumpido al servicio de un mismo empleador.»
+                    </p>
+                    <div style="font-size:0.8rem; background:rgba(34,197,94,0.08); color:#16a34a; padding:0.4rem 0.75rem; border-radius:4px; display:flex; align-items:flex-start; gap:8px;">
+                        <i class="ph-bold ph-calculator" style="font-size:1.05rem; margin-top:2px; flex-shrink:0;"></i>
+                        <div>
+                            <strong>Equivalencia y aplicación en el sistema:</strong><br>
+                            &bull; 15 días &divide; 6 meses = <strong>2.5 días de vacaciones ganados por mes</strong> (equivalente a 30 días anuales).<br>
+                            &bull; Para meses parciales: <strong>2.5 &divide; 30 = 0.08333 días</strong> por cada día computable trabajado.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="legal-art77" class="legal-card" style="margin-bottom:1rem; padding:0.85rem 1rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:var(--bg-table-th, rgba(30,41,59,0.3));">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                        <span class="badge" style="background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700;">Artículo 77 &bull; Fracción Proporcional</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted);">Ingreso o retiro parcial</span>
+                    </div>
+                    <p style="margin:0; font-style:italic; color:var(--text-main);">
+                        «Cuando se ponga término al contrato de trabajo, o relación laboral, el trabajador tendrá derecho a que se le paguen los salarios y la parte proporcional de sus prestaciones de ley acumuladas durante el tiempo trabajado.»
+                    </p>
+                </div>
+
+                <div id="legal-art78" class="legal-card" style="margin-bottom:1rem; padding:0.85rem 1rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:var(--bg-table-th, rgba(30,41,59,0.3));">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                        <span class="badge" style="background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700;">Artículo 78 &bull; Salario durante Vacaciones</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted);">Remuneración Ordinaria</span>
+                    </div>
+                    <p style="margin:0 0 0.5rem 0; font-style:italic; color:var(--text-main);">
+                        «Las vacaciones se pagarán calculándolas en base al último salario ordinario devengado por el trabajador.<br>
+                        En caso de salario variables, se calculará en base al salario ordinario promedio de los últimos seis meses.»
+                    </p>
+                    <div style="font-size:0.8rem; background:rgba(99,102,241,0.08); color:var(--primary); padding:0.4rem 0.75rem; border-radius:4px; display:flex; align-items:flex-start; gap:8px;">
+                        <i class="ph-bold ph-coins" style="font-size:1.05rem; margin-top:2px; flex-shrink:0;"></i>
+                        <div>
+                            <strong>En el sistema:</strong> El tiempo de vacaciones es descanso remunerado íntegro; los días disfrutados se debitan del saldo acumulado disponible sin descontar salario básico.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="legal-art79" class="legal-card" style="margin-bottom:1rem; padding:0.85rem 1rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:var(--bg-table-th, rgba(30,41,59,0.3));">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                        <span class="badge" style="background:rgba(34,197,94,0.15); color:#16a34a; font-weight:700;">Artículo 79 &bull; Permisos y Causas Justificadas</span>
+                        <span style="font-size:0.75rem; color:#16a34a; font-weight:600;">No afecta vacaciones</span>
+                    </div>
+                    <p style="margin:0 0 0.5rem 0; font-style:italic; color:var(--text-main);">
+                        «La interrupción del trabajo por enfermedad del trabajador, permiso u otra causa justa, no interrumpe la suma de los días trabajados para completar el tiempo que le confiere derecho a vacaciones.»
+                    </p>
+                    <div style="font-size:0.8rem; background:rgba(34,197,94,0.08); color:#16a34a; padding:0.4rem 0.75rem; border-radius:4px; display:flex; align-items:flex-start; gap:8px;">
+                        <i class="ph-bold ph-shield-check" style="font-size:1.05rem; margin-top:2px; flex-shrink:0;"></i>
+                        <div>
+                            <strong>Permiso con Goce:</strong> El saldo acumulado de vacaciones <strong>queda intacto (NO disminuye)</strong>, el empleado percibe su salario regular y continúa acumulando sus 2.5 días mensuales por ley.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="legal-art80" class="legal-card" style="margin-bottom:0.5rem; padding:0.85rem 1rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:var(--bg-table-th, rgba(30,41,59,0.3));">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                        <span class="badge" style="background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700;">Artículo 80 &bull; Garantía durante Vacaciones</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted);">Protección al trabajador</span>
+                    </div>
+                    <p style="margin:0; font-style:italic; color:var(--text-main);">
+                        «Durante el período de vacaciones el empleador no podrá adoptar ni comunicar al trabajador ninguna medida en su contra, salvo en caso de acciones penales.»
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <a href="https://www.poderjudicial.gob.ni/cjnejapa/pdf/codigo-trabajo.pdf" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size:0.8rem; gap:6px;">
+                    <i class="ph-bold ph-file-pdf" style="color:#ef4444;"></i>
+                    <span>Ver Código Oficial (PDF Poder Judicial)</span>
+                </a>
+                <button type="button" class="btn btn-primary" onclick="closeModal('modal-base-legal-vacaciones')">Entendido</button>
+            </div>
         </div>
     </div>
 
@@ -2131,7 +2259,7 @@
                     <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.2); border-radius:8px; padding:0.8rem 1rem; font-size:0.83rem; color:var(--text-muted);">
                         <i class="ph-bold ph-info"></i>
                         <strong>Ley 822:</strong> IR calculado con tabla progresiva anualizada.<br>
-                        <strong>Ley 185:</strong> 1.25 días de vacaciones acumulados por empleado.
+                        <strong>Ley 185 (Art. 76):</strong> 15 días por cada 6 meses (equivalencia proporcional de 2.5 días/mes acumulados).
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -2146,25 +2274,26 @@
 
     <!-- MODAL: DETALLE DE NÓMINA -->
     <div class="modal" id="modal-detalle-nomina">
-        <div class="modal-content" style="max-width:900px; width:95%;">
+        <div class="modal-content" style="max-width:980px; width:95%; max-height:92vh; display:flex; flex-direction:column;">
             <div class="modal-header">
                 <h3><i class="ph-bold ph-clipboard-text"></i> Detalle de Nómina — <span id="lbl-nomina-periodo"></span></h3>
                 <button class="modal-close" onclick="closeModal('modal-detalle-nomina')">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="overflow-y:auto; padding:1.25rem;">
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.75rem; margin-bottom:1.5rem; padding:1rem; background:rgba(99,102,241,0.06); border-radius:10px;">
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Total Bruto</div><div style="font-size:1.1rem; font-weight:700;" id="dndet-bruto">C$0.00</div></div>
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Deducciones</div><div style="font-size:1.1rem; font-weight:700; color:#ef4444;" id="dndet-deducciones">C$0.00</div></div>
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Total Neto</div><div style="font-size:1.1rem; font-weight:700; color:#22c55e;" id="dndet-neto">C$0.00</div></div>
-                    <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">INSS Patronal</div><div style="font-size:1.1rem; font-weight:700; color:#f59e0b;" id="dndet-patronal">C$0.00</div></div>
+                    <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">INSS Patronal (21.5%)</div><div style="font-size:1.1rem; font-weight:700; color:#f59e0b;" id="dndet-patronal">C$0.00</div></div>
+                    <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">INATEC Patronal (2%)</div><div style="font-size:1.1rem; font-weight:700; color:#06b6d4;" id="dndet-inatec">C$0.00</div></div>
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Provisiones (Vac+Agui)</div><div style="font-size:1.1rem; font-weight:700; color:#a855f7;" id="dndet-provisiones">C$0.00</div></div>
                 </div>
                 <div style="overflow-x: auto;">
                     <table class="data-table" id="tabla-detalle-nomina">
                         <thead>
                             <tr>
-                                <th>Empleado</th><th>Cargo</th><th>Salario Base</th>
-                                <th>INSS Lab. (7%)</th><th>IR (Ley 822)</th>
+                                <th>Empleado</th><th>Cargo</th><th>Salario Base</th><th>Ajustes / Faltas</th>
+                                <th>Devengado</th><th>INSS Lab. (7%)</th><th>IR (Ley 822)</th>
                                 <th>Neto a Recibir</th><th>Colilla</th>
                             </tr>
                         </thead>
@@ -2183,65 +2312,132 @@
 
     <!-- MODAL: COLILLA INDIVIDUAL DE PAGO -->
     <div class="modal" id="modal-colilla">
-        <div class="modal-content" style="max-width:680px; width:95%;">
+        <div class="modal-content" style="max-width:720px; width:95%; max-height:92vh; display:flex; flex-direction:column;">
             <div class="modal-header">
-                <h3><i class="ph-bold ph-receipt"></i> Colilla de Pago</h3>
+                <h3><i class="ph-bold ph-receipt"></i> Colilla de Pago Individual</h3>
                 <button class="modal-close" onclick="closeModal('modal-colilla')">&times;</button>
             </div>
-            <div class="modal-body">
-                <div id="colilla-print-area" style="background:#fff; color:#1e293b; padding:1.5rem; border-radius:8px; font-family:'Outfit',sans-serif;">
+            <div class="modal-body" style="overflow-y:auto; padding:1.25rem;">
+                <div id="colilla-print-area" style="background:#fff; color:#1e293b; padding:1.75rem; border-radius:8px; font-family:'Outfit',sans-serif; border:1px solid #e2e8f0;">
+                    <!-- Encabezado de la Empresa -->
                     <div style="text-align:center; border-bottom:2px solid #4338ca; padding-bottom:0.8rem; margin-bottom:1rem;">
-                        <div style="font-size:1.1rem; font-weight:800; color:#4338ca;">JEHOVÁ JIREH MOTO REPUESTOS</div>
-                        <div style="font-size:0.75rem; color:#64748b;">Masatepe, Nicaragua</div>
-                        <div id="col-periodo" style="font-size:0.9rem; font-weight:600; margin-top:4px;"></div>
+                        <div style="font-size:1.15rem; font-weight:800; color:#4338ca; letter-spacing:0.5px;">JEHOVÁ JIREH MOTO REPUESTOS</div>
+                        <div style="font-size:0.75rem; color:#64748b;">Masatepe, Nicaragua — RUC: J0310000000000</div>
+                        <div id="col-periodo" style="font-size:0.92rem; font-weight:700; margin-top:4px; color:#1e293b;"></div>
                     </div>
+
+                    <!-- Datos Contractuales y Vacaciones -->
                     <table style="width:100%; font-size:0.82rem; border-collapse:collapse; margin-bottom:0.8rem;">
                         <tr>
                             <td style="width:55%; vertical-align:top; padding:2px 0;">
-                                <div><span style="color:#64748b;">Nombre: </span><strong id="col-empleado"></strong></div>
-                                <div><span style="color:#64748b;">N° Cédula: </span><span id="col-cedula"></span></div>
-                                <div><span style="color:#64748b;">Cargo: </span><span id="col-cargo"></span></div>
-                                <div><span style="color:#64748b;">N° INSS: </span><span id="col-inss"></span></div>
-                                <div><span style="color:#64748b;">Salario Contrato: </span><strong id="col-salario-contrato"></strong></div>
+                                <div style="margin-bottom:2px;"><span style="color:#64748b;">Nombre: </span><strong id="col-empleado"></strong></div>
+                                <div style="margin-bottom:2px;"><span style="color:#64748b;">N° Cédula: </span><span id="col-cedula"></span></div>
+                                <div style="margin-bottom:2px;"><span style="color:#64748b;">Cargo: </span><span id="col-cargo"></span></div>
+                                <div style="margin-bottom:2px;"><span style="color:#64748b;">N° INSS: </span><span id="col-inss"></span></div>
+                                <div style="margin-bottom:2px;"><span style="color:#64748b;">Salario Base Contractual: </span><strong id="col-salario-contrato" style="color:#4338ca;"></strong></div>
+                                <div><span style="color:#64748b;">Valor Diario (÷ 30): </span><strong id="col-valor-diario"></strong></div>
                             </td>
-                            <td style="width:45%; vertical-align:top; padding:2px 0; text-align:right;">
-                                <div><span style="color:#64748b;">Ingreso: </span><span id="col-fecha-ingreso">—</span></div>
-                                <div><span style="color:#64748b;">Días Trabajados: </span><span id="col-dias-trabajados">—</span></div>
-                                <table style="width:100%; font-size:0.78rem; margin-top:6px; border-top:1px solid #e2e8f0; padding-top:4px;">
-                                    <tr><td style="color:#64748b;">Vacaciones acumuladas</td><td id="col-vac-acumulado" style="text-align:right; font-weight:600;">—</td></tr>
-                                    <tr><td style="color:#64748b;">(-) Días tomados</td><td id="col-vac-tomados" style="text-align:right;">—</td></tr>
-                                    <tr style="border-top:1px dashed #cbd5e1;"><td style="color:#4338ca; font-weight:700;">Saldo disponible</td><td id="col-vac-saldo" style="text-align:right; font-weight:700; color:#4338ca;">—</td></tr>
-                                </table>
+                            <td style="width:45%; vertical-align:top; padding:2px 0; border-left:1px dashed #cbd5e1; padding-left:14px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:2px;"><span style="color:#64748b;">Fecha Ingreso: </span><span id="col-fecha-ingreso">—</span></div>
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#64748b;">Días remunerados del período: </span><strong id="col-dias-trabajados">—</strong></div>
+                                <div style="border-top:1px solid #e2e8f0; padding-top:4px;">
+                                    <div style="font-weight:700; color:#4338ca; font-size:0.75rem; text-transform:uppercase; margin-bottom:2px;">Control Vacaciones (Ley 185)</div>
+                                    <table style="width:100%; font-size:0.78rem;">
+                                        <tr><td style="color:#64748b;">Saldo anterior:</td><td id="col-vac-acumulado" style="text-align:right;">—</td></tr>
+                                        <tr><td style="color:#64748b;">Ganadas en el mes:</td><td id="col-vac-mes" style="text-align:right;">—</td></tr>
+                                        <tr><td style="color:#64748b;">(-) Días descansados:</td><td id="col-vac-tomados" style="text-align:right;">—</td></tr>
+                                        <tr style="border-top:1px dashed #cbd5e1;"><td style="color:#4338ca; font-weight:700;">Saldo disponible:</td><td id="col-vac-saldo" style="text-align:right; font-weight:700; color:#4338ca;">—</td></tr>
+                                    </table>
+                                </div>
                             </td>
                         </tr>
                     </table>
+
+                    <!-- AJUSTES DEL PERÍODO (TIEMPO NO REMUNERADO) -->
+                    <div id="col-ajustes-container" style="display:none; background:#fffbeb; border:1px solid #fef3c7; border-left:3px solid #f59e0b; padding:0.6rem 0.8rem; border-radius:6px; margin-bottom:0.8rem; font-size:0.8rem;">
+                        <div style="font-weight:700; color:#b45309; text-transform:uppercase; font-size:0.75rem; margin-bottom:4px;">
+                            ⚠️ Ajustes del Período (Tiempo No Remunerado)
+                        </div>
+                        <table style="width:100%; font-size:0.8rem;">
+                            <tr id="col-row-falta" style="display:none;">
+                                <td>Falta injustificada (<span id="col-dias-falta">0</span> días × <span id="col-val-dia-falta">C$0.00</span>)</td>
+                                <td id="col-monto-falta" style="text-align:right; color:#b91c1c; font-weight:600;">-C$0.00</td>
+                            </tr>
+                            <tr id="col-row-septimo" style="display:none;">
+                                <td>Séptimo día no generado (<span id="col-dias-septimo">0</span> días — Art. 64 Ley 185)</td>
+                                <td id="col-monto-septimo" style="text-align:right; color:#b91c1c; font-weight:600;">-C$0.00</td>
+                            </tr>
+                            <tr id="col-row-psg" style="display:none;">
+                                <td>Permiso sin goce de salario (<span id="col-dias-psg">0</span> días)</td>
+                                <td id="col-monto-psg" style="text-align:right; color:#b91c1c; font-weight:600;">-C$0.00</td>
+                            </tr>
+                            <tr style="border-top:1px dashed #f59e0b; font-weight:700;">
+                                <td>Total ajuste por tiempo no remunerado</td>
+                                <td id="col-total-ajustes" style="text-align:right; color:#b91c1c;">-C$0.00</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- PERCEPCIONES Y DEDUCCIONES -->
                     <div style="border-top:1px dashed #cbd5e1; margin:0.6rem 0;"></div>
                     <table style="width:100%; font-size:0.82rem; border-collapse:collapse;">
                         <tr>
                             <td style="width:50%; vertical-align:top; padding-right:1rem;">
-                                <div style="font-weight:700; text-transform:uppercase; font-size:0.75rem; color:#4338ca; margin-bottom:4px; border-bottom:1px solid #4338ca; padding-bottom:2px;">PERCEPCIONES</div>
+                                <div style="font-weight:700; text-transform:uppercase; font-size:0.75rem; color:#4338ca; margin-bottom:4px; border-bottom:1px solid #4338ca; padding-bottom:2px;">
+                                    SALARIO DEVENGADO Y PERCEPCIONES
+                                </div>
                                 <table style="width:100%;">
-                                    <tr><td style="padding:2px 0;">Salario Devengado</td><td id="col-salario-base" style="text-align:right;"></td></tr>
-                                    <tr id="col-extras-row"><td style="padding:2px 0; color:#64748b;">Otros Ingresos</td><td id="col-ingresos-extra" style="text-align:right; color:#64748b;"></td></tr>
-                                    <tr style="border-top:1px solid #e2e8f0; font-weight:700;"><td style="padding:4px 0;">Total Percepciones</td><td id="col-bruto" style="text-align:right;"></td></tr>
-                                    <tr style="font-size:1rem; font-weight:800; color:#16a34a;"><td style="padding:4px 0;">Neto a Recibir</td><td id="col-neto" style="text-align:right;"></td></tr>
+                                    <tr><td style="padding:2px 0;">Salario Base Contractual</td><td id="col-base-contrato-tbl" style="text-align:right;"></td></tr>
+                                    <tr id="col-descuento-ajuste-row" style="display:none;"><td style="padding:2px 0; color:#b91c1c;">(-) Ajuste tiempo no laborado</td><td id="col-descuento-ajuste-val" style="text-align:right; color:#b91c1c;"></td></tr>
+                                    <tr style="border-top:1px solid #e2e8f0; font-weight:600;"><td style="padding:2px 0;">Salario Devengado Ordinario</td><td id="col-salario-devengado" style="text-align:right;"></td></tr>
+                                    <tr id="col-extras-row"><td style="padding:2px 0; color:#64748b;">Otros Ingresos / KPI</td><td id="col-ingresos-extra" style="text-align:right; color:#64748b;"></td></tr>
+                                    <tr style="border-top:1px solid #cbd5e1; font-weight:700;"><td style="padding:3px 0;">Total Percepciones (Base Cotizable)</td><td id="col-bruto" style="text-align:right;"></td></tr>
+                                    <tr style="background:#f0fdf4; font-size:0.95rem; font-weight:800; color:#15803d;"><td style="padding:6px 4px; border-top:1px solid #bbf7d0;">NETO A RECIBIR</td><td id="col-neto" style="text-align:right; padding:6px 4px; border-top:1px solid #bbf7d0;"></td></tr>
                                 </table>
                             </td>
                             <td style="width:50%; vertical-align:top; padding-left:1rem; border-left:1px dashed #cbd5e1;">
-                                <div style="font-weight:700; text-transform:uppercase; font-size:0.75rem; color:#b91c1c; margin-bottom:4px; border-bottom:1px solid #b91c1c; padding-bottom:2px;">DEDUCCIONES</div>
+                                <div style="font-weight:700; text-transform:uppercase; font-size:0.75rem; color:#b91c1c; margin-bottom:4px; border-bottom:1px solid #b91c1c; padding-bottom:2px;">
+                                    DEDUCCIONES DE LEY
+                                </div>
                                 <table style="width:100%;">
-                                    <tr><td style="padding:2px 0;">INSS Laboral (7%)</td><td id="col-inss-lab" style="text-align:right; color:#ef4444;"></td></tr>
-                                    <tr><td style="padding:2px 0;">IR (Ley 822)</td><td id="col-ir" style="text-align:right; color:#ef4444;"></td></tr>
+                                    <tr><td style="padding:2px 0;">INSS Laboral (7% Régimen Integral)</td><td id="col-inss-lab" style="text-align:right; color:#ef4444; font-weight:600;"></td></tr>
+                                    <tr><td style="padding:2px 0;">IR Rentas del Trabajo (DGI Ley 822)</td><td id="col-ir" style="text-align:right; color:#ef4444; font-weight:600;"></td></tr>
                                     <tr id="col-adelanto-row"><td style="padding:2px 0;">Adelanto Salarial</td><td id="col-adelanto" style="text-align:right; color:#ef4444;">C$0.00</td></tr>
-                                    <tr style="border-top:1px solid #e2e8f0; font-weight:700; color:#b91c1c;"><td style="padding:4px 0;">Total Deducciones</td><td id="col-deducciones" style="text-align:right;"></td></tr>
+                                    <tr style="border-top:1px solid #cbd5e1; font-weight:700; color:#b91c1c;"><td style="padding:4px 0;">Total Deducciones de Ley</td><td id="col-deducciones" style="text-align:right;"></td></tr>
                                 </table>
                             </td>
                         </tr>
                     </table>
+
+                    <!-- CARGAS Y PROVISIONES PATRONALES -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.8rem; margin-top:1rem; font-size:0.75rem;">
+                        <div style="font-weight:700; color:#475569; text-transform:uppercase; font-size:0.72rem; margin-bottom:6px; display:flex; justify-content:space-between; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
+                            <span>CARGAS Y PROVISIONES PATRONALES — A cargo exclusivo del empleador</span>
+                            <span>No se descuentan al trabajador</span>
+                        </div>
+                        <table style="width:100%; font-size:0.76rem;">
+                            <tr style="font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.3px;">
+                                <td colspan="2" style="padding-bottom:2px; border-right:1px dashed #e2e8f0;">Cargas Patronales</td>
+                                <td colspan="2" style="padding-bottom:2px; padding-left:12px;">Provisiones Laborales</td>
+                            </tr>
+                            <tr>
+                                <td style="width:25%;">INSS Patronal (21.5%): <strong id="col-inss-pat">C$0.00</strong></td>
+                                <td style="width:25%; border-right:1px dashed #e2e8f0;">INATEC (2%): <strong id="col-inatec-pat">C$0.00</strong></td>
+                                <td style="width:25%; padding-left:12px;">Vacaciones (1/12): <strong id="col-prov-vac">C$0.00</strong></td>
+                                <td style="width:25%;">Aguinaldo (1/12): <strong id="col-prov-agui">C$0.00</strong></td>
+                            </tr>
+                            <tr style="border-top:1px solid #e2e8f0;">
+                                <td colspan="2" style="padding-top:4px; color:#64748b;">Total cargas: <strong id="col-tot-cargas-pat">C$0.00</strong></td>
+                                <td colspan="2" style="text-align:right; padding-top:4px; color:#4338ca;">Costo Total Empresa: <strong id="col-costo-tot-pat">C$0.00</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Firmas -->
                     <div style="border-top:1px dashed #cbd5e1; margin:1rem 0;"></div>
                     <div style="display:flex; justify-content:space-around; font-size:0.75rem; color:#64748b; margin-top:1.5rem; text-align:center;">
-                        <div>___________________________<br>Firma Empleado</div>
-                        <div>___________________________<br>Firma Responsable RRHH</div>
+                        <div>___________________________<br>Firma Empleado<br><small id="col-firma-nombre"></small></div>
+                        <div>___________________________<br>Firma Responsable RRHH<br><small>Jehová Jireh Moto Repuestos</small></div>
                     </div>
                 </div>
             </div>
@@ -2259,6 +2455,7 @@
         // ---- Variables globales RRHH ----
         let _empleadosCache = [];
         let _cargosCache = [];
+        let _movimientosCache = [];
         let _nominaDetalleId = null;
         let _currentRrhhTab = 'all';
         const MESES_ES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -2474,11 +2671,49 @@
             document.getElementById('form-empleado').reset();
             document.getElementById('emp-id').value = '';
             document.getElementById('emp-cargo').value = '';
+            const vacInput = document.getElementById('emp-vacaciones-disponibles');
+            if (vacInput) vacInput.value = '0';
             document.getElementById('modal-empleado-titulo').textContent = 'Registrar Nuevo Empleado';
             document.getElementById('btn-guardar-empleado').textContent = 'Guardar Empleado';
             document.getElementById('emp-preview-calculo').style.display = 'none';
             cargarCargosRRHH();
             openModal('modal-empleado');
+        }
+
+        function calcularSaldoPorAntiguedad() {
+            const fIngStr = document.getElementById('emp-fecha-ingreso')?.value;
+            if (!fIngStr) {
+                mostrarNotificacionRRHH('Ingresa primero la Fecha de Ingreso del empleado.', 'info');
+                return;
+            }
+            const fIng = new Date(fIngStr + 'T00:00:00');
+            const hoy = new Date();
+            if (fIng > hoy) {
+                mostrarNotificacionRRHH('La fecha de ingreso no puede ser posterior a hoy.', 'error');
+                return;
+            }
+            let meses = (hoy.getFullYear() - fIng.getFullYear()) * 12 + (hoy.getMonth() - fIng.getMonth());
+            let diasRest = hoy.getDate() - fIng.getDate();
+            if (diasRest < 0) {
+                meses -= 1;
+                const prevMonth = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+                diasRest += prevMonth.getDate();
+            }
+            meses = Math.max(0, meses);
+            diasRest = Math.max(0, diasRest);
+            // Ley 185: 2.5 días/mes (15 días por cada 6 meses) y 2.5/30 por día
+            const totalEstimado = (meses * 2.5) + (diasRest * (2.5 / 30.0));
+            const vacInput = document.getElementById('emp-vacaciones-disponibles');
+            if (vacInput) vacInput.value = totalEstimado.toFixed(1);
+            mostrarNotificacionRRHH(`Saldo estimado por antigüedad: ${totalEstimado.toFixed(1)} días (${meses} meses, ${diasRest} días). Guarda para aplicar.`, 'info');
+        }
+
+        function sugerirVacacionesPorAntiguedad() {
+            const empId = document.getElementById('emp-id').value;
+            const vacInput = document.getElementById('emp-vacaciones-disponibles');
+            if (!empId && vacInput && (!vacInput.value || parseFloat(vacInput.value) === 0)) {
+                calcularSaldoPorAntiguedad();
+            }
         }
 
         // =========================================================================
@@ -2517,21 +2752,32 @@
                 const tbody = document.getElementById('tbody-empleados');
                 if (!tbody) return;
                 if (lista.length === 0) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">No hay empleados registrados.</td></tr>'; return; }
-                tbody.innerHTML = lista.map(e => `
-                <tr style="opacity:${e.activo ? '1' : '0.5'}">
-                    <td>#${String(e.id).padStart(3,'0')}</td>
-                    <td><strong>${e.nombre_completo}</strong></td>
-                    <td>${e.identificacion || '—'}</td>
-                    <td>${e.num_inss || '—'}</td>
-                    <td><span class="badge" style="background:rgba(99,102,241,0.1); color:var(--primary); font-weight:600;">${e.cargo || '—'}</span></td>
-                    <td>${cs(e.salario_base)}</td>
-                    <td><strong style="color:${parseFloat(e.dias_vacaciones_disponibles) > 0 ? '#16a34a' : 'inherit'}">${parseFloat(e.dias_vacaciones_disponibles).toFixed(1)} días</strong></td>
-                    <td><span style="background:${e.activo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}; color:${e.activo ? '#22c55e' : '#ef4444'}; padding:2px 8px; border-radius:20px; font-size:0.75rem;">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
-                    <td><div style="display:flex;gap:4px;">
-                        <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="editarEmpleado(${e.id})" title="Editar"><i class="ph-bold ph-pencil"></i></button>
-                        <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;color:${e.activo ? '#ef4444' : '#22c55e'};" onclick="toggleEmpleadoEstado(${e.id}, ${!e.activo})" title="${e.activo ? 'Inactivar' : 'Activar'}"><i class="ph-bold ph-${e.activo ? 'user-minus' : 'user-check'}"></i></button>
-                    </div></td>
-                </tr>`).join('');
+                tbody.innerHTML = lista.map(e => {
+                    const saldoVac = parseFloat(e.dias_vacaciones_disponibles) || 0;
+                    let saldoVacBadge = '';
+                    if (saldoVac > 0) {
+                        saldoVacBadge = `<strong style="color:#16a34a;">${saldoVac.toFixed(1)} días</strong>`;
+                    } else if (saldoVac < 0) {
+                        saldoVacBadge = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; padding:2px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;" title="Saldo en negativo: requiere ajuste o revisión de ausencias">⚠️ ${saldoVac.toFixed(1)} días</span>`;
+                    } else {
+                        saldoVacBadge = `<span style="color:var(--text-muted); font-size:0.85rem;">0.0 días</span>`;
+                    }
+                    return `
+                    <tr style="opacity:${e.activo ? '1' : '0.5'}">
+                        <td>#${String(e.id).padStart(3,'0')}</td>
+                        <td><strong>${e.nombre_completo}</strong></td>
+                        <td>${e.identificacion || '—'}</td>
+                        <td>${e.num_inss || '—'}</td>
+                        <td><span class="badge" style="background:rgba(99,102,241,0.1); color:var(--primary); font-weight:600;">${e.cargo || '—'}</span></td>
+                        <td>${cs(e.salario_base)}</td>
+                        <td>${saldoVacBadge}</td>
+                        <td><span style="background:${e.activo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}; color:${e.activo ? '#22c55e' : '#ef4444'}; padding:2px 8px; border-radius:20px; font-size:0.75rem;">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
+                        <td><div style="display:flex;gap:4px;">
+                            <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="editarEmpleado(${e.id})" title="Editar"><i class="ph-bold ph-pencil"></i></button>
+                            <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;color:${e.activo ? '#ef4444' : '#22c55e'};" onclick="toggleEmpleadoEstado(${e.id}, ${!e.activo})" title="${e.activo ? 'Inactivar' : 'Activar'}"><i class="ph-bold ph-${e.activo ? 'user-minus' : 'user-check'}"></i></button>
+                        </div></td>
+                    </tr>`;
+                }).join('');
             } catch (e) { console.error('Error cargando empleados RRHH:', e); }
         }
 
@@ -2567,6 +2813,10 @@
             
             document.getElementById('emp-salario').value = emp.salario_base || '';
             document.getElementById('emp-fecha-ingreso').value = emp.fecha_ingreso ? emp.fecha_ingreso.split('T')[0] : '';
+            const vacInput = document.getElementById('emp-vacaciones-disponibles');
+            if (vacInput) {
+                vacInput.value = (emp.dias_vacaciones_disponibles !== undefined) ? emp.dias_vacaciones_disponibles : 0;
+            }
             document.getElementById('emp-telefono').value = emp.telefono || '';
             document.getElementById('emp-email').value = emp.email || '';
             document.getElementById('emp-observaciones').value = emp.observaciones || '';
@@ -2587,6 +2837,7 @@
                 cargo: cargo,
                 salario_base: parseFloat(document.getElementById('emp-salario').value) || 0,
                 fecha_ingreso: document.getElementById('emp-fecha-ingreso').value,
+                dias_vacaciones_disponibles: parseFloat(document.getElementById('emp-vacaciones-disponibles')?.value) || 0,
                 telefono: document.getElementById('emp-telefono').value.trim(),
                 email: document.getElementById('emp-email').value.trim(),
                 observaciones: document.getElementById('emp-observaciones').value.trim()
@@ -2605,7 +2856,16 @@
         }
 
         async function toggleEmpleadoEstado(id, nuevoActivo) {
-            if (!confirm(`¿Deseas ${nuevoActivo ? 'activar' : 'inactivar'} este empleado?`)) return;
+            const accion = nuevoActivo ? 'activar' : 'inactivar';
+            const confirmado = await confirmarAccion({
+                titulo: `¿Deseas ${accion} este empleado?`,
+                texto: nuevoActivo ? 'El empleado volverá a estar disponible en la nómina y operaciones del sistema.' : 'El empleado pasará a estado inactivo.',
+                icono: 'question',
+                textoConfirmar: `Sí, ${accion}`,
+                textoCancelar: 'Cancelar',
+                esPeligroso: !nuevoActivo
+            });
+            if (!confirmado) return;
             try {
                 const res = await fetch(`/api/empleados/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: nuevoActivo }) });
                 const data = await res.json();
@@ -2641,12 +2901,84 @@
             try {
                 const res = await fetch(url);
                 const data = await res.json();
+                _movimientosCache = Array.isArray(data) ? data : [];
                 const tbody = document.getElementById('tbody-movimientos-laborales');
                 if (!tbody) return;
-                if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted); padding:1.5rem;">Sin movimientos registrados.</td></tr>'; return; }
-                const tipoLabel = { VACACIONES: '🏖️ Vacaciones', PERMISO_CON_GOCE: '✅ Permiso c/Goce', PERMISO_SIN_GOCE: '❌ Permiso s/Goce', FALTA: '⚠️ Falta Injustificada' };
-                tbody.innerHTML = data.map(m => `<tr><td><strong>${m.empleado}</strong></td><td>${tipoLabel[m.tipo] || m.tipo}</td><td>${m.fecha_inicio}</td><td>${m.fecha_fin}</td><td><strong>${m.dias_tomados} día(s)</strong></td><td>${m.observacion || '—'}</td></tr>`).join('');
-            } catch (e) { console.error(e); }
+                if (!_movimientosCache.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted); padding:1.5rem;"><i class="ph-bold ph-calendar-blank" style="font-size:1.5rem;opacity:0.4;"></i><br>Sin movimientos laborales registrados.</td></tr>';
+                    return;
+                }
+                const tipoLabel = {
+                    VACACIONES: '🏖️ Vacaciones',
+                    PERMISO_CON_GOCE: '✅ Permiso c/Goce',
+                    PERMISO_SIN_GOCE: '❌ Permiso s/Goce',
+                    FALTA: '⚠️ Falta Injustificada'
+                };
+                tbody.innerHTML = _movimientosCache.map(m => {
+                    let extraBadge = '';
+                    if (m.tipo === 'FALTA' && m.afecta_septimo_dia) {
+                        extraBadge = '<span class="badge" style="background:rgba(239,68,68,0.12); color:#ef4444; font-size:0.72rem; margin-left:4px;" title="Afecta descanso de séptimo día según Art. 64 Ley 185">+ Séptimo Día</span>';
+                    }
+                    return `
+                    <tr>
+                        <td><strong>${m.empleado}</strong></td>
+                        <td><span class="badge" style="background:rgba(99,102,241,0.08); font-size:0.8rem; font-weight:600;">${tipoLabel[m.tipo] || m.tipo}</span>${extraBadge}</td>
+                        <td>${m.fecha_inicio}</td>
+                        <td>${m.fecha_fin}</td>
+                        <td><strong>${parseFloat(m.dias_tomados).toFixed(1)} día(s)</strong></td>
+                        <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${m.observacion || ''}">${m.observacion || '—'}</td>
+                        <td style="text-align:center;">
+                            <div style="display:inline-flex; gap:6px;">
+                                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="editarMovimientoLaboral(${m.id})" title="Actualizar datos de esta ausencia">
+                                    <i class="ph-bold ph-pencil"></i> Actualizar
+                                </button>
+                                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem; color:#ef4444;" onclick="eliminarMovimientoLaboral(${m.id})" title="Eliminar registro">
+                                    <i class="ph-bold ph-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                console.error('Error al cargar movimientos laborales:', e);
+            }
+        }
+
+        function abrirModalNuevoMovimiento() {
+            document.getElementById('form-movimiento-laboral').reset();
+            document.getElementById('mov-id').value = '';
+            document.getElementById('modal-movimiento-titulo').innerHTML = '<i class="ph-bold ph-calendar-blank"></i> Registrar Vacaciones / Permiso / Falta';
+            document.getElementById('btn-guardar-movimiento').textContent = 'Guardar Movimiento';
+            document.getElementById('mov-emp-saldo-container').style.display = 'none';
+            document.getElementById('mov-alerta-saldo').style.display = 'none';
+            const afSepChk = document.getElementById('mov-afecta-septimo');
+            if (afSepChk) afSepChk.checked = false;
+            const afSepCont = document.getElementById('mov-afecta-septimo-container');
+            if (afSepCont) afSepCont.style.display = 'none';
+            validarSaldoVacaciones();
+            openModal('modal-movimiento-laboral');
+        }
+
+        function editarMovimientoLaboral(id) {
+            const m = _movimientosCache.find(x => x.id === id);
+            if (!m) return;
+            document.getElementById('mov-id').value = m.id;
+            document.getElementById('mov-empleado-id').value = m.empleado_id;
+            document.getElementById('mov-tipo').value = m.tipo;
+            document.getElementById('mov-fecha-inicio').value = m.fecha_inicio ? m.fecha_inicio.split('T')[0] : '';
+            document.getElementById('mov-fecha-fin').value = m.fecha_fin ? m.fecha_fin.split('T')[0] : '';
+            document.getElementById('mov-dias').value = m.dias_tomados;
+            document.getElementById('mov-observacion').value = m.observacion || '';
+            document.getElementById('modal-movimiento-titulo').innerHTML = '<i class="ph-bold ph-pencil-simple"></i> Actualizar Ausencia / Vacaciones';
+            document.getElementById('btn-guardar-movimiento').textContent = 'Actualizar Movimiento';
+
+            const afSepChk = document.getElementById('mov-afecta-septimo');
+            if (afSepChk) afSepChk.checked = Boolean(m.afecta_septimo_dia);
+            const afSepCont = document.getElementById('mov-afecta-septimo-container');
+            if (afSepCont) afSepCont.style.display = m.tipo === 'FALTA' ? 'block' : 'none';
+
+            actualizarInfoEmpleadoMovimiento();
+            openModal('modal-movimiento-laboral');
         }
 
         function actualizarInfoEmpleadoMovimiento() {
@@ -2683,16 +3015,81 @@
             validarSaldoVacaciones();
         }
 
+        function abrirModalBaseLegalVacaciones(targetArticleId) {
+            openModal('modal-base-legal-vacaciones');
+            if (targetArticleId) {
+                setTimeout(() => {
+                    const el = document.getElementById(`legal-${targetArticleId}`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.style.border = '2px solid var(--primary)';
+                        el.style.boxShadow = '0 0 12px rgba(99,102,241,0.4)';
+                        el.style.transition = 'all 0.4s ease';
+                        setTimeout(() => {
+                            el.style.border = '1px solid rgba(255,255,255,0.08)';
+                            el.style.boxShadow = 'none';
+                        }, 2500);
+                    }
+                }, 180);
+            }
+        }
+
         function validarSaldoVacaciones() {
             const tipo = document.getElementById('mov-tipo')?.value;
             const dias = parseFloat(document.getElementById('mov-dias')?.value) || 0;
             const empId = parseInt(document.getElementById('mov-empleado-id')?.value);
             const alerta = document.getElementById('mov-alerta-saldo');
             const btnSubmit = document.getElementById('btn-guardar-movimiento');
+            const movId = document.getElementById('mov-id')?.value;
+            const badgeInfo = document.getElementById('mov-tipo-badge-info');
+
+            // Mostrar/ocultar opción de afectar séptimo día si es Falta Injustificada
+            const afSepCont = document.getElementById('mov-afecta-septimo-container');
+            if (afSepCont) {
+                if (tipo === 'FALTA') {
+                    afSepCont.style.display = 'block';
+                } else {
+                    afSepCont.style.display = 'none';
+                    const afSepChk = document.getElementById('mov-afecta-septimo');
+                    if (afSepChk) afSepChk.checked = false;
+                }
+            }
+
+            // Banner explicativo según Ley 185
+            if (badgeInfo) {
+                if (tipo === 'VACACIONES') {
+                    badgeInfo.style.background = 'rgba(99,102,241,0.08)';
+                    badgeInfo.style.border = '1px solid rgba(99,102,241,0.2)';
+                    badgeInfo.style.color = 'var(--primary)';
+                    badgeInfo.innerHTML = '<i class="ph-bold ph-calendar-blank"></i> <strong>Vacaciones:</strong> Se descuentan del saldo de vacaciones disponible. El empleado percibe su salario mensual ordinario completo. <a href="javascript:void(0)" onclick="abrirModalBaseLegalVacaciones(\'art76\')" style="font-weight:700; text-decoration:underline; margin-left:4px; color:var(--primary); cursor:pointer;">Ver Art. 76 (Ley 185) &rarr;</a>';
+                } else if (tipo === 'PERMISO_CON_GOCE') {
+                    badgeInfo.style.background = 'rgba(34,197,94,0.1)';
+                    badgeInfo.style.border = '1px solid rgba(34,197,94,0.25)';
+                    badgeInfo.style.color = '#16a34a';
+                    badgeInfo.innerHTML = '<i class="ph-bold ph-check-circle"></i> <strong>Permiso con Goce:</strong> Las vacaciones del empleado <strong>quedan intactas (NO disminuyen)</strong>. El empleado percibe su salario normal íntegro. <a href="javascript:void(0)" onclick="abrirModalBaseLegalVacaciones(\'art79\')" style="font-weight:700; text-decoration:underline; margin-left:4px; color:#16a34a; cursor:pointer;">Ver Art. 79 (Ley 185) &rarr;</a>';
+                } else if (tipo === 'PERMISO_SIN_GOCE') {
+                    badgeInfo.style.background = 'rgba(245,158,11,0.1)';
+                    badgeInfo.style.border = '1px solid rgba(245,158,11,0.25)';
+                    badgeInfo.style.color = '#b45309';
+                    badgeInfo.innerHTML = '<i class="ph-bold ph-minus-circle"></i> <strong>Permiso sin Goce:</strong> Las vacaciones <strong>quedan intactas</strong>. Los días no laborados se deducen del salario en la nómina mensual. <a href="javascript:void(0)" onclick="abrirModalBaseLegalVacaciones(\'art78\')" style="font-weight:700; text-decoration:underline; margin-left:4px; color:#b45309; cursor:pointer;">Ver Base Legal &rarr;</a>';
+                } else if (tipo === 'FALTA') {
+                    badgeInfo.style.background = 'rgba(239,68,68,0.1)';
+                    badgeInfo.style.border = '1px solid rgba(239,68,68,0.25)';
+                    badgeInfo.style.color = '#ef4444';
+                    badgeInfo.innerHTML = '<i class="ph-bold ph-warning-circle"></i> <strong>Falta Injustificada:</strong> Las vacaciones <strong>quedan intactas</strong>. Los días ausentes se deducen del salario en la nómina mensual antes de INSS/IR, y puede afectar el séptimo día si no se completó la jornada semanal (Art. 64 Ley 185). <a href="javascript:void(0)" onclick="abrirModalBaseLegalVacaciones(\'art79\')" style="font-weight:700; text-decoration:underline; margin-left:4px; color:#ef4444; cursor:pointer;">Ver Base Legal &rarr;</a>';
+                }
+            }
 
             if (tipo === 'VACACIONES' && empId && dias > 0) {
                 const emp = _empleadosCache.find(e => e.id === empId);
-                const saldo = parseFloat(emp?.dias_vacaciones_disponibles) || 0;
+                let saldo = parseFloat(emp?.dias_vacaciones_disponibles) || 0;
+                // Si estamos editando el mismo registro que ya era VACACIONES, reintegrar temporalmente sus días para evaluar disponibilidad
+                if (movId) {
+                    const movExistente = _movimientosCache.find(x => String(x.id) === String(movId));
+                    if (movExistente && movExistente.tipo === 'VACACIONES' && movExistente.empleado_id === empId) {
+                        saldo += parseFloat(movExistente.dias_tomados) || 0;
+                    }
+                }
                 if (dias > saldo) {
                     if (alerta) {
                         alerta.textContent = `⚠️ Saldo insuficiente: ${emp?.nombre_completo} cuenta con ${saldo.toFixed(2)} días disponibles y solicitó ${dias} días.`;
@@ -2708,27 +3105,73 @@
 
         async function guardarMovimientoLaboral(event) {
             event.preventDefault();
+            const movId = document.getElementById('mov-id').value;
             const payload = {
                 empleado_id: parseInt(document.getElementById('mov-empleado-id').value),
                 tipo: document.getElementById('mov-tipo').value,
                 fecha_inicio: document.getElementById('mov-fecha-inicio').value,
                 fecha_fin: document.getElementById('mov-fecha-fin').value,
                 dias_tomados: parseFloat(document.getElementById('mov-dias').value),
-                observacion: document.getElementById('mov-observacion').value.trim()
+                observacion: document.getElementById('mov-observacion').value.trim(),
+                afecta_septimo_dia: document.getElementById('mov-tipo').value === 'FALTA' && document.getElementById('mov-afecta-septimo').checked
             };
+            const url = movId ? `/api/movimientos-laborales/${movId}` : '/api/movimientos-laborales';
+            const method = movId ? 'PUT' : 'POST';
+
             try {
-                const res = await fetch('/api/movimientos-laborales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 const data = await res.json();
                 if (data.success) {
                     closeModal('modal-movimiento-laboral');
                     document.getElementById('form-movimiento-laboral').reset();
                     document.getElementById('mov-emp-saldo-container').style.display = 'none';
                     document.getElementById('mov-alerta-saldo').style.display = 'none';
-                    cargarMovimientosLaborales();
-                    cargarEmpleadosRRHH();
+                    await cargarMovimientosLaborales();
+                    await cargarEmpleadosRRHH(); // ¡Actualiza de inmediato los saldos en el Directorio de Empleados!
                     mostrarNotificacionRRHH(data.mensaje, 'success');
-                } else { mostrarNotificacionRRHH(data.error || 'Error.', 'error'); }
-            } catch (e) { mostrarNotificacionRRHH('Error de conexión.', 'error'); }
+                } else {
+                    mostrarNotificacionRRHH(data.error || 'Error al guardar movimiento.', 'error');
+                }
+            } catch (e) {
+                mostrarNotificacionRRHH('Error de conexión al guardar movimiento.', 'error');
+            }
+        }
+
+        async function eliminarMovimientoLaboral(id) {
+            const m = _movimientosCache.find(x => x.id === id);
+            const empNombre = m ? m.empleado : 'el empleado';
+            const esVacaciones = m && m.tipo === 'VACACIONES';
+            const subtexto = esVacaciones
+                ? `Se eliminará este registro y se reintegrarán ${m.dias_tomados} día(s) al saldo de vacaciones de ${empNombre}.`
+                : `Se eliminará este registro de ausencia de ${empNombre}. Esta acción no se puede deshacer.`;
+
+            const confirmado = await confirmarAccion({
+                titulo: '¿Eliminar movimiento laboral?',
+                texto: subtexto,
+                icono: 'warning',
+                textoConfirmar: 'Sí, eliminar',
+                textoCancelar: 'Cancelar',
+                esPeligroso: true
+            });
+            if (!confirmado) return;
+
+            try {
+                const res = await fetch(`/api/movimientos-laborales/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    mostrarNotificacionRRHH(data.mensaje, 'success');
+                    await cargarMovimientosLaborales();
+                    await cargarEmpleadosRRHH(); // ¡Actualiza de inmediato los saldos en el Directorio de Empleados!
+                } else {
+                    mostrarNotificacionRRHH(data.error || 'Error al eliminar movimiento.', 'error');
+                }
+            } catch (e) {
+                mostrarNotificacionRRHH('Error de conexión al eliminar movimiento.', 'error');
+            }
         }
 
         // NÓMINA
@@ -2738,7 +3181,16 @@
             const empleadoId = document.getElementById('nomina-empleado').value;
             const mes = parseInt(document.getElementById('nomina-mes').value);
             const anio = parseInt(document.getElementById('nomina-anio').value);
-            if (!confirm(`¿Generar nómina para ${MESES_ES[mes]} ${anio}? Esta acción no se puede deshacer.`)) return;
+
+            const confirmado = await confirmarAccion({
+                titulo: '¿Generar nómina?',
+                texto: `¿Generar nómina para ${MESES_ES[mes]} ${anio}? Esta acción creará los registros contables y no se puede deshacer.`,
+                icono: 'question',
+                textoConfirmar: 'Generar Nómina',
+                textoCancelar: 'Cancelar'
+            });
+            if (!confirmado) return;
+
             btn.disabled = true;
             btn.innerHTML = '<i class="ph-bold ph-spinner"></i> Procesando...';
             try {
@@ -2756,12 +3208,21 @@
         }
 
         async function eliminarNomina(id) {
-            if (!confirm('¿Eliminar esta nómina? Se revertirán los días de vacaciones acumulados. Esta acción es irreversible.')) return;
+            const confirmado = await confirmarAccion({
+                titulo: '¿Eliminar esta nómina?',
+                texto: 'Se revertirán los días de vacaciones acumulados para los empleados. Esta acción es irreversible.',
+                icono: 'warning',
+                textoConfirmar: 'Sí, eliminar nómina',
+                textoCancelar: 'Cancelar',
+                esPeligroso: true
+            });
+            if (!confirmado) return;
+
             try {
                 const res = await fetch(`/api/nomina/${id}`, { method: 'DELETE' });
                 const data = await res.json();
-                if (data.success) { mostrarNotificacionRRHH('Nómina eliminada.', 'success'); cargarHistorialNominas(); cargarEmpleadosRRHH(); }
-                else { mostrarNotificacionRRHH(data.error || 'Error al eliminar.', 'error'); }
+                if (data.success) { mostrarNotificacionRRHH('Nómina eliminada exitosamente.', 'success'); cargarHistorialNominas(); cargarEmpleadosRRHH(); }
+                else { mostrarNotificacionRRHH(data.error || 'Error al eliminar nómina.', 'error'); }
             } catch (e) { mostrarNotificacionRRHH('Error de conexión.', 'error'); }
         }
 
@@ -2802,16 +3263,28 @@
                 document.getElementById('dndet-deducciones').textContent = cs(cabecera.total_deducciones);
                 document.getElementById('dndet-neto').textContent = cs(cabecera.total_neto);
                 document.getElementById('dndet-patronal').textContent = cs(cabecera.inss_patronal_total);
+                const elInatec = document.getElementById('dndet-inatec');
+                if (elInatec) elInatec.textContent = cs(cabecera.inatec_patronal_total || 0);
                 document.getElementById('dndet-provisiones').textContent = cs((cabecera.provision_vac_total || 0) + (cabecera.provision_agui_total || 0));
                 const tbody = document.getElementById('tbody-detalle-nomina');
-                tbody.innerHTML = detalles.map(d => `<tr>
-                    <td><strong>${d.empleado}</strong></td><td>${d.cargo || '—'}</td>
-                    <td>${cs(d.salario_base)}</td>
-                    <td style="color:#ef4444;">${cs(d.inss_laboral)}</td>
-                    <td style="color:#ef4444;">${cs(d.ir)}</td>
-                    <td style="color:#22c55e;font-weight:700;">${cs(d.neto_pagar)}</td>
-                    <td><button class="btn btn-secondary" style="padding:3px 8px;font-size:0.72rem;" onclick="verColillaRRHH(${nominaId},${d.empleado_id})"><i class="ph-bold ph-receipt"></i> Colilla</button></td>
-                </tr>`).join('');
+                tbody.innerHTML = detalles.map(d => {
+                    const salContrato = d.salario_contrato || d.salario_base;
+                    const totAjustes = (d.monto_falta || 0) + (d.monto_septimo_dia || 0) + (d.monto_permiso_sin_goce || 0);
+                    let badgeAjustes = '<span style="color:var(--text-muted);">—</span>';
+                    if (totAjustes > 0) {
+                        badgeAjustes = `<span style="color:#b91c1c; font-weight:600;">-${cs(totAjustes)}</span>`;
+                    }
+                    return `<tr>
+                        <td><strong>${d.empleado}</strong></td><td>${d.cargo || '—'}</td>
+                        <td>${cs(salContrato)}</td>
+                        <td>${badgeAjustes}</td>
+                        <td style="font-weight:600;">${cs(d.salario_base)}</td>
+                        <td style="color:#ef4444;">${cs(d.inss_laboral)}</td>
+                        <td style="color:#ef4444;">${cs(d.ir)}</td>
+                        <td style="color:#22c55e;font-weight:700;">${cs(d.neto_pagar)}</td>
+                        <td><button class="btn btn-secondary" style="padding:3px 8px;font-size:0.72rem;" onclick="verColillaRRHH(${nominaId},${d.empleado_id})"><i class="ph-bold ph-receipt"></i> Colilla</button></td>
+                    </tr>`;
+                }).join('');
                 openModal('modal-detalle-nomina');
             } catch (e) { mostrarNotificacionRRHH('Error cargando detalle.', 'error'); }
         }
@@ -2825,32 +3298,137 @@
                 const mes = MESES_ES[nomina.mes] || nomina.mes;
                 document.getElementById('col-periodo').textContent = `Colilla de Pago — ${mes} ${nomina.anio}`;
                 document.getElementById('col-empleado').textContent = colilla.empleado;
+                const firmaEl = document.getElementById('col-firma-nombre');
+                if (firmaEl) firmaEl.textContent = colilla.empleado;
                 document.getElementById('col-cedula').textContent = colilla.identificacion || '—';
                 document.getElementById('col-inss').textContent = colilla.num_inss || '—';
                 document.getElementById('col-cargo').textContent = colilla.cargo || '—';
-                document.getElementById('col-salario-contrato').textContent = cs(colilla.salario_base);
+
+                const salContrato = parseFloat(colilla.salario_contrato || colilla.salario_base || 0);
+                const valorDiario = parseFloat(colilla.valor_diario || (salContrato / 30.0));
+                document.getElementById('col-salario-contrato').textContent = cs(salContrato);
+                document.getElementById('col-valor-diario').textContent = cs(valorDiario);
                 document.getElementById('col-fecha-ingreso').textContent = colilla.fecha_ingreso || '—';
-                document.getElementById('col-dias-trabajados').textContent = '30 días';
-                const vacAcum = parseFloat(colilla.dias_vacaciones_disponibles || 0);
+                document.getElementById('col-dias-trabajados').textContent = (parseFloat(colilla.dias_trabajados) || 30).toFixed(1) + ' días';
+
+                // Vacaciones
+                const vacAcum = parseFloat(colilla.vac_acumulada || 0);
+                const vacMes = parseFloat(colilla.vac_mes || 2.5);
+                const vacDesc = parseFloat(colilla.vac_descansados || 0);
+                const vacSaldo = parseFloat(colilla.vac_saldo || (vacAcum + vacMes - vacDesc));
                 document.getElementById('col-vac-acumulado').textContent = vacAcum.toFixed(2) + ' días';
-                document.getElementById('col-vac-tomados').textContent = '0.00 días';
-                document.getElementById('col-vac-saldo').textContent = vacAcum.toFixed(2) + ' días';
-                document.getElementById('col-salario-base').textContent = cs(colilla.salario_base);
+                const elVacMes = document.getElementById('col-vac-mes');
+                if (elVacMes) elVacMes.textContent = vacMes.toFixed(2) + ' días';
+                document.getElementById('col-vac-tomados').textContent = vacDesc.toFixed(2) + ' días';
+                document.getElementById('col-vac-saldo').textContent = vacSaldo.toFixed(2) + ' días';
+
+                // Ajustes del Período
+                const diasFalta = parseFloat(colilla.dias_falta || 0);
+                const montoFalta = parseFloat(colilla.monto_falta || 0);
+                const diasSep = parseFloat(colilla.dias_septimo_dia || 0);
+                const montoSep = parseFloat(colilla.monto_septimo_dia || 0);
+                const diasPsg = parseFloat(colilla.dias_permiso_sin_goce || 0);
+                const montoPsg = parseFloat(colilla.monto_permiso_sin_goce || 0);
+                const totalAjustes = montoFalta + montoSep + montoPsg;
+
+                const ajContainer = document.getElementById('col-ajustes-container');
+                const rowFalta = document.getElementById('col-row-falta');
+                const rowSep = document.getElementById('col-row-septimo');
+                const rowPsg = document.getElementById('col-row-psg');
+                const descAjusteRow = document.getElementById('col-descuento-ajuste-row');
+
+                if (totalAjustes > 0) {
+                    if (ajContainer) ajContainer.style.display = 'block';
+                    if (rowFalta) {
+                        rowFalta.style.display = diasFalta > 0 ? '' : 'none';
+                        const elDf = document.getElementById('col-dias-falta');
+                        if (elDf) elDf.textContent = diasFalta.toFixed(1);
+                        const elVdf = document.getElementById('col-val-dia-falta');
+                        if (elVdf) elVdf.textContent = cs(valorDiario);
+                        const elMf = document.getElementById('col-monto-falta');
+                        if (elMf) elMf.textContent = `(-) ${cs(montoFalta)}`;
+                    }
+
+                    if (rowSep) {
+                        rowSep.style.display = diasSep > 0 ? '' : 'none';
+                        const elDs = document.getElementById('col-dias-septimo');
+                        if (elDs) elDs.textContent = diasSep.toFixed(1);
+                        const elMs = document.getElementById('col-monto-septimo');
+                        if (elMs) elMs.textContent = `(-) ${cs(montoSep)}`;
+                    }
+
+                    if (rowPsg) {
+                        rowPsg.style.display = diasPsg > 0 ? '' : 'none';
+                        const elDp = document.getElementById('col-dias-psg');
+                        if (elDp) elDp.textContent = diasPsg.toFixed(1);
+                        const elMp = document.getElementById('col-monto-psg');
+                        if (elMp) elMp.textContent = `(-) ${cs(montoPsg)}`;
+                    }
+
+                    const elTotAj = document.getElementById('col-total-ajustes');
+                    if (elTotAj) elTotAj.textContent = `(-) ${cs(totalAjustes)}`;
+
+                    if (descAjusteRow) {
+                        descAjusteRow.style.display = '';
+                        const elDajVal = document.getElementById('col-descuento-ajuste-val');
+                        if (elDajVal) elDajVal.textContent = `- ${cs(totalAjustes)}`;
+                    }
+                } else {
+                    if (ajContainer) ajContainer.style.display = 'none';
+                    if (descAjusteRow) descAjusteRow.style.display = 'none';
+                }
+
+                // Percepciones
+                const elBaseContr = document.getElementById('col-base-contrato-tbl');
+                if (elBaseContr) elBaseContr.textContent = cs(salContrato);
+                const salDevengado = parseFloat(colilla.salario_devengado || (salContrato - totalAjustes));
+                const elSalDev = document.getElementById('col-salario-devengado');
+                if (elSalDev) elSalDev.textContent = cs(salDevengado);
                 const extras = parseFloat(colilla.ingresos_extra || 0);
                 document.getElementById('col-ingresos-extra').textContent = cs(extras);
                 const extrasRow = document.getElementById('col-extras-row');
                 if (extrasRow) extrasRow.style.display = extras > 0 ? '' : 'none';
-                document.getElementById('col-bruto').textContent = cs(colilla.salario_bruto || colilla.salario_base);
+
+                const totPercepciones = parseFloat(colilla.salario_bruto || (salDevengado + extras));
+                document.getElementById('col-bruto').textContent = cs(totPercepciones);
                 document.getElementById('col-neto').textContent = cs(colilla.neto_pagar);
+
+                // Deducciones de Ley
                 document.getElementById('col-inss-lab').textContent = cs(colilla.inss_laboral);
                 document.getElementById('col-ir').textContent = cs(colilla.ir);
-                document.getElementById('col-adelanto').textContent = 'C$0.00';
+                const adelanto = parseFloat(colilla.adelanto_salarial || 0);
+                document.getElementById('col-adelanto').textContent = cs(adelanto);
                 const adelRow = document.getElementById('col-adelanto-row');
-                if (adelRow) adelRow.style.display = 'none';
+                if (adelRow) adelRow.style.display = adelanto > 0 ? '' : 'none';
                 document.getElementById('col-deducciones').textContent = cs(colilla.total_deducciones);
+
+                // Obligaciones Patronales
+                const inssPat = parseFloat(colilla.inss_patronal || 0);
+                const inatecPat = parseFloat(colilla.inatec_patronal || 0);
+                const provVac = parseFloat(colilla.provision_vacaciones || 0);
+                const provAgui = parseFloat(colilla.provision_aguinaldo || 0);
+                const totCargas = inssPat + inatecPat + provVac + provAgui;
+                const costoTot = totPercepciones + totCargas;
+
+                const elInssPat = document.getElementById('col-inss-pat');
+                if (elInssPat) elInssPat.textContent = cs(inssPat);
+                const elInatecPat = document.getElementById('col-inatec-pat');
+                if (elInatecPat) elInatecPat.textContent = cs(inatecPat);
+                const elProvVac = document.getElementById('col-prov-vac');
+                if (elProvVac) elProvVac.textContent = cs(provVac);
+                const elProvAgui = document.getElementById('col-prov-agui');
+                if (elProvAgui) elProvAgui.textContent = cs(provAgui);
+                const elTotCargas = document.getElementById('col-tot-cargas-pat');
+                if (elTotCargas) elTotCargas.textContent = cs(totCargas);
+                const elCostoTot = document.getElementById('col-costo-tot-pat');
+                if (elCostoTot) elCostoTot.textContent = cs(costoTot);
+
                 closeModal('modal-detalle-nomina');
                 setTimeout(() => openModal('modal-colilla'), 150);
-            } catch (e) { mostrarNotificacionRRHH('Error cargando colilla.', 'error'); }
+            } catch (e) {
+                console.error(e);
+                mostrarNotificacionRRHH('Error cargando colilla.', 'error');
+            }
         }
 
         function imprimirColilla() {
@@ -2873,6 +3451,7 @@
 
         // Notificaciones para el módulo RRHH
         function mostrarNotificacionRRHH(msg, tipo) {
+            if (typeof mostrarToast === 'function') { mostrarToast(msg, tipo); return; }
             if (typeof showToast === 'function') { showToast(msg, tipo); return; }
             let toast = document.getElementById('rrhh-toast');
             if (!toast) {

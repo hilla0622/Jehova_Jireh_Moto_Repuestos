@@ -5,61 +5,112 @@
     <title>Colilla de Pago - {{ c.empleado }}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            font-size: 13px;
-            color: #000;
-            background-color: #fff;
+            font-family: 'Outfit', Arial, sans-serif;
+            font-size: 12px;
+            color: #1e293b;
+            background-color: #f8fafc;
             margin: 20px;
         }
         .colilla-container {
-            width: 700px;
+            width: 720px;
             margin: 0 auto;
-            padding: 15px;
+            padding: 24px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         }
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            font-size: 14px;
+            border-bottom: 2px solid #4338ca;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
         }
-        .grid-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
+        .header h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #4338ca;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .col-left, .col-center, .col-right {
-            display: inline-block;
-            vertical-align: top;
+        .header .sub {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
         }
-        .vacaciones-box {
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
-            text-align: right;
+        .header .periodo {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 4px;
+        }
+        .section-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 0;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #cbd5e1;
         }
         .table-section {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            font-size: 11.5px;
         }
         .table-section td {
-            padding: 3px 0;
+            padding: 4px 0;
+            vertical-align: middle;
         }
         .text-right {
             text-align: right;
         }
+        .bold {
+            font-weight: 700;
+        }
+        .text-danger {
+            color: #b91c1c;
+        }
+        .text-success {
+            color: #15803d;
+        }
+        .text-muted {
+            color: #64748b;
+        }
         .line-top {
-            border-top: 1px solid #000;
+            border-top: 1px solid #cbd5e1;
         }
         .line-bottom {
-            border-bottom: 1px solid #000;
+            border-bottom: 1px solid #cbd5e1;
         }
-        .bold {
-            font-weight: bold;
+        .box-ajustes {
+            background: #fffbeb;
+            border: 1px solid #fef3c7;
+            border-left: 3px solid #f59e0b;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+        .box-patronal {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 14px;
+            font-size: 11px;
         }
         .firma-container {
-            margin-top: 50px;
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-around;
             text-align: center;
+            font-size: 11px;
+            color: #64748b;
         }
         @media print {
+            body { background: #fff; margin: 0; }
+            .colilla-container { border: none; box-shadow: none; width: 100%; padding: 0; }
             .no-print { display: none; }
         }
     </style>
@@ -67,90 +118,185 @@
 <body>
 
 <div class="no-print" style="text-align:center; margin-bottom: 15px;">
-    <button onclick="window.print()">🖨️ Imprimir / Guardar en PDF</button>
+    <button onclick="window.print()" style="background:#4338ca; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600;">
+        Imprimir / Guardar en PDF
+    </button>
 </div>
 
 <div class="colilla-container">
     <!-- Encabezado -->
     <div class="header">
-        Colilla de pago de {{ c.empresa }}<br>
-        {{ c.periodo }}
+        <h2>{{ c.empresa }}</h2>
+        <div class="sub">Masatepe, Nicaragua &mdash; RUC: J0310000000000</div>
+        <div class="periodo">Colilla de Pago &mdash; {{ c.periodo }}</div>
     </div>
 
     <!-- Información del Empleado y Vacaciones -->
-    <table width="100%">
+    <table width="100%" style="font-size: 11.5px; margin-bottom: 12px;">
         <tr>
-            <td width="45%" valign="top">
-                Nombre: {{ c.empleado }}<br>
-                N° Cédula: {{ c.cedula }}<br>
-                Cargo: {{ c.cargo }}<br>
-                Departamento: {{ c.departamento }}<br>
-                INSS: {{ c.inss }}<br>
-                Salario de Contrato Mensual: C$ {{ "%.2f"|format(c.salario_contrato) }}
-            </td>
-            <td width="25%" valign="top">
-                Ingreso: {{ c.fecha_ingreso }}<br>
-                Días Trabajados: {{ c.dias_trabajados }}
-            </td>
-            <td width="30%" valign="top" class="text-right">
+            <td width="55%" valign="top">
                 <table width="100%">
-                    <tr><td>Acumulado a periodo ant.</td><td class="text-right">{{ "%.2f"|format(c.vac_acumulado) }}</td></tr>
-                    <tr><td>Vacaciones del mes</td><td class="text-right">{{ "%.2f"|format(c.vac_mes) }}</td></tr>
-                    <tr><td class="line-bottom">(-) Días Descansados</td><td class="text-right line-bottom">{{ "%.2f"|format(c.vac_descansados) }}</td></tr>
-                    <tr><td class="bold">Saldo disponible</td><td class="text-right bold">{{ "%.2f"|format(c.vac_saldo) }}</td></tr>
+                    <tr><td width="35%" class="text-muted">Nombre:</td><td><strong>{{ c.empleado }}</strong></td></tr>
+                    <tr><td class="text-muted">N° Cédula:</td><td>{{ c.cedula }}</td></tr>
+                    <tr><td class="text-muted">Cargo:</td><td>{{ c.cargo }}</td></tr>
+                    <tr><td class="text-muted">N° INSS:</td><td>{{ c.inss }}</td></tr>
+                    <tr><td class="text-muted">Salario Contractual:</td><td><strong>C$ {{ "%.2f"|format(c.salario_contrato) }}</strong></td></tr>
+                    <tr><td class="text-muted">Valor Diario (&divide;30):</td><td>C$ {{ "%.2f"|format(c.valor_diario) }}</td></tr>
+                </table>
+            </td>
+            <td width="45%" valign="top" style="border-left: 1px dashed #cbd5e1; padding-left: 14px;">
+                <table width="100%">
+                    <tr><td class="text-muted">Fecha Ingreso:</td><td class="text-right">{{ c.fecha_ingreso }}</td></tr>
+                    <tr><td class="text-muted">Días remunerados del período:</td><td class="text-right"><strong>{{ "%.1f"|format(c.dias_trabajados) }} días</strong></td></tr>
+                    <tr><td colspan="2" style="border-top:1px solid #e2e8f0; padding-top:4px; font-weight:600; color:#4338ca;">Control de Vacaciones (Ley 185)</td></tr>
+                    <tr><td class="text-muted">Saldo anterior:</td><td class="text-right">{{ "%.2f"|format(c.vac_acumulado) }} días</td></tr>
+                    <tr><td class="text-muted">Ganadas en el mes:</td><td class="text-right">{{ "%.2f"|format(c.vac_mes) }} días</td></tr>
+                    <tr><td class="text-muted">(-) Días descansados:</td><td class="text-right">{{ "%.2f"|format(c.vac_descansados) }} días</td></tr>
+                    <tr style="border-top:1px dashed #cbd5e1;"><td class="bold" style="color:#4338ca;">Saldo disponible:</td><td class="text-right bold" style="color:#4338ca;">{{ "%.2f"|format(c.vac_saldo) }} días</td></tr>
                 </table>
             </td>
         </tr>
     </table>
 
-    <hr style="border: 0.5px solid #000; margin: 10px 0;">
+    {% if c.total_ajustes > 0 %}
+    <!-- AJUSTES DEL PERÍODO (TIEMPO NO REMUNERADO) -->
+    <div class="box-ajustes">
+        <div style="font-weight:700; color:#b45309; text-transform:uppercase; font-size:10.5px; margin-bottom:4px;">
+            Ajustes del Período (Tiempo No Remunerado)
+        </div>
+        <table width="100%" style="font-size:11.5px;">
+            {% if c.dias_falta > 0 %}
+            <tr>
+                <td>Falta injustificada &mdash; {{ "%.1f"|format(c.dias_falta) }} día(s) ({{ "%.1f"|format(c.dias_falta) }} &times; C${{ "%.2f"|format(c.valor_diario) }})</td>
+                <td class="text-right text-danger">(-) C$ {{ "%.2f"|format(c.monto_falta) }}</td>
+            </tr>
+            {% endif %}
+            {% if c.dias_septimo_dia > 0 %}
+            <tr>
+                <td>Séptimo día no generado &mdash; {{ "%.1f"|format(c.dias_septimo_dia) }} día(s) (Art. 64 Ley 185)</td>
+                <td class="text-right text-danger">(-) C$ {{ "%.2f"|format(c.monto_septimo_dia) }}</td>
+            </tr>
+            {% endif %}
+            {% if c.dias_permiso_sin_goce > 0 %}
+            <tr>
+                <td>Permiso sin goce de salario &mdash; {{ "%.1f"|format(c.dias_permiso_sin_goce) }} día(s)</td>
+                <td class="text-right text-danger">(-) C$ {{ "%.2f"|format(c.monto_permiso_sin_goce) }}</td>
+            </tr>
+            {% endif %}
+            <tr style="border-top:1px dashed #f59e0b; font-weight:700;">
+                <td>Total ajuste por tiempo no remunerado</td>
+                <td class="text-right text-danger">(-) C$ {{ "%.2f"|format(c.total_ajustes) }}</td>
+            </tr>
+        </table>
+    </div>
+    {% endif %}
 
     <!-- Tabla Percepciones y Deducciones -->
-    <table class="table-section">
-        <tr class="bold">
-            <td width="30%">PERCEPCIONES</td>
-            <td width="20%"></td>
-            <td width="30%">DEDUCCIONES</td>
-            <td width="20%"></td>
-        </tr>
+    <table width="100%" style="margin-bottom: 12px;">
         <tr>
-            <td>Salario Devengado</td>
-            <td class="text-right">C$ {{ "%.2f"|format(c.salario_devengado) }}</td>
-            <td>INSS Laboral</td>
-            <td class="text-right">C$ {{ "%.2f"|format(c.inss_laboral) }}</td>
-        </tr>
-        <tr>
-            <td>KPI / Extras</td>
-            <td class="text-right">C$ {{ "%.2f"|format(c.kpi_meta) }}</td>
-            <td>IR</td>
-            <td class="text-right">C$ {{ "%.2f"|format(c.ir) }}</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-            <td>Adelanto Salarial</td>
-            <td class="text-right">C$ {{ "%.2f"|format(c.adelanto) }}</td>
-        </tr>
-        <tr>
-            <td class="bold line-top">Total Percepciones</td>
-            <td class="text-right bold line-top">C$ {{ "%.2f"|format(c.total_percepciones) }}</td>
-            <td class="bold line-top">Total Deducciones</td>
-            <td class="text-right bold line-top">C$ {{ "%.2f"|format(c.total_deducciones) }}</td>
-        </tr>
-        <tr>
-            <td class="bold">Neto a Recibir</td>
-            <td class="text-right bold">C$ {{ "%.2f"|format(c.neto_a_recibir) }}</td>
-            <td></td>
-            <td></td>
+            <!-- Columna Percepciones -->
+            <td width="50%" valign="top" style="padding-right: 14px;">
+                <div class="section-title" style="color: #4338ca; border-color: #4338ca;">
+                    SALARIO DEVENGADO Y PERCEPCIONES
+                </div>
+                <table class="table-section">
+                    <tr>
+                        <td>Salario base contractual</td>
+                        <td class="text-right">C$ {{ "%.2f"|format(c.salario_contrato) }}</td>
+                    </tr>
+                    {% if c.total_ajustes > 0 %}
+                    <tr class="text-danger">
+                        <td>(-) Ajustes por tiempo no trabajado</td>
+                        <td class="text-right">- C$ {{ "%.2f"|format(c.total_ajustes) }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr style="border-top: 1px solid #e2e8f0; font-weight: 600;">
+                        <td>Salario devengado ordinario</td>
+                        <td class="text-right">C$ {{ "%.2f"|format(c.salario_devengado) }}</td>
+                    </tr>
+                    {% if c.kpi_meta > 0 %}
+                    <tr>
+                        <td class="text-muted">KPI / Ingresos Extra</td>
+                        <td class="text-right">C$ {{ "%.2f"|format(c.kpi_meta) }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr class="bold line-top" style="font-size: 12px;">
+                        <td>Total Percepciones (Base Cotizable)</td>
+                        <td class="text-right">C$ {{ "%.2f"|format(c.total_percepciones) }}</td>
+                    </tr>
+                    <tr style="background:#f0fdf4; font-size:13px; font-weight:800; color:#16a34a;">
+                        <td style="padding:6px 4px; border-top:1px solid #bbf7d0;">NETO A RECIBIR</td>
+                        <td class="text-right" style="padding:6px 4px; border-top:1px solid #bbf7d0;">C$ {{ "%.2f"|format(c.neto_a_recibir) }}</td>
+                    </tr>
+                </table>
+            </td>
+
+            <!-- Columna Deducciones -->
+            <td width="50%" valign="top" style="padding-left: 14px; border-left: 1px dashed #cbd5e1;">
+                <div class="section-title" style="color: #b91c1c; border-color: #b91c1c;">
+                    DEDUCCIONES DE LEY
+                </div>
+                <table class="table-section">
+                    <tr>
+                        <td>INSS Laboral (7% Régimen Integral)</td>
+                        <td class="text-right text-danger">C$ {{ "%.2f"|format(c.inss_laboral) }}</td>
+                    </tr>
+                    <tr>
+                        <td>IR Rentas del Trabajo (DGI Ley 822)</td>
+                        <td class="text-right text-danger">C$ {{ "%.2f"|format(c.ir) }}</td>
+                    </tr>
+                    {% if c.adelanto > 0 %}
+                    <tr>
+                        <td>Adelanto Salarial</td>
+                        <td class="text-right text-danger">C$ {{ "%.2f"|format(c.adelanto) }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr class="bold line-top" style="color: #b91c1c; font-size: 12px;">
+                        <td>Total Deducciones de Ley</td>
+                        <td class="text-right">C$ {{ "%.2f"|format(c.total_deducciones) }}</td>
+                    </tr>
+                </table>
+            </td>
         </tr>
     </table>
 
-    <hr style="border: 0.5px solid #000; margin: 15px 0;">
+    <!-- CARGAS Y PROVISIONES PATRONALES -->
+    <div class="box-patronal">
+        <div style="font-weight:700; color:#475569; text-transform:uppercase; font-size:10px; margin-bottom:8px; display:flex; justify-content:space-between; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">
+            <span>CARGAS Y PROVISIONES PATRONALES &mdash; A cargo exclusivo del empleador</span>
+            <span>No se descuentan al trabajador</span>
+        </div>
+        <table width="100%">
+            <tr style="font-size:9.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.3px;">
+                <td colspan="2" style="padding-bottom:3px; border-right:1px dashed #e2e8f0;">Cargas Patronales</td>
+                <td colspan="2" style="padding-bottom:3px; padding-left:12px;">Provisiones Laborales</td>
+            </tr>
+            <tr>
+                <td width="25%">INSS Patronal (21.5%): <strong>C$ {{ "%.2f"|format(c.inss_patronal) }}</strong></td>
+                <td width="25%" style="border-right:1px dashed #e2e8f0;">INATEC (2%): <strong>C$ {{ "%.2f"|format(c.inatec_patronal) }}</strong></td>
+                <td width="25%" style="padding-left:12px;">Vacaciones (1/12): <strong>C$ {{ "%.2f"|format(c.provision_vacaciones) }}</strong></td>
+                <td width="25%">Aguinaldo (1/12): <strong>C$ {{ "%.2f"|format(c.provision_aguinaldo) }}</strong></td>
+            </tr>
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td colspan="2" style="padding-top:5px; color:#64748b;">Total cargas: <strong>C$ {{ "%.2f"|format(c.inss_patronal + c.inatec_patronal) }}</strong></td>
+                <td colspan="2" style="padding-top:5px; text-align:right; color:#4338ca;">Costo total empresa: <strong>C$ {{ "%.2f"|format(c.costo_total_patronal) }}</strong></td>
+            </tr>
+        </table>
+    </div>
 
     <!-- Pie de Firma -->
     <div class="firma-container">
-        Recibí Conforme<br><br>
-        {{ c.empleado }}
+        <div>
+            _________________________________________<br>
+            <strong>{{ c.empleado }}</strong><br>
+            Cédula: {{ c.cedula }}<br>
+            Recibí Conforme
+        </div>
+        <div>
+            _________________________________________<br>
+            <strong>Jehová Jireh Moto Repuestos</strong><br>
+            Responsable de Recursos Humanos
+        </div>
     </div>
 </div>
 

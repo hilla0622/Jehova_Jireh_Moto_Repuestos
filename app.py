@@ -9,10 +9,10 @@ app = Flask(__name__, template_folder='Fronted/templates', static_folder='Fronte
 app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_super_secure')
 
 # ==============================================================================
-# CONFIGURACIÃ“N DE BASE DE DATOS SQL SERVER
+# CONFIGURACIÓN DE BASE DE DATOS SQL SERVER
 # ==============================================================================
 # Cambia 'LAPTOP-CNR3S3I3' por tu nombre de servidor SQL Server.
-DB_SERVER = os.environ.get('DB_SERVER', r'HILLARY')
+DB_SERVER = os.environ.get('DB_SERVER', r'LAPTOP-CNR3S3I3')
 DB_NAME = 'jehova_jireh_db'
 
 def get_db_connection():
@@ -26,7 +26,7 @@ def get_db_connection():
     return conn
 
 def execute_query(query, params=(), fetchone=False, fetchall=False, commit=False):
-    """FunciÃ³n de ayuda para ejecutar consultas y retornar diccionarios"""
+    """Función de ayuda para ejecutar consultas y retornar diccionarios"""
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -76,7 +76,7 @@ def role_required(*roles_permitidos):
                 return redirect(url_for('login'))
             user_rol = session['user'].get('rol')
             if user_rol not in roles_permitidos:
-                return jsonify({"error": "Acceso denegado: Tu rol no tiene permisos para esta acciÃ³n."}), 403
+                return jsonify({"error": "Acceso denegado: Tu rol no tiene permisos para esta acción."}), 403
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -105,7 +105,7 @@ def tienda():
     """
     productos = execute_query(query_productos, fetchall=True)
 
-    # Obtener las categorÃ­as que tienen al menos un producto activo
+    # Obtener las categorías que tienen al menos un producto activo
     query_categorias = """
         SELECT DISTINCT c.nombre AS nombre
         FROM productos p
@@ -125,14 +125,14 @@ def registro():
         telefono = request.form.get('telefono', '')
         direccion = request.form.get('direccion', '')
 
-        # Verificar si el correo ya estÃ¡ registrado
+        # Verificar si el correo ya está registrado
         check_query = "SELECT id FROM clientes WHERE email = ?"
         user_exists = execute_query(check_query, params=(email,), fetchall=True)
 
         if user_exists:
-            return render_template('registro.html', error='Ese correo electrÃ³nico ya estÃ¡ registrado.')
+            return render_template('registro.html', error='Ese correo electrónico ya está registrado.')
 
-        # Encriptar la contraseÃ±a
+        # Encriptar la contraseña
         password_hash = generate_password_hash(password)
 
         # Insertar el nuevo cliente
@@ -142,8 +142,8 @@ def registro():
         """
         try:
             execute_query(insert_query, params=(nombre_completo, email, password_hash, telefono, direccion), commit=True)
-            # Redirigir al login con Ã©xito (podrÃ­amos usar flash messages, pero por ahora en la URL o render)
-            return render_template('login.html', error='Â¡Registro exitoso! Por favor inicia sesiÃ³n con tu nueva cuenta.')
+            # Redirigir al login con éxito (podríamos usar flash messages, pero por ahora en la URL o render)
+            return render_template('login.html', error='¡Registro exitoso! Por favor inicia sesión con tu nueva cuenta.')
         except Exception as e:
             return render_template('registro.html', error='Error al registrar. Por favor intenta de nuevo.')
 
@@ -158,7 +158,7 @@ def login():
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
 
-        # 1. ValidaciÃ³n como Empleado/Admin en la base de datos SQL Server
+        # 1. Validación como Empleado/Admin en la base de datos SQL Server
         query = """
             SELECT u.id, u.username, u.nombre_completo AS nombre, r.nombre AS rol
             FROM usuarios u
@@ -178,7 +178,7 @@ def login():
                 return jsonify({"success": True, "redirect": url_for('inicio')})
             return redirect(url_for('inicio'))
             
-        # 2. ValidaciÃ³n como Cliente Web
+        # 2. Validación como Cliente Web
         query_cliente = "SELECT id, email, nombre_completo, password_hash, direccion FROM clientes WHERE email = ?"
         cliente = execute_query(query_cliente, (username,), fetchone=True)
         
@@ -195,7 +195,7 @@ def login():
             return redirect(url_for('tienda'))
 
         # Si falla en ambas tablas
-        error_msg = "Usuario o contraseÃ±a incorrectos."
+        error_msg = "Usuario o contraseña incorrectos."
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"success": False, "error": error_msg}), 401
         return render_template('login.html', error=error_msg)
@@ -240,7 +240,7 @@ def api_usuarios():
 
         rol_info = execute_query("SELECT id FROM roles WHERE nombre = ?", (rol,), fetchone=True)
         if not rol_info:
-            return jsonify({"error": "Rol no vÃ¡lido."}), 400
+            return jsonify({"error": "Rol no válido."}), 400
 
         existente = execute_query("SELECT id FROM usuarios WHERE username = ?", (username,), fetchone=True)
         if existente:
@@ -266,22 +266,22 @@ def api_categorias():
 
     if request.method == 'POST':
         if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
-            return jsonify({"error": "No tienes permiso para registrar categorÃ­as."}), 403
+            return jsonify({"error": "No tienes permiso para registrar categorías."}), 403
         
         data = request.json or {}
         nombre = data.get('nombre', '').strip()
         descripcion = data.get('descripcion', '').strip()
 
         if not nombre:
-            return jsonify({"error": "El nombre de la categorÃ­a es obligatorio."}), 400
+            return jsonify({"error": "El nombre de la categoría es obligatorio."}), 400
 
         existente = execute_query("SELECT id FROM categorias WHERE nombre = ?", (nombre,), fetchone=True)
         if existente:
-            return jsonify({"error": "El nombre de la categorÃ­a ya existe."}), 400
+            return jsonify({"error": "El nombre de la categoría ya existe."}), 400
 
         try:
             execute_query("INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)", (nombre, descripcion), commit=True)
-            return jsonify({"success": True, "mensaje": "CategorÃ­a registrada exitosamente."}), 201
+            return jsonify({"success": True, "mensaje": "Categoría registrada exitosamente."}), 201
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
@@ -289,22 +289,22 @@ def api_categorias():
 @login_required
 def api_categoria_editar(cat_id):
     if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones']:
-        return jsonify({"error": "No tienes permiso para modificar categorÃ­as."}), 403
+        return jsonify({"error": "No tienes permiso para modificar categorías."}), 403
     
     data = request.json or {}
     nombre = data.get('nombre', '').strip()
     descripcion = data.get('descripcion', '').strip()
 
     if not nombre:
-        return jsonify({"error": "El nombre de la categorÃ­a es obligatorio."}), 400
+        return jsonify({"error": "El nombre de la categoría es obligatorio."}), 400
 
     existente = execute_query("SELECT id FROM categorias WHERE nombre = ? AND id != ?", (nombre, cat_id), fetchone=True)
     if existente:
-        return jsonify({"error": "El nombre de la categorÃ­a ya existe."}), 400
+        return jsonify({"error": "El nombre de la categoría ya existe."}), 400
 
     try:
         execute_query("UPDATE categorias SET nombre = ?, descripcion = ? WHERE id = ?", (nombre, descripcion, cat_id), commit=True)
-        return jsonify({"success": True, "mensaje": "CategorÃ­a actualizada exitosamente."})
+        return jsonify({"success": True, "mensaje": "Categoría actualizada exitosamente."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -340,7 +340,7 @@ def api_productos():
         min_stock = int(data.get('min_stock', 5))
 
         if not nombre or precio <= 0 or not codigo:
-            return jsonify({"error": "Nombre, CÃ³digo y Precio vÃ¡lidos son obligatorios."}), 400
+            return jsonify({"error": "Nombre, Código y Precio válidos son obligatorios."}), 400
 
         query_insert = """
             INSERT INTO productos (codigo_sku, categoria_id, nombre, costo, precio_venta, stock_actual, stock_minimo)
@@ -350,7 +350,7 @@ def api_productos():
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # Buscar o crear categorÃ­a
+            # Buscar o crear categoría
             cursor.execute("SELECT id FROM categorias WHERE nombre = ?", (categoria,))
             cat_row = cursor.fetchone()
             if cat_row:
@@ -429,7 +429,7 @@ def api_producto_editar(prod_id):
                 cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (nuevo_stock, prod_id))
                 mov_query = """
                     INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, motivo, usuario_id)
-                    VALUES (?, ?, ?, ?, ?, 'Ajuste por ediciÃ³n de producto', ?)
+                    VALUES (?, ?, ?, ?, ?, 'Ajuste por edición de producto', ?)
                 """
                 cursor.execute(mov_query, (prod_id, tipo_mov, abs(diff), prod['stock_actual'], nuevo_stock, session['user']['id']))
         
@@ -572,7 +572,7 @@ def api_caja_cierre():
                        (sesion_id, session['user']['id']))
         caja = cursor.fetchone()
         if not caja or caja.estado != 'Abierta':
-            return jsonify({"error": "SesiÃ³n de caja invÃ¡lida o ya estÃ¡ cerrada."}), 400
+            return jsonify({"error": "Sesión de caja inválida o ya está cerrada."}), 400
             
         monto_inicial = caja.monto_inicial
         
@@ -632,7 +632,7 @@ def api_caja_sesion(id):
     sesion = execute_query(query, (id,), fetchone=True)
     
     if not sesion:
-        return jsonify({"error": "SesiÃ³n no encontrada"}), 404
+        return jsonify({"error": "Sesión no encontrada"}), 404
         
     query_ventas = "SELECT ISNULL(SUM(total), 0) FROM ventas WHERE sesion_caja_id = ? AND estado != 'Anulada' AND forma_pago = 'Efectivo'"
     conn = get_db_connection()
@@ -693,7 +693,7 @@ def api_ventas():
         items = data.get('items', []) 
 
         if not items:
-            return jsonify({"error": "El carrito de compra estÃ¡ vacÃ­o."}), 400
+            return jsonify({"error": "El carrito de compra está vacío."}), 400
 
         try:
             conn = get_db_connection()
@@ -757,7 +757,7 @@ def api_ventas():
                     VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
                 """, (p_id, cant, stock_ant, stock_post, f"Venta {codigo_v}", 'Venta desde caja', session['user']['id']))
 
-            # --- ASIENTO CONTABLE AUTOMÃTICO DE VENTA ---
+            # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA ---
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
             cta_caja = cursor.fetchone()[0]
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'") # Ventas
@@ -838,7 +838,7 @@ def api_ventas_web():
     items = data.get('items', []) 
 
     if not items:
-        return jsonify({"error": "El carrito de compra estÃ¡ vacÃ­o."}), 400
+        return jsonify({"error": "El carrito de compra está vacío."}), 400
 
     cliente_id = None
     if 'user' in session and session['user']['rol'] == 'Cliente':
@@ -877,7 +877,7 @@ def api_ventas_web():
                 p_id, cant, float(prod.precio_venta), float(prod.costo), subtotal, prod.stock_actual
             ))
 
-        # Buscar un admin genÃ©rico para los movimientos que exigen usuario_id NO NULL
+        # Buscar un admin genérico para los movimientos que exigen usuario_id NO NULL
         cursor.execute("SELECT TOP 1 u.id FROM usuarios u INNER JOIN roles r ON u.rol_id = r.id WHERE r.nombre = 'Administrador'")
         admin_row = cursor.fetchone()
         admin_id = admin_row[0] if admin_row else 1
@@ -905,7 +905,7 @@ def api_ventas_web():
                 VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
             """, (p_id, cant, stock_ant, stock_post, f"Venta Web {codigo_v}", 'Venta desde la tienda online', admin_id))
 
-        # --- ASIENTO CONTABLE AUTOMÃTICO DE VENTA WEB ---
+        # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA WEB ---
         cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
         cta_caja = cursor.fetchone()[0]
         cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'") # Ventas
@@ -933,7 +933,7 @@ def api_ventas_web():
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_v_id, cta_inv, total_costo_venta))
 
         conn.commit()
-        return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada con Ã©xito."}), 201
+        return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada con éxito."}), 201
 
     except Exception as e:
         if 'conn' in locals():
@@ -944,7 +944,7 @@ def api_ventas_web():
 @app.route('/api/ventas/<int:v_id>', methods=['GET'])
 @login_required
 def api_venta_detalle(v_id):
-    return jsonify({"error": "Detalle Ãºnico no implementado (la vista general ya los incluye)."}), 501
+    return jsonify({"error": "Detalle único no implementado (la vista general ya los incluye)."}), 501
 
 
 
@@ -1326,7 +1326,7 @@ def api_compras():
 
             cursor.execute("UPDATE compras SET total = ? WHERE id = ?", (total_compra, compra_id))
 
-            # --- ASIENTO CONTABLE AUTOMÃTICO DE COMPRA ---
+            # --- ASIENTO CONTABLE AUTOMÁTICO DE COMPRA ---
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.04'") # Inventario
             cta_inv = cursor.fetchone()[0]
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '2.1.01'") # Proveedores
@@ -1413,7 +1413,7 @@ def api_reportes():
             conn.close()
 
 # ==============================================================================
-# MÃ“DULO CONTABLE Y ESTADOS FINANCIEROS
+# MÓDULO CONTABLE Y ESTADOS FINANCIEROS
 # ==============================================================================
 
 @app.route('/api/finanzas/cuentas', methods=['GET', 'POST'])
@@ -1833,7 +1833,7 @@ def api_balance_general():
             haber = float(f['h'] or 0)
             saldo = (haber - debe) if f['naturaleza'] == 'Acreedora' else (debe - haber)
             
-            # Ajuste para cuentas contra-activo (ej. DepreciaciÃ³n acumulada) que son naturaleza Acreedora pero van en Activos
+            # Ajuste para cuentas contra-activo (ej. Depreciación acumulada) que son naturaleza Acreedora pero van en Activos
             if f['clasificacion'] == 'Activo no corriente - contraactivo':
                 saldo = -abs(saldo) # Se resta del activo
                 
@@ -1855,7 +1855,7 @@ def api_balance_general():
                 patrimonio.append(obj)
                 total_patrimonio += saldo
 
-        patrimonio.append({"cuenta": "Utilidad neta del perÃ­odo", "saldo": utilidad_neta})
+        patrimonio.append({"cuenta": "Utilidad neta del período", "saldo": utilidad_neta})
 
         return jsonify({
             "activos": {
@@ -1878,7 +1878,7 @@ def api_balance_general():
         return jsonify({"error": str(e)}), 500
 
 # ==============================================================================
-# RECURSOS HUMANOS Y NÃ“MINA
+# RECURSOS HUMANOS Y NÓMINA
 # Roles permitidos: Administrador, Responsable de Recursos Humanos
 # ==============================================================================
 ROLES_RRHH = ['Administrador', 'Responsable de Recursos Humanos']
@@ -2004,16 +2004,18 @@ def api_empleados():
         observaciones = data.get('observaciones', '').strip()
 
         if not nombre or salario_base <= 0:
-            return jsonify({"error": "Nombre y Salario base vÃ¡lidos son obligatorios."}), 400
+            return jsonify({"error": "Nombre y Salario base válidos son obligatorios."}), 400
+
+        dias_vac = float(data.get('dias_vacaciones_disponibles', 0) or 0)
 
         try:
             execute_query(
                 """INSERT INTO empleados
                    (nombre_completo, identificacion, num_inss, cargo, salario_base,
-                    fecha_ingreso, telefono, email, observaciones)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    fecha_ingreso, telefono, email, observaciones, dias_vacaciones_disponibles)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (nombre, identificacion, num_inss, cargo, salario_base,
-                 fecha_ingreso, telefono, email, observaciones),
+                 fecha_ingreso, telefono, email, observaciones, dias_vac),
                 commit=True
             )
             return jsonify({"success": True, "mensaje": "Empleado registrado exitosamente."}), 201
@@ -2055,6 +2057,19 @@ def api_empleado_editar(emp_id):
             )
             if rows == 0:
                 return jsonify({"error": "Empleado no encontrado."}), 404
+
+            # Actualizar saldo de vacaciones si viene en la petición
+            dias_vac_val = data.get('dias_vacaciones_disponibles')
+            if dias_vac_val is not None:
+                try:
+                    dias_vac = round(float(dias_vac_val), 2)
+                    execute_query(
+                        "UPDATE empleados SET dias_vacaciones_disponibles = ? WHERE id = ?",
+                        (dias_vac, emp_id), commit=True
+                    )
+                except (ValueError, TypeError):
+                    pass
+
             return jsonify({"success": True, "mensaje": "Empleado actualizado."})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -2086,8 +2101,9 @@ def api_movimientos_laborales():
         emp_id = request.args.get('empleado_id')
         if emp_id:
             query = """
-                SELECT ml.id, e.nombre_completo AS empleado, ml.tipo,
-                       ml.fecha_inicio, ml.fecha_fin, ml.dias_tomados, ml.observacion, ml.created_at
+                SELECT ml.id, ml.empleado_id, e.nombre_completo AS empleado, ml.tipo,
+                       ml.fecha_inicio, ml.fecha_fin, ml.dias_tomados, ml.observacion, ml.created_at,
+                       ISNULL(ml.afecta_septimo_dia, 0) AS afecta_septimo_dia
                 FROM movimientos_laborales ml
                 JOIN empleados e ON ml.empleado_id = e.id
                 WHERE ml.empleado_id = ?
@@ -2096,18 +2112,21 @@ def api_movimientos_laborales():
             movimientos = execute_query(query, (emp_id,), fetchall=True)
         else:
             query = """
-                SELECT ml.id, e.nombre_completo AS empleado, ml.tipo,
-                       ml.fecha_inicio, ml.fecha_fin, ml.dias_tomados, ml.observacion, ml.created_at
+                SELECT ml.id, ml.empleado_id, e.nombre_completo AS empleado, ml.tipo,
+                       ml.fecha_inicio, ml.fecha_fin, ml.dias_tomados, ml.observacion, ml.created_at,
+                       ISNULL(ml.afecta_septimo_dia, 0) AS afecta_septimo_dia
                 FROM movimientos_laborales ml
                 JOIN empleados e ON ml.empleado_id = e.id
                 ORDER BY ml.created_at DESC
             """
             movimientos = execute_query(query, fetchall=True)
-        # Serializar fechas
+        # Serializar fechas y números
         for m in movimientos:
-            if m.get('fecha_inicio'): m['fecha_inicio'] = str(m['fecha_inicio'])
-            if m.get('fecha_fin'):    m['fecha_fin']    = str(m['fecha_fin'])
+            if m.get('fecha_inicio'): m['fecha_inicio'] = str(m['fecha_inicio'])[:10]
+            if m.get('fecha_fin'):    m['fecha_fin']    = str(m['fecha_fin'])[:10]
             if m.get('created_at'):   m['created_at']   = str(m['created_at'])
+            if m.get('dias_tomados') is not None: m['dias_tomados'] = float(m['dias_tomados'])
+            m['afecta_septimo_dia'] = bool(m.get('afecta_septimo_dia', False))
         return jsonify(movimientos)
 
     if request.method == 'POST':
@@ -2121,6 +2140,7 @@ def api_movimientos_laborales():
         fecha_fin    = data.get('fecha_fin', '')
         dias_tomados = float(data.get('dias_tomados', 0))
         observacion  = data.get('observacion', '').strip()
+        afecta_septimo_dia = 1 if (tipo == 'FALTA' and bool(data.get('afecta_septimo_dia', False))) else 0
 
         if not empleado_id or not tipo or not fecha_inicio or not fecha_fin or dias_tomados <= 0:
             return jsonify({"error": "Todos los campos son obligatorios y los días deben ser mayores a 0."}), 400
@@ -2146,9 +2166,9 @@ def api_movimientos_laborales():
 
             execute_query(
                 """INSERT INTO movimientos_laborales
-                   (empleado_id, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (empleado_id, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion),
+                   (empleado_id, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion, afecta_septimo_dia)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (empleado_id, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion, afecta_septimo_dia),
                 commit=True
             )
 
@@ -2163,17 +2183,120 @@ def api_movimientos_laborales():
             return jsonify({"error": str(e)}), 500
 
 
-# --- GENERACIÃ“N DE NÃ“MINA ---
+@app.route('/api/movimientos-laborales/<int:mov_id>', methods=['PUT', 'DELETE'])
+@login_required
+def api_movimiento_laboral_detalle(mov_id):
+    """PUT: Actualizar movimiento laboral. DELETE: Eliminar movimiento laboral (reintegrando días si fue vacaciones)."""
+    if session['user']['rol'] not in ROLES_RRHH:
+        return jsonify({"error": "No tienes permisos."}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, empleado_id, tipo, dias_tomados FROM movimientos_laborales WHERE id = ?", (mov_id,))
+        mov = cursor.fetchone()
+        if not mov:
+            conn.close()
+            return jsonify({"error": "Movimiento laboral no encontrado."}), 404
+
+        m_id, emp_id, tipo, dias_tomados = mov[0], mov[1], mov[2], float(mov[3])
+
+        if request.method == 'DELETE':
+            # Si era tipo VACACIONES, reintegrar los días al saldo disponible del empleado
+            if tipo == 'VACACIONES':
+                cursor.execute(
+                    "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles + ? WHERE id = ?",
+                    (dias_tomados, emp_id)
+                )
+            cursor.execute("DELETE FROM movimientos_laborales WHERE id = ?", (mov_id,))
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True, "mensaje": "Movimiento laboral eliminado exitosamente."})
+
+        if request.method == 'PUT':
+            data = request.json or {}
+            nuevo_emp_id = int(data.get('empleado_id', emp_id))
+            nuevo_tipo = data.get('tipo', tipo)
+            nueva_fecha_inicio = data.get('fecha_inicio')
+            nueva_fecha_fin = data.get('fecha_fin')
+            nuevos_dias = float(data.get('dias_tomados', dias_tomados))
+            nueva_obs = data.get('observacion', '').strip()
+            afecta_septimo_dia = 1 if (nuevo_tipo == 'FALTA' and bool(data.get('afecta_septimo_dia', False))) else 0
+
+            if nuevos_dias <= 0 or not nueva_fecha_inicio or not nueva_fecha_fin:
+                conn.close()
+                return jsonify({"error": "Fechas válidas y días mayores a 0 son obligatorios."}), 400
+
+            tipos_validos = ['VACACIONES', 'PERMISO_CON_GOCE', 'PERMISO_SIN_GOCE', 'FALTA']
+            if nuevo_tipo not in tipos_validos:
+                conn.close()
+                return jsonify({"error": f"Tipo inválido. Use: {tipos_validos}"}), 400
+
+            # 1. Si el movimiento anterior era VACACIONES, reintegrar días al empleado original
+            if tipo == 'VACACIONES':
+                cursor.execute(
+                    "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles + ? WHERE id = ?",
+                    (dias_tomados, emp_id)
+                )
+
+            # 2. Si el nuevo tipo es VACACIONES, verificar saldo disponible y descontar del empleado correspondiente
+            if nuevo_tipo == 'VACACIONES':
+                cursor.execute(
+                    "SELECT nombre_completo, ISNULL(dias_vacaciones_disponibles, 0) FROM empleados WHERE id = ?",
+                    (nuevo_emp_id,)
+                )
+                emp_row = cursor.fetchone()
+                if not emp_row:
+                    conn.rollback()
+                    conn.close()
+                    return jsonify({"error": "Empleado no encontrado."}), 404
+
+                emp_nom = emp_row[0]
+                saldo_disponible = float(emp_row[1])
+
+                if nuevos_dias > saldo_disponible:
+                    conn.rollback()
+                    conn.close()
+                    return jsonify({
+                        "error": f"Saldo insuficiente: {emp_nom} cuenta con {saldo_disponible:.2f} días disponibles y solicitó {nuevos_dias:.1f} días."
+                    }), 400
+
+                cursor.execute(
+                    "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles - ? WHERE id = ?",
+                    (nuevos_dias, nuevo_emp_id)
+                )
+
+            # 3. Actualizar registro en movimientos_laborales
+            cursor.execute("""
+                UPDATE movimientos_laborales
+                SET empleado_id = ?, tipo = ?, fecha_inicio = ?, fecha_fin = ?, dias_tomados = ?, observacion = ?, afecta_septimo_dia = ?
+                WHERE id = ?
+            """, (nuevo_emp_id, nuevo_tipo, nueva_fecha_inicio, nueva_fecha_fin, nuevos_dias, nueva_obs, afecta_septimo_dia, mov_id))
+
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True, "mensaje": "Movimiento laboral actualizado exitosamente."})
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+# --- GENERACIÓN DE NÓMINA ---
 @app.route('/api/nomina/generar', methods=['POST'])
 @login_required
 def api_nomina_generar():
-    """Genera la nÃ³mina mensual para todos los empleados activos con cÃ¡lculos correctos Ley 822 + Ley 185."""
+    """Genera la nómina mensual para todos los empleados activos con cálculos correctos Ley 822 + Ley 185."""
     if session['user']['rol'] not in ROLES_RRHH:
-        return jsonify({"error": "No tienes permisos para generar nÃ³minas."}), 403
+        return jsonify({"error": "No tienes permisos para generar nóminas."}), 403
 
     data = request.json or {}
-    mes  = int(data.get('mes', 1))
-    anio = int(data.get('anio', 2026))
+    mes               = int(data.get('mes', 1))
+    anio              = int(data.get('anio', 2026))
+    # 'all' para toda la planilla, o un int para un empleado específico
+    empleado_id_param = data.get('empleado_id', 'all')
 
     try:
         conn   = get_db_connection()
@@ -2191,25 +2314,34 @@ def api_nomina_generar():
             nomina_id = int(cursor.fetchone()[0])
             es_complemento = False
 
-        empleado_id_param = data.get('empleado_id', 'all')
+        # Blindaje anti-duplicidad por período (mes/año):
+        # Evita que un empleado sea reprocesado o acumule vacaciones más de una vez en el mismo mes.
         if empleado_id_param != 'all':
             cursor.execute("""
-                SELECT id, salario_base FROM empleados 
+                SELECT id, salario_base, fecha_ingreso, ISNULL(dias_vacaciones_disponibles, 0) FROM empleados 
                 WHERE activo=1 AND id=? 
-                AND id NOT IN (SELECT empleado_id FROM detalle_nomina WHERE nomina_id = ?)
-            """, (empleado_id_param, nomina_id))
+                AND id NOT IN (
+                    SELECT dn.empleado_id FROM detalle_nomina dn
+                    JOIN nomina n ON dn.nomina_id = n.id
+                    WHERE n.periodo_mes = ? AND n.periodo_anio = ?
+                )
+            """, (empleado_id_param, mes, anio))
         else:
             cursor.execute("""
-                SELECT id, salario_base FROM empleados 
+                SELECT id, salario_base, fecha_ingreso, ISNULL(dias_vacaciones_disponibles, 0) FROM empleados 
                 WHERE activo=1 
-                AND id NOT IN (SELECT empleado_id FROM detalle_nomina WHERE nomina_id = ?)
-            """, (nomina_id,))
+                AND id NOT IN (
+                    SELECT dn.empleado_id FROM detalle_nomina dn
+                    JOIN nomina n ON dn.nomina_id = n.id
+                    WHERE n.periodo_mes = ? AND n.periodo_anio = ?
+                )
+            """, (mes, anio))
 
         empleados = cursor.fetchall()
         
         if not empleados:
             conn.close()
-            return jsonify({"error": f"La nÃ³mina {mes}/{anio} ya fue generada para el/los empleado(s) seleccionado(s)."}), 400
+            return jsonify({"error": f"La nómina {mes}/{anio} ya fue generada para el/los empleado(s) seleccionado(s)."}), 400
 
         t_bruto       = 0.0
         t_deducciones = 0.0
@@ -2217,22 +2349,104 @@ def api_nomina_generar():
         t_ir          = 0.0
         t_neto        = 0.0
         t_patronal    = 0.0
+        t_inatec      = 0.0
         t_vac         = 0.0
         t_agui        = 0.0
 
-        for emp in empleados:
-            e_id   = emp[0]
-            salario = float(emp[1])
+        from datetime import datetime as dt_mod
 
-            # Usar mÃ³dulo de cÃ¡lculos con lÃ³gica correcta
-            calc = calcular_nomina_empleado(salario)
+        for emp in empleados:
+            e_id                  = emp[0]
+            salario_base_contrato = float(emp[1])
+            fecha_ingreso_val     = emp[2]
+            saldo_vac_actual      = float(emp[3])
+
+            # Valor diario (criterio MITRAB y jurisprudencia: salario mensual ÷ 30)
+            valor_diario = round(salario_base_contrato / 30.0, 2)
+
+            # Cálculo de días computables según fecha de ingreso
+            dias_computables = 30.0
+            if fecha_ingreso_val:
+                try:
+                    if isinstance(fecha_ingreso_val, str):
+                        f_ing = dt_mod.strptime(fecha_ingreso_val[:10], '%Y-%m-%d').date()
+                    else:
+                        f_ing = fecha_ingreso_val
+
+                    if f_ing.year > anio or (f_ing.year == anio and f_ing.month > mes):
+                        # Ingresó después del período de nómina: se omite
+                        continue
+                    elif f_ing.year == anio and f_ing.month == mes:
+                        dia_ing = f_ing.day
+                        dias_computables = max(1.0, min(30.0, float(30 - dia_ing + 1)))
+                    else:
+                        dias_computables = 30.0
+                except Exception:
+                    dias_computables = 30.0
+
+            # Consultar ausencias y permisos del mes en movimientos_laborales
+            cursor.execute("""
+                SELECT tipo, ISNULL(dias_tomados, 0), ISNULL(afecta_septimo_dia, 0)
+                FROM movimientos_laborales
+                WHERE empleado_id = ?
+                  AND ((YEAR(fecha_inicio) = ? AND MONTH(fecha_inicio) = ?)
+                    OR (YEAR(fecha_fin) = ? AND MONTH(fecha_fin) = ?))
+            """, (e_id, anio, mes, anio, mes))
+            movs_rows = cursor.fetchall()
+
+            dias_falta = 0.0
+            dias_septimo_dia = 0.0
+            dias_permiso_sin_goce = 0.0
+
+            for r in movs_rows:
+                t_mov = r[0]
+                d_mov = float(r[1])
+                af_sep = bool(r[2])
+                if t_mov == 'FALTA':
+                    dias_falta += d_mov
+                    if af_sep:
+                        # Si afecta séptimo día según Art. 64 Ley 185 (por jornada semanal incompleta)
+                        dias_septimo_dia += 1.0
+                elif t_mov == 'PERMISO_SIN_GOCE':
+                    dias_permiso_sin_goce += d_mov
+
+            # Montos de ajustes por tiempo no trabajado
+            monto_falta = round(dias_falta * valor_diario, 2)
+            monto_septimo_dia = round(dias_septimo_dia * valor_diario, 2)
+            monto_permiso_sin_goce = round(dias_permiso_sin_goce * valor_diario, 2)
+
+            # Si ingresó a mitad de mes, el tiempo previo no laborado
+            dias_no_ingreso = max(0.0, 30.0 - dias_computables)
+            monto_no_ingreso = round(dias_no_ingreso * valor_diario, 2)
+
+            total_ajustes_tiempo = monto_falta + monto_septimo_dia + monto_permiso_sin_goce + monto_no_ingreso
+            salario_devengado = max(0.0, round(salario_base_contrato - total_ajustes_tiempo, 2))
+
+            # Días computables efectivamente trabajados
+            dias_trabajados_mes = max(0.0, round(dias_computables - dias_falta - dias_septimo_dia - dias_permiso_sin_goce, 1))
+
+            # Vacaciones ganadas en el período:
+            # Art. 76 Ley 185: 15 días por cada 6 meses = 2.5 días/mes (factor: 2.5/30 por día computable).
+            # Art. 79 Ley 185: faltas injustificadas NO son causa protegida → reducen días computables.
+            # IMPORTANTE: siempre usar días efectivamente trabajados, nunca forzar 2.5 si hubo ausencias.
+            if dias_trabajados_mes >= 30.0:
+                vac_ganadas = 2.5
+            else:
+                vac_ganadas = round(dias_trabajados_mes * (2.5 / 30.0), 4)
+                vac_ganadas = round(vac_ganadas, 2)  # redondear a 2 decimales para mostrar
+
+            # Cálculos de nómina (Ley 822 y Ley 185) sobre salario devengado real
+            calc = calcular_nomina_empleado(salario_devengado)
 
             cursor.execute(
                 """INSERT INTO detalle_nomina
                    (nomina_id, empleado_id, salario_base, ingresos_extra, ir,
                     inss_laboral, neto_pagar, inss_patronal,
-                    provision_vacaciones, provision_aguinaldo)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    provision_vacaciones, provision_aguinaldo,
+                    dias_trabajados, vac_acumulada, vac_mes, vac_saldo_final,
+                    dias_falta, monto_falta, dias_permiso_sin_goce, monto_permiso_sin_goce,
+                    dias_septimo_dia, monto_septimo_dia, inatec_patronal)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (nomina_id, e_id,
                  calc['salario_ordinario'],
                  calc['ingresos_extra'],
@@ -2241,13 +2455,24 @@ def api_nomina_generar():
                  calc['salario_neto'],
                  calc['inss_patronal'],
                  calc['provision_vacaciones'],
-                 calc['provision_aguinaldo'])
+                 calc['provision_aguinaldo'],
+                 dias_trabajados_mes,
+                 saldo_vac_actual,
+                 vac_ganadas,
+                 round(saldo_vac_actual + vac_ganadas, 2),
+                 dias_falta,
+                 monto_falta,
+                 dias_permiso_sin_goce,
+                 monto_permiso_sin_goce,
+                 dias_septimo_dia,
+                 monto_septimo_dia,
+                 calc['inatec_patronal'])
             )
 
-            # Acumular dÃ­as de vacaciones ganados este mes (1.25 dÃ­as = 15 dÃ­as / 12 meses)
+            # Acumular días de vacaciones computables correspondientes a este período
             cursor.execute(
-                "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles + 1.25 WHERE id = ?",
-                (e_id,)
+                "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles + ? WHERE id = ?",
+                (vac_ganadas, e_id)
             )
 
             t_bruto       += calc['salario_bruto']
@@ -2256,6 +2481,7 @@ def api_nomina_generar():
             t_ir          += calc['ir_retencion']
             t_neto        += calc['salario_neto']
             t_patronal    += calc['inss_patronal']
+            t_inatec      += calc['inatec_patronal']
             t_vac         += calc['provision_vacaciones']
             t_agui        += calc['provision_aguinaldo']
 
@@ -2263,13 +2489,14 @@ def api_nomina_generar():
         cursor.execute(
             """UPDATE nomina
                SET total_ingresos=total_ingresos+?, total_deducciones=total_deducciones+?, total_neto=total_neto+?,
-                   inss_patronal_total=inss_patronal_total+?, provision_vac_total=provision_vac_total+?, provision_agui_total=provision_agui_total+?
+                   inss_patronal_total=inss_patronal_total+?, provision_vac_total=provision_vac_total+?, provision_agui_total=provision_agui_total+?,
+                   inatec_patronal_total=ISNULL(inatec_patronal_total, 0)+?
                WHERE id=?""",
             (round(t_bruto, 2), round(t_deducciones, 2), round(t_neto, 2),
-             round(t_patronal, 2), round(t_vac, 2), round(t_agui, 2), nomina_id)
+             round(t_patronal, 2), round(t_vac, 2), round(t_agui, 2), round(t_inatec, 2), nomina_id)
         )
 
-        # --- ASIENTO CONTABLE AUTOMÃTICO DE NÃ“MINA ---
+        # --- ASIENTO CONTABLE AUTOMÁTICO DE NÓMINA ---
         def get_cta(codigo):
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = ?", (codigo,))
             row = cursor.fetchone()
@@ -2284,9 +2511,9 @@ def api_nomina_generar():
         cta_provisiones = get_cta('2.1.08')
         cta_sueldos_pagar = get_cta('2.1.04')
         
-        concepto_asiento = f"Registro de nÃ³mina mes {mes:02d}/{anio}"
+        concepto_asiento = f"Registro de nómina mes {mes:02d}/{anio}"
         if es_complemento:
-            concepto_asiento = f"Registro de nÃ³mina mes {mes:02d}/{anio} (Complemento)"
+            concepto_asiento = f"Registro de nómina mes {mes:02d}/{anio} (Complemento)"
         cursor.execute("""
             INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
             VALUES (GETDATE(), ?, 'RRHH', ?, ?)
@@ -2294,16 +2521,17 @@ def api_nomina_generar():
         cursor.execute("SELECT @@IDENTITY AS id")
         asiento_id = cursor.fetchone()[0]
         
-        # DÃ©bitos (Gastos)
+        # Débitos (Gastos)
         if t_bruto > 0 and cta_sueldos_gasto:
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_sueldos_gasto, round(t_bruto, 2)))
-        if t_patronal > 0 and cta_cargas_patronales:
-            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_cargas_patronales, round(t_patronal, 2)))
+        t_cargas_pat = t_patronal + t_inatec
+        if t_cargas_pat > 0 and cta_cargas_patronales:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_cargas_patronales, round(t_cargas_pat, 2)))
         t_prestaciones = t_vac + t_agui
         if t_prestaciones > 0 and cta_prestaciones_gasto:
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_prestaciones_gasto, round(t_prestaciones, 2)))
             
-        # CrÃ©ditos (Pasivos)
+        # Créditos (Pasivos)
         t_inss_total = t_inss_lab + t_patronal
         if t_inss_total > 0 and cta_retenciones_inss:
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_retenciones_inss, round(t_inss_total, 2)))
@@ -2318,13 +2546,14 @@ def api_nomina_generar():
         conn.close()
         return jsonify({
             "success"   : True,
-            "mensaje"   : f"NÃ³mina {mes:02d}/{anio} generada con Ã©xito para {len(empleados)} empleados.",
+            "mensaje"   : f"Nómina {mes:02d}/{anio} generada con éxito para {len(empleados)} empleados.",
             "nomina_id" : nomina_id,
             "resumen"   : {
                 "total_bruto"      : round(t_bruto, 2),
                 "total_deducciones": round(t_deducciones, 2),
                 "total_neto"       : round(t_neto, 2),
                 "inss_patronal"    : round(t_patronal, 2),
+                "inatec_patronal"  : round(t_inatec, 2),
                 "provision_vac"    : round(t_vac, 2),
                 "provision_agui"   : round(t_agui, 2)
             }
@@ -2340,13 +2569,14 @@ def api_nomina_generar():
 @app.route('/api/nomina/historial', methods=['GET'])
 @login_required
 def api_nomina_historial():
-    """Lista el historial de todas las nÃ³minas generadas."""
+    """Lista el historial de todas las nóminas generadas."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     query2 = """
         SELECT id, periodo_mes AS mes, periodo_anio AS anio, fecha_generacion,
                total_ingresos, total_deducciones, total_neto,
                ISNULL(inss_patronal_total, 0) AS inss_patronal_total,
+               ISNULL(inatec_patronal_total, 0) AS inatec_patronal_total,
                ISNULL(provision_vac_total, 0) AS provision_vac_total,
                ISNULL(provision_agui_total, 0) AS provision_agui_total,
                ISNULL(estado, 'CERRADA') AS estado
@@ -2356,7 +2586,7 @@ def api_nomina_historial():
     nominas = execute_query(query2, fetchall=True)
     for n in nominas:
         for campo in ['total_ingresos', 'total_deducciones', 'total_neto',
-                      'inss_patronal_total', 'provision_vac_total', 'provision_agui_total']:
+                      'inss_patronal_total', 'inatec_patronal_total', 'provision_vac_total', 'provision_agui_total']:
             if campo in n and n[campo] is not None:
                 n[campo] = float(n[campo])
         if n.get('fecha_generacion'):
@@ -2367,13 +2597,14 @@ def api_nomina_historial():
 @app.route('/api/nomina/<int:nomina_id>/detalle', methods=['GET'])
 @login_required
 def api_nomina_detalle(nomina_id):
-    """Obtiene el detalle completo de una nÃ³mina: cabecera + lÃ­neas por empleado."""
+    """Obtiene el detalle completo de una nómina: cabecera + líneas por empleado."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     cabecera = execute_query(
         """SELECT id, periodo_mes AS mes, periodo_anio AS anio, fecha_generacion,
                   total_ingresos, total_deducciones, total_neto,
                   ISNULL(inss_patronal_total,0) AS inss_patronal_total,
+                  ISNULL(inatec_patronal_total,0) AS inatec_patronal_total,
                   ISNULL(provision_vac_total,0) AS provision_vac_total,
                   ISNULL(provision_agui_total,0) AS provision_agui_total,
                   ISNULL(estado,'CERRADA') AS estado
@@ -2381,30 +2612,43 @@ def api_nomina_detalle(nomina_id):
         (nomina_id,), fetchone=True
     )
     if not cabecera:
-        return jsonify({"error": "NÃ³mina no encontrada."}), 404
+        return jsonify({"error": "Nómina no encontrada."}), 404
 
     detalles = execute_query(
         """SELECT dn.id, e.id AS empleado_id, e.nombre_completo AS empleado, e.identificacion, e.cargo,
-                  dn.salario_base, ISNULL(dn.ingresos_extra,0) AS ingresos_extra,
+                  e.salario_base AS salario_contrato,
+                  dn.salario_base AS salario_devengado,
+                  dn.salario_base AS salario_base,
+                  ISNULL(dn.ingresos_extra,0) AS ingresos_extra,
                   dn.inss_laboral, dn.ir,
                   ISNULL(dn.inss_patronal,0) AS inss_patronal,
+                  ISNULL(dn.inatec_patronal,0) AS inatec_patronal,
                   ISNULL(dn.provision_vacaciones,0) AS provision_vacaciones,
                   ISNULL(dn.provision_aguinaldo,0) AS provision_aguinaldo,
-                  dn.neto_pagar
+                  dn.neto_pagar,
+                  ISNULL(dn.dias_trabajados, 30) AS dias_trabajados,
+                  ISNULL(dn.dias_falta, 0) AS dias_falta,
+                  ISNULL(dn.monto_falta, 0) AS monto_falta,
+                  ISNULL(dn.dias_permiso_sin_goce, 0) AS dias_permiso_sin_goce,
+                  ISNULL(dn.monto_permiso_sin_goce, 0) AS monto_permiso_sin_goce,
+                  ISNULL(dn.dias_septimo_dia, 0) AS dias_septimo_dia,
+                  ISNULL(dn.monto_septimo_dia, 0) AS monto_septimo_dia
            FROM detalle_nomina dn
            JOIN empleados e ON dn.empleado_id = e.id
            WHERE dn.nomina_id=?
            ORDER BY e.nombre_completo""",
         (nomina_id,), fetchall=True
     )
-    campos_float = ['salario_base', 'ingresos_extra', 'inss_laboral', 'ir',
-                    'inss_patronal', 'provision_vacaciones', 'provision_aguinaldo', 'neto_pagar']
+    campos_float = ['salario_contrato', 'salario_devengado', 'salario_base', 'ingresos_extra', 'inss_laboral', 'ir',
+                    'inss_patronal', 'inatec_patronal', 'provision_vacaciones', 'provision_aguinaldo', 'neto_pagar',
+                    'dias_trabajados', 'dias_falta', 'monto_falta', 'dias_permiso_sin_goce', 'monto_permiso_sin_goce',
+                    'dias_septimo_dia', 'monto_septimo_dia']
     for d in detalles:
         for c in campos_float:
             if c in d and d[c] is not None:
                 d[c] = float(d[c])
     for c in ['total_ingresos', 'total_deducciones', 'total_neto',
-               'inss_patronal_total', 'provision_vac_total', 'provision_agui_total']:
+               'inss_patronal_total', 'inatec_patronal_total', 'provision_vac_total', 'provision_agui_total']:
         if cabecera.get(c) is not None:
             cabecera[c] = float(cabecera[c])
     if cabecera.get('fecha_generacion'):
@@ -2415,7 +2659,7 @@ def api_nomina_detalle(nomina_id):
 @app.route('/api/nomina/<int:nomina_id>/empleado/<int:emp_id>', methods=['GET'])
 @login_required
 def api_colilla_individual(nomina_id, emp_id):
-    """Obtiene la colilla (recibo) individual de pago de un empleado en una nÃ³mina."""
+    """Obtiene la colilla (recibo) individual de pago de un empleado en una nómina."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     nomina = execute_query(
@@ -2423,43 +2667,79 @@ def api_colilla_individual(nomina_id, emp_id):
         (nomina_id,), fetchone=True
     )
     if not nomina:
-        return jsonify({"error": "NÃ³mina no encontrada."}), 404
+        return jsonify({"error": "Nómina no encontrada."}), 404
     if nomina.get('fecha_generacion'):
         nomina['fecha_generacion'] = str(nomina['fecha_generacion'])
 
     detalle = execute_query(
         """SELECT e.nombre_completo AS empleado, e.identificacion, e.num_inss, e.cargo,
-                  dn.salario_base, ISNULL(dn.ingresos_extra,0) AS ingresos_extra,
+                  e.fecha_ingreso,
+                  e.salario_base AS salario_contrato,
+                  dn.salario_base AS salario_devengado,
+                  ISNULL(dn.ingresos_extra,0) AS ingresos_extra,
                   dn.inss_laboral, dn.ir,
                   ISNULL(dn.inss_patronal,0) AS inss_patronal,
+                  ISNULL(dn.inatec_patronal,0) AS inatec_patronal,
                   ISNULL(dn.provision_vacaciones,0) AS provision_vacaciones,
                   ISNULL(dn.provision_aguinaldo,0) AS provision_aguinaldo,
-                  dn.neto_pagar
+                  dn.neto_pagar,
+                  ISNULL(dn.dias_trabajados, 30) AS dias_trabajados,
+                  ISNULL(dn.vac_acumulada, 0) AS vac_acumulada,
+                  ISNULL(dn.vac_mes, 2.5) AS vac_mes,
+                  ISNULL(dn.vac_descansados, 0) AS vac_descansados,
+                  ISNULL(dn.vac_saldo_final, 0) AS vac_saldo,
+                  ISNULL(dn.dias_falta, 0) AS dias_falta,
+                  ISNULL(dn.monto_falta, 0) AS monto_falta,
+                  ISNULL(dn.dias_permiso_sin_goce, 0) AS dias_permiso_sin_goce,
+                  ISNULL(dn.monto_permiso_sin_goce, 0) AS monto_permiso_sin_goce,
+                  ISNULL(dn.dias_septimo_dia, 0) AS dias_septimo_dia,
+                  ISNULL(dn.monto_septimo_dia, 0) AS monto_septimo_dia,
+                  ISNULL(dn.adelanto_salarial, 0) AS adelanto_salarial
            FROM detalle_nomina dn
            JOIN empleados e ON dn.empleado_id = e.id
            WHERE dn.nomina_id=? AND dn.empleado_id=?""",
         (nomina_id, emp_id), fetchone=True
     )
     if not detalle:
-        return jsonify({"error": "Detalle de empleado no encontrado en esta nÃ³mina."}), 404
-    campos_float = ['salario_base', 'ingresos_extra', 'inss_laboral', 'ir',
-                    'inss_patronal', 'provision_vacaciones', 'provision_aguinaldo', 'neto_pagar']
+        return jsonify({"error": "Detalle de empleado no encontrado en esta nómina."}), 404
+
+    campos_float = [
+        'salario_contrato', 'salario_devengado', 'ingresos_extra', 'inss_laboral', 'ir',
+        'inss_patronal', 'inatec_patronal', 'provision_vacaciones', 'provision_aguinaldo',
+        'neto_pagar', 'dias_trabajados', 'vac_acumulada', 'vac_mes', 'vac_descansados', 'vac_saldo',
+        'dias_falta', 'monto_falta', 'dias_permiso_sin_goce', 'monto_permiso_sin_goce',
+        'dias_septimo_dia', 'monto_septimo_dia', 'adelanto_salarial'
+    ]
     for c in campos_float:
         if detalle.get(c) is not None:
             detalle[c] = float(detalle[c])
-    detalle['salario_bruto'] = round(
-        detalle['salario_base'] + detalle['ingresos_extra'], 2
+        else:
+            detalle[c] = 0.0
+
+    if detalle.get('fecha_ingreso'):
+        detalle['fecha_ingreso'] = str(detalle['fecha_ingreso'])[:10]
+
+    # Valor diario estándar mensual ÷ 30
+    detalle['valor_diario'] = round(detalle['salario_contrato'] / 30.0, 2)
+    detalle['total_ajustes_tiempo'] = round(
+        detalle['monto_falta'] + detalle['monto_septimo_dia'] + detalle['monto_permiso_sin_goce'], 2
     )
-    detalle['total_deducciones'] = round(
-        detalle['inss_laboral'] + detalle['ir'], 2
+    detalle['salario_bruto'] = round(detalle['salario_devengado'] + detalle['ingresos_extra'], 2)
+    detalle['total_deducciones'] = round(detalle['inss_laboral'] + detalle['ir'] + detalle['adelanto_salarial'], 2)
+
+    # Costo y obligaciones patronales (a cargo del empleador)
+    detalle['total_cargas_patronales'] = round(
+        detalle['inss_patronal'] + detalle['inatec_patronal'] + detalle['provision_vacaciones'] + detalle['provision_aguinaldo'], 2
     )
+    detalle['costo_total_patronal'] = round(detalle['salario_bruto'] + detalle['total_cargas_patronales'], 2)
+
     return jsonify({"nomina": nomina, "colilla": detalle})
 
 
 @app.route('/api/nomina/<int:nomina_id>', methods=['DELETE'])
 @login_required
 def api_nomina_delete(nomina_id):
-    """Elimina una nÃ³mina completa y revierte las vacaciones acumuladas."""
+    """Elimina una nómina completa y revierte las vacaciones acumuladas."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
     try:
@@ -2470,18 +2750,20 @@ def api_nomina_delete(nomina_id):
         cursor.execute("SELECT id FROM nomina WHERE id=?", (nomina_id,))
         if not cursor.fetchone():
             conn.close()
-            return jsonify({"error": "NÃ³mina no encontrada."}), 404
+            return jsonify({"error": "Nómina no encontrada."}), 404
 
-        # Revertir vacaciones (restar los 1.25 que se sumaron a cada empleado en esta nÃ³mina)
-        cursor.execute("SELECT empleado_id FROM detalle_nomina WHERE nomina_id=?", (nomina_id,))
+        # Revertir vacaciones (restar exactamente los días proporcionales que se sumaron a cada empleado en esta nómina)
+        cursor.execute("SELECT empleado_id, ISNULL(vac_mes, 2.5) FROM detalle_nomina WHERE nomina_id=?", (nomina_id,))
         empleados_en_nomina = cursor.fetchall()
         for emp in empleados_en_nomina:
+            emp_id = emp[0]
+            vac_a_revertir = float(emp[1])
             cursor.execute(
-                "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles - 1.25 WHERE id = ?",
-                (emp[0],)
+                "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles - ? WHERE id = ?",
+                (vac_a_revertir, emp_id)
             )
 
-        # Eliminar la nÃ³mina (ON DELETE CASCADE debe borrar detalle_nomina)
+        # Eliminar la nómina (ON DELETE CASCADE debe borrar detalle_nomina)
         cursor.execute("DELETE FROM nomina WHERE id=?", (nomina_id,))
         conn.commit()
         conn.close()
@@ -2514,7 +2796,21 @@ def ver_colilla(id_detalle):
             d.ir,
             (d.inss_laboral + d.ir) as total_deducciones,
             d.neto_pagar as neto_a_recibir,
-            ISNULL(e.dias_vacaciones_disponibles, 0) as vac_saldo
+            ISNULL(d.dias_trabajados, 30) as dias_trabajados,
+            ISNULL(d.vac_acumulada, ISNULL(e.dias_vacaciones_disponibles, 0)) as vac_acumulada,
+            ISNULL(d.vac_mes, 2.5) as vac_mes,
+            ISNULL(d.vac_descansados, 0) as vac_descansados,
+            ISNULL(d.vac_saldo_final, ISNULL(e.dias_vacaciones_disponibles, 0)) as vac_saldo,
+            ISNULL(d.dias_falta, 0) as dias_falta,
+            ISNULL(d.monto_falta, 0) as monto_falta,
+            ISNULL(d.dias_permiso_sin_goce, 0) as dias_permiso_sin_goce,
+            ISNULL(d.monto_permiso_sin_goce, 0) as monto_permiso_sin_goce,
+            ISNULL(d.dias_septimo_dia, 0) as dias_septimo_dia,
+            ISNULL(d.monto_septimo_dia, 0) as monto_septimo_dia,
+            ISNULL(d.inss_patronal, 0) as inss_patronal,
+            ISNULL(d.inatec_patronal, 0) as inatec_patronal,
+            ISNULL(d.provision_vacaciones, 0) as provision_vacaciones,
+            ISNULL(d.provision_aguinaldo, 0) as provision_aguinaldo
         FROM detalle_nomina d
         INNER JOIN nomina n ON d.nomina_id = n.id
         INNER JOIN empleados e ON d.empleado_id = e.id
@@ -2527,32 +2823,72 @@ def ver_colilla(id_detalle):
 
     meses_es = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-    mes_nombre = meses_es[datos.get('periodo_mes', 0)] if datos.get('periodo_mes') else 'â€”'
+    mes_nombre = meses_es[datos.get('periodo_mes', 0)] if datos.get('periodo_mes') else '—'
     periodo = f"{mes_nombre} {datos.get('periodo_anio', '')}"
 
+    salario_contrato = float(datos.get('salario_contrato') or 0)
+    valor_diario = round(salario_contrato / 30.0, 2)
+    monto_falta = float(datos.get('monto_falta') or 0)
+    monto_sep = float(datos.get('monto_septimo_dia') or 0)
+    monto_psg = float(datos.get('monto_permiso_sin_goce') or 0)
+    total_ajustes = round(monto_falta + monto_sep + monto_psg, 2)
+
+    sal_devengado = float(datos.get('salario_devengado') or 0)
+    kpi_meta = float(datos.get('kpi_meta') or 0)
+    tot_percepciones = float(datos.get('total_percepciones') or sal_devengado)
+    inss_lab = float(datos.get('inss_laboral') or 0)
+    ir_val = float(datos.get('ir') or 0)
+    tot_deducciones = float(datos.get('total_deducciones') or (inss_lab + ir_val))
+    neto_recibir = float(datos.get('neto_a_recibir') or (tot_percepciones - tot_deducciones))
+
+    inss_pat = float(datos.get('inss_patronal') or 0)
+    inatec_pat = float(datos.get('inatec_patronal') or 0)
+    prov_vac = float(datos.get('provision_vacaciones') or 0)
+    prov_agui = float(datos.get('provision_aguinaldo') or 0)
+    tot_cargas_pat = round(inss_pat + inatec_pat + prov_vac + prov_agui, 2)
+    costo_tot_pat = round(tot_percepciones + tot_cargas_pat, 2)
+
     c = {
-        "empresa": "JehovÃ¡ Jireh Moto Repuestos",
+        "empresa": "Jehová Jireh Moto Repuestos",
         "periodo": periodo,
         "empleado": datos['empleado'],
-        "cedula": datos.get('cedula') or 'N/A',
+        "cedula": datos.get('cedula') or '—',
         "cargo": datos.get('cargo') or 'Empleado',
         "departamento": 'General',
-        "inss": datos.get('inss') or 'N/A',
-        "salario_contrato": float(datos.get('salario_contrato') or 0),
-        "fecha_ingreso": str(datos.get('fecha_ingreso', ''))[:10] if datos.get('fecha_ingreso') else 'â€”',
-        "dias_trabajados": 30,
-        "vac_acumulado": float(datos.get('vac_saldo') or 0),
-        "vac_mes": 1.25,
-        "vac_descansados": 0.0,
-        "vac_saldo": float(datos.get('vac_saldo') or 0),
-        "salario_devengado": float(datos.get('salario_devengado') or 0),
-        "kpi_meta": float(datos.get('kpi_meta') or 0),
-        "total_percepciones": float(datos.get('total_percepciones') or 0),
-        "inss_laboral": float(datos.get('inss_laboral') or 0),
-        "ir": float(datos.get('ir') or 0),
+        "inss": datos.get('inss') or '—',
+        "salario_contrato": salario_contrato,
+        "valor_diario": valor_diario,
+        "fecha_ingreso": str(datos.get('fecha_ingreso', ''))[:10] if datos.get('fecha_ingreso') else '—',
+        "dias_trabajados": float(datos.get('dias_trabajados') or 30),
+        # Ajustes por tiempo no trabajado
+        "dias_falta": float(datos.get('dias_falta') or 0),
+        "monto_falta": monto_falta,
+        "dias_septimo_dia": float(datos.get('dias_septimo_dia') or 0),
+        "monto_septimo_dia": monto_sep,
+        "dias_permiso_sin_goce": float(datos.get('dias_permiso_sin_goce') or 0),
+        "monto_permiso_sin_goce": monto_psg,
+        "total_ajustes": total_ajustes,
+        # Percepciones y Deducciones
+        "salario_devengado": sal_devengado,
+        "kpi_meta": kpi_meta,
+        "total_percepciones": tot_percepciones,
+        "inss_laboral": inss_lab,
+        "ir": ir_val,
         "adelanto": 0.0,
-        "total_deducciones": float(datos.get('total_deducciones') or 0),
-        "neto_a_recibir": float(datos.get('neto_a_recibir') or 0)
+        "total_deducciones": tot_deducciones,
+        "neto_a_recibir": neto_recibir,
+        # Vacaciones
+        "vac_acumulado": float(datos.get('vac_acumulada') or 0),
+        "vac_mes": float(datos.get('vac_mes') or 2.5),
+        "vac_descansados": float(datos.get('vac_descansados') or 0),
+        "vac_saldo": float(datos.get('vac_saldo') or 0),
+        # Cargas Patronales
+        "inss_patronal": inss_pat,
+        "inatec_patronal": inatec_pat,
+        "provision_vacaciones": prov_vac,
+        "provision_aguinaldo": prov_agui,
+        "total_cargas_patronales": tot_cargas_pat,
+        "costo_total_patronal": costo_tot_pat
     }
 
     return render_template('colilla.html', c=c)

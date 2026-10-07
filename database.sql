@@ -705,3 +705,212 @@ INSERT INTO cuentas_contables (id, codigo, nombre, clasificacion, naturaleza, de
 SET IDENTITY_INSERT cuentas_contables OFF;
 GO
 
+-- ==============================================================================
+-- 12. TABLAS AGREGADAS PARA CONCORDANCIA CON DIAGRAMA UML (FASE 1)
+-- ==============================================================================
+
+-- Módulo: Seguridad y Autenticación
+CREATE TABLE permisos (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    rol_id INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(255) NULL,
+    CONSTRAINT fk_permisos_roles FOREIGN KEY (rol_id) REFERENCES roles(id)
+);
+GO
+
+CREATE TABLE sesiones (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    fechaInicio DATETIME DEFAULT GETDATE(),
+    estado VARCHAR(20) DEFAULT 'Activa',
+    ip VARCHAR(50) NULL,
+    CONSTRAINT fk_sesiones_usuarios FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+GO
+
+-- Módulo: Portal Web y Clientes
+CREATE TABLE carritos (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    subtotal DECIMAL(12,2) DEFAULT 0.00,
+    estado VARCHAR(20) DEFAULT 'Activo',
+    CONSTRAINT fk_carritos_clientes FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+);
+GO
+
+CREATE TABLE detalle_carritos (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    carrito_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    cantidad INT NOT NULL,
+    precioUnitario DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+    CONSTRAINT fk_detcarrito_carritos FOREIGN KEY (carrito_id) REFERENCES carritos(id),
+    CONSTRAINT fk_detcarrito_productos FOREIGN KEY (producto_id) REFERENCES productos(id)
+);
+GO
+
+CREATE TABLE pedidos_web (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    codigo VARCHAR(50) NOT NULL UNIQUE,
+    cliente_id INT NOT NULL,
+    fecha DATETIME DEFAULT GETDATE(),
+    subtotal DECIMAL(12,2) NOT NULL,
+    total DECIMAL(12,2) NOT NULL,
+    formaEntrega VARCHAR(50) NULL,
+    metodo VARCHAR(50) NULL,
+    estado VARCHAR(30) DEFAULT 'Pendiente',
+    CONSTRAINT fk_pedidos_clientes FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+);
+GO
+
+CREATE TABLE detalle_pedidos_web (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    pedido_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    cantidad INT NOT NULL,
+    precioUnitario DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+    CONSTRAINT fk_detpedido_pedidos FOREIGN KEY (pedido_id) REFERENCES pedidos_web(id),
+    CONSTRAINT fk_detpedido_productos FOREIGN KEY (producto_id) REFERENCES productos(id)
+);
+GO
+
+-- Módulo: Facturación y Punto de Venta (POS)
+CREATE TABLE pagos (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    venta_id INT NOT NULL,
+    metodo VARCHAR(50) NOT NULL,
+    monto DECIMAL(12,2) NOT NULL,
+    referencia VARCHAR(100) NULL,
+    fecha DATETIME DEFAULT GETDATE(),
+    CONSTRAINT fk_pagos_ventas FOREIGN KEY (venta_id) REFERENCES ventas(id)
+);
+GO
+
+CREATE TABLE comprobantes (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    venta_id INT NOT NULL,
+    numero VARCHAR(50) NOT NULL UNIQUE,
+    fechaEmision DATETIME DEFAULT GETDATE(),
+    total DECIMAL(12,2) NOT NULL,
+    CONSTRAINT fk_comprobantes_ventas FOREIGN KEY (venta_id) REFERENCES ventas(id)
+);
+GO
+
+-- Módulo: Inventario, Kardex y Proveedores
+CREATE TABLE ajustes_inventario (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    producto_id INT NOT NULL,
+    tipo VARCHAR(30) NOT NULL,
+    cantidad INT NOT NULL,
+    motivo VARCHAR(255) NULL,
+    fecha DATETIME DEFAULT GETDATE(),
+    CONSTRAINT fk_ajustes_productos FOREIGN KEY (producto_id) REFERENCES productos(id)
+);
+GO
+
+CREATE TABLE recepciones_compra (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    compra_id INT NOT NULL,
+    fechaRecepcion DATETIME DEFAULT GETDATE(),
+    estado VARCHAR(30) DEFAULT 'Recibido',
+    CONSTRAINT fk_recepcion_compras FOREIGN KEY (compra_id) REFERENCES compras(id)
+);
+GO
+
+-- Módulo: Recursos Humanos y Nómina
+CREATE TABLE cargos (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(255) NULL
+);
+GO
+
+CREATE TABLE empleados (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre_completo VARCHAR(150) NOT NULL,
+    identificacion VARCHAR(30) NULL,
+    cargo_id INT NULL,
+    salario_base DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    fecha_ingreso DATE NULL,
+    activo BIT DEFAULT 1,
+    num_inss VARCHAR(30) NULL,
+    telefono VARCHAR(25) NULL,
+    email VARCHAR(100) NULL,
+    vacacionesDisponibles DECIMAL(5,2) DEFAULT 0.00,
+    created_at DATETIME DEFAULT GETDATE(),
+    CONSTRAINT fk_empleados_cargos FOREIGN KEY (cargo_id) REFERENCES cargos(id)
+);
+GO
+
+CREATE TABLE movimientos_laborales (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    empleado_id INT NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NULL,
+    dias_tomados INT DEFAULT 0,
+    observacion VARCHAR(255) NULL,
+    CONSTRAINT fk_mov_laborales_empleados FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+);
+GO
+
+CREATE TABLE vacaciones (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    empleado_id INT NOT NULL,
+    fechaInicio DATE NOT NULL,
+    fechaFin DATE NOT NULL,
+    dias INT NOT NULL,
+    estado VARCHAR(30) DEFAULT 'Aprobada',
+    CONSTRAINT fk_vacaciones_empleados FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+);
+GO
+
+CREATE TABLE nomina (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    periodo_mes INT NOT NULL,
+    periodo_anio INT NOT NULL,
+    fecha_generacion DATETIME DEFAULT GETDATE(),
+    total_ingresos DECIMAL(12,2) DEFAULT 0.00,
+    total_deducciones DECIMAL(12,2) DEFAULT 0.00,
+    total_neto DECIMAL(12,2) DEFAULT 0.00,
+    inss_patronal_total DECIMAL(12,2) DEFAULT 0.00,
+    provision_vac_total DECIMAL(12,2) DEFAULT 0.00,
+    provision_agui_total DECIMAL(12,2) DEFAULT 0.00,
+    estado VARCHAR(30) DEFAULT 'Procesada'
+);
+GO
+
+CREATE TABLE detalle_nomina (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nomina_id INT NOT NULL,
+    empleado_id INT NOT NULL,
+    salario_base DECIMAL(12,2) DEFAULT 0.00,
+    inss_laboral DECIMAL(12,2) DEFAULT 0.00,
+    ir DECIMAL(12,2) DEFAULT 0.00,
+    otras_deducciones DECIMAL(12,2) DEFAULT 0.00,
+    neto_pagar DECIMAL(12,2) DEFAULT 0.00,
+    ingresos_extra DECIMAL(12,2) DEFAULT 0.00,
+    inss_patronal DECIMAL(12,2) DEFAULT 0.00,
+    provision_vacaciones DECIMAL(12,2) DEFAULT 0.00,
+    provision_aguinaldo DECIMAL(12,2) DEFAULT 0.00,
+    kpi_comision DECIMAL(12,2) DEFAULT 0.00,
+    adelanto_salarial DECIMAL(12,2) DEFAULT 0.00,
+    dias_trabajados INT DEFAULT 30,
+    vac_acumulada DECIMAL(5,2) DEFAULT 0.00,
+    vac_mes DECIMAL(5,2) DEFAULT 0.00,
+    CONSTRAINT fk_detnomina_nomina FOREIGN KEY (nomina_id) REFERENCES nomina(id),
+    CONSTRAINT fk_detnomina_empleados FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+);
+GO
+
+CREATE TABLE colilla_pago (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    detalle_nomina_id INT NOT NULL,
+    periodo VARCHAR(50) NOT NULL,
+    netoRecibir DECIMAL(12,2) NOT NULL,
+    CONSTRAINT fk_colilla_detnomina FOREIGN KEY (detalle_nomina_id) REFERENCES detalle_nomina(id)
+);
+GO

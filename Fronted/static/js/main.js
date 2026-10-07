@@ -2,6 +2,140 @@
 // Jehová Jireh Moto Repuestos - Lógica Frontend SPA & Conexión con API Flask
 // ==============================================================================
 
+// =========================================================================
+// SISTEMA DE ALERTAS Y CONFIRMACIONES MODERNAS (SWEETALERT2)
+// Elimina diálogos nativos del navegador ("192.168.0.7 dice") con interfaz estética
+// =========================================================================
+
+function getSwalTheme() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return {
+        background: isLight ? '#ffffff' : '#1e293b',
+        color: isLight ? '#0f172a' : '#f8fafc',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: isLight ? '#94a3b8' : '#475569'
+    };
+}
+
+// Diálogo de Confirmación Moderno (Reemplazo estético de confirm())
+async function confirmarAccion({
+    titulo = '¿Estás seguro?',
+    texto = '',
+    icono = 'warning',
+    textoConfirmar = 'Sí, continuar',
+    textoCancelar = 'Cancelar',
+    esPeligroso = false
+} = {}) {
+    if (typeof Swal === 'undefined') {
+        return window._nativeConfirm ? window._nativeConfirm(texto || titulo) : true;
+    }
+    const theme = getSwalTheme();
+    const result = await Swal.fire({
+        title: titulo,
+        html: texto ? `<span style="font-size:0.95rem; line-height:1.5;">${texto.replace(/\n/g, '<br>')}</span>` : undefined,
+        icon: icono,
+        showCancelButton: true,
+        confirmButtonText: textoConfirmar,
+        cancelButtonText: textoCancelar,
+        reverseButtons: true,
+        background: theme.background,
+        color: theme.color,
+        customClass: {
+            popup: 'jj-swal-popup',
+            confirmButton: esPeligroso ? 'btn btn-danger jj-swal-btn' : 'btn btn-primary jj-swal-btn',
+            cancelButton: 'btn btn-secondary jj-swal-btn'
+        },
+        buttonsStyling: false
+    });
+    return result.isConfirmed;
+}
+
+// Alerta Moderna (Reemplazo estético de alert())
+function mostrarMensaje({
+    titulo = '',
+    texto = '',
+    icono = 'info',
+    temporizador = null
+} = {}) {
+    if (typeof Swal === 'undefined') {
+        console.log(titulo, texto);
+        return Promise.resolve();
+    }
+    const theme = getSwalTheme();
+    return Swal.fire({
+        title: titulo || (icono === 'success' ? '¡Éxito!' : icono === 'error' ? 'Atención' : 'Notificación'),
+        html: `<span style="font-size:0.95rem; line-height:1.5;">${texto.replace(/\n/g, '<br>')}</span>`,
+        icon: icono,
+        confirmButtonText: 'Entendido',
+        timer: temporizador,
+        timerProgressBar: !!temporizador,
+        background: theme.background,
+        color: theme.color,
+        customClass: {
+            popup: 'jj-swal-popup',
+            confirmButton: 'btn btn-primary jj-swal-btn'
+        },
+        buttonsStyling: false
+    });
+}
+
+// Toast notification moderno y discreto
+function mostrarToast(mensaje, tipo = 'success') {
+    if (typeof Swal === 'undefined') return;
+    const theme = getSwalTheme();
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true,
+        background: theme.background,
+        color: theme.color,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
+    Toast.fire({
+        icon: tipo === 'error' ? 'error' : (tipo === 'warning' ? 'warning' : 'success'),
+        title: mensaje
+    });
+}
+
+window.confirmarAccion = confirmarAccion;
+window.mostrarMensaje = mostrarMensaje;
+window.mostrarToast = mostrarToast;
+window.showToast = mostrarToast;
+
+// INTERCEPTOR UNIVERSAL DE ALERT:
+// Nunca más saldrá la ventana nativa "192.168.0.7 dice"
+if (!window._nativeAlert) {
+    window._nativeAlert = window.alert;
+    window.alert = function(msg) {
+        let icon = 'info';
+        let cleanMsg = String(msg || '');
+        if (cleanMsg.includes('✅') || cleanMsg.toLowerCase().includes('éxito') || cleanMsg.toLowerCase().includes('exito') || cleanMsg.toLowerCase().includes('guardado') || cleanMsg.toLowerCase().includes('registrado') || cleanMsg.toLowerCase().includes('exitosa') || cleanMsg.toLowerCase().includes('exitosamente')) {
+            icon = 'success';
+        } else if (cleanMsg.includes('❌') || cleanMsg.toLowerCase().includes('error') || cleanMsg.toLowerCase().includes('superado') || cleanMsg.toLowerCase().includes('no hay') || cleanMsg.toLowerCase().includes('no puedes')) {
+            icon = 'error';
+        } else if (cleanMsg.includes('⚠️') || cleanMsg.toLowerCase().includes('advertencia') || cleanMsg.toLowerCase().includes('cuidado') || cleanMsg.toLowerCase().includes('debes')) {
+            icon = 'warning';
+        }
+        
+        let title = icon === 'success' ? 'Operación Exitosa' : (icon === 'error' ? 'Atención' : 'Notificación');
+        if (cleanMsg.includes('¡') && cleanMsg.includes('!')) {
+            const match = cleanMsg.match(/¡([^!]+)!/);
+            if (match) title = match[1];
+        }
+
+        mostrarMensaje({
+            titulo: title,
+            texto: cleanMsg,
+            icono: icon
+        });
+    };
+}
+
 let productosCache = [];
 let proveedoresCache = [];
 let movimientosCache = [];
@@ -289,7 +423,15 @@ async function guardarCuenta(e) {
 }
 
 async function eliminarCuenta(id) {
-    if (!confirm("¿Estás seguro de que deseas eliminar esta cuenta?")) return;
+    const confirmado = await confirmarAccion({
+        titulo: '¿Eliminar cuenta?',
+        texto: '¿Estás seguro de que deseas eliminar esta cuenta financiera?',
+        icono: 'warning',
+        textoConfirmar: 'Sí, eliminar',
+        textoCancelar: 'Cancelar',
+        esPeligroso: true
+    });
+    if (!confirmado) return;
     
     try {
         const resp = await fetch(`/api/finanzas/cuentas/${id}`, {
@@ -298,13 +440,14 @@ async function eliminarCuenta(id) {
         const result = await resp.json();
         
         if (resp.ok) {
+            mostrarToast('Cuenta eliminada exitosamente.', 'success');
             cargarDatosFinanzas();
         } else {
-            alert("Error: " + result.error);
+            mostrarMensaje({ titulo: 'Error al eliminar', texto: result.error || 'No se pudo eliminar la cuenta.', icono: 'error' });
         }
     } catch (err) {
         console.error(err);
-        alert("Error al eliminar la cuenta.");
+        mostrarMensaje({ titulo: 'Error de red', texto: 'Error al eliminar la cuenta.', icono: 'error' });
     }
 }
 
@@ -470,19 +613,28 @@ function filterInventarioTable(query) {
 
 // --- EDICIÓN Y BORRADO DE PRODUCTO ---
 async function borrarProducto(prodId) {
-    if(!confirm("¿Estás seguro de que deseas eliminar este repuesto? (Los registros históricos se mantendrán por integridad)")) return;
+    const confirmado = await confirmarAccion({
+        titulo: '¿Eliminar repuesto?',
+        texto: '¿Estás seguro de que deseas eliminar este repuesto? (Los registros históricos se mantendrán por integridad)',
+        icono: 'warning',
+        textoConfirmar: 'Sí, eliminar repuesto',
+        textoCancelar: 'Cancelar',
+        esPeligroso: true
+    });
+    if (!confirmado) return;
+
     try {
         const res = await fetch(`/api/productos/${prodId}`, { method: 'DELETE' });
         const data = await res.json();
         if(res.ok && data.success) {
-            alert("Producto eliminado exitosamente.");
+            mostrarToast("Producto eliminado exitosamente.", "success");
             loadInventario();
         } else {
-            alert(data.error || "Error al eliminar producto");
+            mostrarMensaje({ titulo: "Atención", texto: data.error || "Error al eliminar producto", icono: "error" });
         }
     } catch(e) {
         console.error(e);
-        alert("Error de conexión al eliminar producto");
+        mostrarMensaje({ titulo: "Error de red", texto: "Error de conexión al eliminar producto", icono: "error" });
     }
 }
 
@@ -1177,9 +1329,14 @@ async function procesarDevolucion() {
     }
 
     const mnsjStock = actualizaStock ? "(SÍ volverán al stock del catálogo)" : "(NO volverán al stock del catálogo)";
-    if (!confirm(`¿Estás seguro de procesar esta devolución?\n\nProductos a devolver: ${items.length} ${mnsjStock}\nTotal a descontar: ${document.getElementById('dev-total-devolver').textContent}\nMotivo: ${motivoFinal}`)) {
-        return;
-    }
+    const confirmado = await confirmarAccion({
+        titulo: '¿Procesar Devolución?',
+        texto: `Productos a devolver: ${items.length} ${mnsjStock}\nTotal a descontar: ${document.getElementById('dev-total-devolver').textContent}\nMotivo: ${motivoFinal}`,
+        icono: 'question',
+        textoConfirmar: 'Confirmar Devolución',
+        textoCancelar: 'Cancelar'
+    });
+    if (!confirmado) return;
 
     try {
         const res = await fetch(`/api/ventas/${ventaId}/devolucion`, {
@@ -1321,7 +1478,17 @@ function imprimirTicketActual() {
 // ==============================================================================
 
 async function toggleProveedorEstado(id, activar) {
-    if(!confirm(`¿Estás seguro de que deseas ${activar ? 'activar' : 'inactivar'} este proveedor?`)) return;
+    const accion = activar ? 'activar' : 'inactivar';
+    const confirmado = await confirmarAccion({
+        titulo: `¿Deseas ${accion} este proveedor?`,
+        texto: `¿Estás seguro de que deseas ${accion} este proveedor en el catálogo?`,
+        icono: 'question',
+        textoConfirmar: `Sí, ${accion}`,
+        textoCancelar: 'Cancelar',
+        esPeligroso: !activar
+    });
+    if (!confirmado) return;
+
     try {
         const res = await fetch(`/api/proveedores/${id}/estado`, {
             method: 'PUT',
@@ -1330,13 +1497,14 @@ async function toggleProveedorEstado(id, activar) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
+            mostrarToast(`Proveedor ${activar ? 'activado' : 'inactivado'} correctamente.`, 'success');
             loadComprasYProveedores();
         } else {
-            alert(data.error || 'Error al cambiar estado del proveedor.');
+            mostrarMensaje({ titulo: 'Error', texto: data.error || 'Error al cambiar estado del proveedor.', icono: 'error' });
         }
     } catch(err) {
         console.error(err);
-        alert('Error de conexión.');
+        mostrarMensaje({ titulo: 'Error de red', texto: 'Error de conexión.', icono: 'error' });
     }
 }
 

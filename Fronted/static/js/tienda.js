@@ -1,3 +1,24 @@
+// Interceptor universal de alert para Tienda en Línea
+if (typeof Swal !== 'undefined' && !window._nativeAlert) {
+    window._nativeAlert = window.alert;
+    window.alert = function(msg) {
+        let icon = 'info';
+        let cleanMsg = String(msg || '');
+        if (cleanMsg.includes('¡') || cleanMsg.toLowerCase().includes('éxito') || cleanMsg.toLowerCase().includes('exito')) {
+            icon = 'success';
+        } else if (cleanMsg.toLowerCase().includes('error') || cleanMsg.toLowerCase().includes('problema') || cleanMsg.toLowerCase().includes('vacío')) {
+            icon = 'warning';
+        }
+        Swal.fire({
+            title: icon === 'success' ? '¡Excelente!' : (icon === 'warning' ? 'Aviso' : 'Información'),
+            text: cleanMsg,
+            icon: icon,
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#e11d48'
+        });
+    };
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let cart = [];

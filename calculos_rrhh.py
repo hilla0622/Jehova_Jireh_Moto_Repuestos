@@ -19,11 +19,18 @@ def calcular_inss_laboral(salario_bruto: float) -> float:
 
 def calcular_inss_patronal(salario_bruto: float) -> float:
     """
-    INSS Patronal: 22.5% sobre el salario bruto.
-    El empleador paga este porcentaje adicional al INSS (no se descuenta del empleado).
-    Nota: Actualmente en Nicaragua la tasa patronal es 22.5%.
+    INSS Patronal: 21.5% sobre el salario bruto para empresas con menos de 50 trabajadores
+    (Régimen Integral, Decreto 06-2019 de Nicaragua). A cargo exclusivo del empleador.
     """
-    return round(salario_bruto * 0.225, 2)
+    return round(salario_bruto * 0.215, 2)
+
+
+def calcular_inatec_patronal(salario_bruto: float) -> float:
+    """
+    Aporte Patronal INATEC: 2.0% sobre la planilla de salarios brutos devengados.
+    A cargo exclusivo del empleador para capacitación técnica.
+    """
+    return round(salario_bruto * 0.02, 2)
 
 
 def calcular_ir_nicaragua(salario_bruto: float, inss_laboral: float, es_quincenal: bool = False) -> float:
@@ -66,8 +73,18 @@ def calcular_ir_nicaragua(salario_bruto: float, inss_laboral: float, es_quincena
 def calcular_provisiones(salario_bruto: float) -> tuple:
     """
     Provisiones laborales según Ley 185 (Código del Trabajo de Nicaragua):
-    - Vacaciones:  1/12 del salario bruto mensual (el trabajador gana 15 días/año = 1.25 días/mes)
-    - Aguinaldo:   1/12 del salario bruto mensual (equivale al 13° mes de salario)
+
+    - Vacaciones (Art. 76):
+        La ley establece 15 días de descanso continuo y remunerado por cada 6 meses
+        de trabajo ininterrumpido. El sistema convierte esto en una reserva mensual
+        de salario_bruto / 12, equivalente a reservar un salario mensual completo
+        durante 12 meses (= 30 días de vacaciones al año, coherente con los 2.5 días/mes
+        que es la equivalencia proporcional usada internamente).
+        NOTA: El Art. 76 NO menciona "2.5 días/mes"; esa cifra es la equivalencia
+        aritmética que emplea el sistema para el cómputo progresivo del saldo.
+
+    - Aguinaldo (Art. 93):
+        Equivale al décimo tercer mes de salario. La provisión mensual es salario_bruto / 12.
 
     Ambas son provisiones que el empleador debe reservar mensualmente como pasivos laborales.
     """
@@ -97,6 +114,7 @@ def calcular_nomina_empleado(salario_base: float, ingresos_extra: float = 0.0) -
 
     # Cargas patronales (no se descuentan del empleado)
     inss_patronal = calcular_inss_patronal(salario_bruto)
+    inatec_patronal = calcular_inatec_patronal(salario_bruto)
     provision_vacaciones, provision_aguinaldo = calcular_provisiones(salario_bruto)
 
     return {
@@ -109,11 +127,12 @@ def calcular_nomina_empleado(salario_base: float, ingresos_extra: float = 0.0) -
         'salario_neto': salario_neto,
         # Cargas patronales (costos del empleador)
         'inss_patronal': inss_patronal,
+        'inatec_patronal': inatec_patronal,
         'provision_vacaciones': provision_vacaciones,
         'provision_aguinaldo': provision_aguinaldo,
         # Costo total real para el empleador
         'costo_total_patronal': round(
-            salario_bruto + inss_patronal + provision_vacaciones + provision_aguinaldo, 2
+            salario_bruto + inss_patronal + inatec_patronal + provision_vacaciones + provision_aguinaldo, 2
         )
     }
 

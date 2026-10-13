@@ -492,23 +492,29 @@
                     <!-- VISTA 3: Pedidos Web -->
                     <div id="subtab-pedidos-web" class="subtab-view">
                         <div class="card">
-                            <div class="table-toolbar">
-                                <input type="text" id="filter-pedidos-web" class="form-control" placeholder="Buscar por código (WEB-...), nombre o email...">
+                            <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                <input type="text" id="filter-pedidos-web" class="form-control" style="flex: 1; min-width: 280px;" placeholder="Buscar por código (WEB-...), cliente, teléfono o dirección...">
+                                <button class="btn btn-secondary" onclick="loadPedidosWeb()" title="Recargar pedidos web">
+                                    <i class="ph-bold ph-arrows-clockwise"></i> Actualizar
+                                </button>
                             </div>
                             <div class="table-responsive">
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>Código Venta</th>
+                                            <th>Código Pedido</th>
                                             <th>Fecha</th>
-                                            <th>Cliente / Invitado</th>
+                                            <th>Cliente</th>
+                                            <th>Contacto</th>
+                                            <th>Entrega / Dirección</th>
                                             <th>Forma Pago</th>
                                             <th>Total ($)</th>
-                                            <th>Comprobante</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tbody-pedidos-web">
-                                        <!-- Render dinámico -->
+                                        <!-- Render dinámico desde tabla pedidos_web -->
                                     </tbody>
                                 </table>
                             </div>
@@ -727,15 +733,9 @@
                                 <label style="font-size: 0.85rem; font-weight: bold; margin: 0; margin-left: 0.5rem;">Hasta:</label>
                                 <input type="date" id="fin-fecha-fin" class="form-control" style="padding: 0.2rem 0.5rem; height: auto;">
                             </div>
-                            {% if usuario.rol != 'Contador' %}
-{% if usuario.rol != 'Contador' %}
-{% if usuario.rol != 'Contador' %}
                             <button class="btn btn-primary" onclick="openModal('modal-asiento')">
                                 <i class="ph-bold ph-plus"></i> Nuevo Asiento
                             </button>
-                            {% endif %}
-{% endif %}
-{% endif %}
                             <button class="btn btn-secondary" onclick="cargarDatosFinanzas()">
                                 <i class="ph-bold ph-funnel"></i> Filtrar / Refrescar
                             </button>
@@ -1631,10 +1631,11 @@
     <div class="modal" id="modal-proveedor">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="ph-bold ph-user-plus"></i> Registrar Proveedor</h3>
+                <h3 id="modal-proveedor-title"><i class="ph-bold ph-user-plus"></i> Registrar / Editar Proveedor</h3>
                 <button class="modal-close" onclick="closeModal('modal-proveedor')">&times;</button>
             </div>
             <form id="form-proveedor" onsubmit="guardarProveedor(event)">
+                <input type="hidden" id="prov-id">
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Nombre del Proveedor / Empresa:</label>
@@ -1894,7 +1895,7 @@
         window.CURRENT_USER_ROLE = "{{ usuario.rol }}";
     </script>
     <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=2.1"></script>
 
     <!-- ========================================================
     MÓDULO RRHH — Modales y JavaScript

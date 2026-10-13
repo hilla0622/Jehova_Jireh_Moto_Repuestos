@@ -24,12 +24,22 @@ IF OBJECT_ID('detalle_asientos', 'U') IS NOT NULL DROP TABLE detalle_asientos;
 IF OBJECT_ID('asientos_contables', 'U') IS NOT NULL DROP TABLE asientos_contables;
 IF OBJECT_ID('cuentas_contables', 'U') IS NOT NULL DROP TABLE cuentas_contables;
 
+IF OBJECT_ID('colilla_pago', 'U') IS NOT NULL DROP TABLE colilla_pago;
 IF OBJECT_ID('movimientos_laborales', 'U') IS NOT NULL DROP TABLE movimientos_laborales;
+IF OBJECT_ID('vacaciones', 'U') IS NOT NULL DROP TABLE vacaciones;
 IF OBJECT_ID('detalle_nomina', 'U') IS NOT NULL DROP TABLE detalle_nomina;
 IF OBJECT_ID('nomina', 'U') IS NOT NULL DROP TABLE nomina;
 IF OBJECT_ID('empleados', 'U') IS NOT NULL DROP TABLE empleados;
 IF OBJECT_ID('cargos', 'U') IS NOT NULL DROP TABLE cargos;
 
+IF OBJECT_ID('comprobantes', 'U') IS NOT NULL DROP TABLE comprobantes;
+IF OBJECT_ID('pagos', 'U') IS NOT NULL DROP TABLE pagos;
+IF OBJECT_ID('detalle_pedidos_web', 'U') IS NOT NULL DROP TABLE detalle_pedidos_web;
+IF OBJECT_ID('pedidos_web', 'U') IS NOT NULL DROP TABLE pedidos_web;
+IF OBJECT_ID('detalle_carritos', 'U') IS NOT NULL DROP TABLE detalle_carritos;
+IF OBJECT_ID('carritos', 'U') IS NOT NULL DROP TABLE carritos;
+IF OBJECT_ID('ajustes_inventario', 'U') IS NOT NULL DROP TABLE ajustes_inventario;
+IF OBJECT_ID('recepciones_compra', 'U') IS NOT NULL DROP TABLE recepciones_compra;
 IF OBJECT_ID('movimientos_inventario', 'U') IS NOT NULL DROP TABLE movimientos_inventario;
 IF OBJECT_ID('detalle_ventas', 'U') IS NOT NULL DROP TABLE detalle_ventas;
 IF OBJECT_ID('ventas', 'U') IS NOT NULL DROP TABLE ventas;
@@ -39,8 +49,10 @@ IF OBJECT_ID('compras', 'U') IS NOT NULL DROP TABLE compras;
 IF OBJECT_ID('productos', 'U') IS NOT NULL DROP TABLE productos;
 IF OBJECT_ID('proveedores', 'U') IS NOT NULL DROP TABLE proveedores;
 IF OBJECT_ID('clientes', 'U') IS NOT NULL DROP TABLE clientes;
+IF OBJECT_ID('sesiones', 'U') IS NOT NULL DROP TABLE sesiones;
 IF OBJECT_ID('usuarios', 'U') IS NOT NULL DROP TABLE usuarios;
 IF OBJECT_ID('categorias', 'U') IS NOT NULL DROP TABLE categorias;
+IF OBJECT_ID('permisos', 'U') IS NOT NULL DROP TABLE permisos;
 IF OBJECT_ID('roles', 'U') IS NOT NULL DROP TABLE roles;
 GO
 
@@ -1049,7 +1061,9 @@ INSERT INTO cargos (id, nombre_cargo, descripcion, salario_base_sugerido, activo
 (3, 'Encargado de Bodega e Inventario', 'Recepción de mercadería, control de stock y despacho', 11000.00, 1),
 (4, 'Contador General', 'Registro contable, estados financieros y declaraciones fiscales', 18000.00, 1),
 (5, 'Responsable de Recursos Humanos', 'Gestión de nómina, control de vacaciones y personal', 15000.00, 1),
-(6, 'Mecánico / Técnico de Taller', 'Mantenimiento, diagnóstico e instalación de piezas de motos', 12000.00, 1);
+(6, 'Mecánico / Técnico de Taller', 'Mantenimiento, diagnóstico e instalación de piezas de motos', 12000.00, 1),
+(7, 'Gerente de Operaciones', 'Gestión integral de los módulos de inventario, compras, proveedores y ventas', 20000.00, 1),
+(8, 'Gerente Admin Financiero', 'Gestión de módulos de reportes, recursos humanos y estados financieros', 20000.00, 1);
 SET IDENTITY_INSERT cargos OFF;
 GO
 
@@ -1115,6 +1129,49 @@ CREATE TABLE permisos (
 );
 GO
 
+-- Datos iniciales de permisos por rol (Fase 1: Seguridad)
+INSERT INTO permisos (rol_id, nombre, descripcion) VALUES
+-- 1. Administrador (Acceso total)
+(1, 'administracion_total', 'Acceso total y configuración del sistema'),
+(1, 'usuarios_gestionar', 'Administrar usuarios y accesos'),
+(1, 'roles_permisos_gestionar', 'Asignar roles y permisos'),
+(1, 'reportes_gerenciales_ver', 'Visualización de reportes ejecutivos y auditoría'),
+(1, 'auditoria_sesiones_ver', 'Consultar historial y sesiones activas'),
+-- 2. Vendedor (POS, Mostrador, Clientes)
+(2, 'ventas_crear', 'Emitir facturas y ventas en mostrador'),
+(2, 'caja_operar', 'Abrir caja, cobrar y realizar corte de caja'),
+(2, 'clientes_gestionar', 'Consultar y registrar clientes'),
+(2, 'productos_consultar', 'Consultar catálogo, precios y existencias'),
+-- 3. Encargado de Inventario (Almacén, Stock, Kardex)
+(3, 'productos_gestionar', 'Crear y actualizar repuestos y precios'),
+(3, 'kardex_consultar', 'Consultar movimientos y existencias'),
+(3, 'ajustes_inventario_crear', 'Registrar ajustes de entrada y salida de stock'),
+-- 4. Contador (Finanzas, Asientos, Reportes)
+(4, 'cuentas_contables_gestionar', 'Administrar catálogo de cuentas contables'),
+(4, 'asientos_contables_registrar', 'Registrar asientos en el libro diario'),
+(4, 'estados_financieros_ver', 'Generar balance general, estado de resultados y mayor'),
+(4, 'reportes_fiscales_ver', 'Consultar reportes de IVA y retenciones'),
+-- 5. Gerente de Operaciones
+(5, 'inventario_supervisar', 'Supervisión de stock, almacén y abastecimiento'),
+(5, 'compras_supervisar', 'Aprobación de compras y control de proveedores'),
+(5, 'ventas_supervisar', 'Monitoreo de rendimiento de ventas y mostrador'),
+-- 6. Gerente Administrativo y Financiero
+(6, 'finanzas_supervisar', 'Supervisión de balances, costos y rentabilidad'),
+(6, 'rrhh_supervisar', 'Supervisión de planilla y gestión de personal'),
+(6, 'reportes_gerenciales_ver', 'Visualización de reportes ejecutivos'),
+-- 7. Encargado de Compras y Proveedores
+(7, 'compras_registrar', 'Registrar órdenes de compra y facturas de proveedores'),
+(7, 'proveedores_gestionar', 'Administrar catálogo y cuentas de proveedores'),
+(7, 'recepciones_compra_registrar', 'Confirmar recepción física de mercadería'),
+-- 8. Responsable de Recursos Humanos
+(8, 'empleados_gestionar', 'Registrar y editar expedientes de empleados'),
+(8, 'cargos_gestionar', 'Administrar cargos y salarios'),
+(8, 'movimientos_laborales_registrar', 'Registrar faltas, permisos y justificaciones'),
+(8, 'vacaciones_gestionar', 'Registrar y aprobar solicitudes de vacaciones'),
+(8, 'nomina_procesar', 'Calcular y generar nómina quincenal/mensual'),
+(8, 'colillas_pago_emitir', 'Generar e imprimir colillas de pago');
+GO
+
 CREATE TABLE sesiones (
     id INT IDENTITY(1,1) PRIMARY KEY,
     usuario_id INT NOT NULL,
@@ -1128,7 +1185,7 @@ GO
 -- Módulo: Portal Web y Clientes
 CREATE TABLE carritos (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    cliente_id INT NOT NULL,
+    cliente_id INT NULL,
     subtotal DECIMAL(12,2) DEFAULT 0.00,
     estado VARCHAR(20) DEFAULT 'Activo',
     CONSTRAINT fk_carritos_clientes FOREIGN KEY (cliente_id) REFERENCES clientes(id)
@@ -1150,13 +1207,17 @@ GO
 CREATE TABLE pedidos_web (
     id INT IDENTITY(1,1) PRIMARY KEY,
     codigo VARCHAR(50) NOT NULL UNIQUE,
-    cliente_id INT NOT NULL,
+    cliente_id INT NULL,
     fecha DATETIME DEFAULT GETDATE(),
     subtotal DECIMAL(12,2) NOT NULL,
     total DECIMAL(12,2) NOT NULL,
     formaEntrega VARCHAR(50) NULL,
     metodo VARCHAR(50) NULL,
     estado VARCHAR(30) DEFAULT 'Pendiente',
+    nombre_cliente VARCHAR(150) NULL,
+    telefono VARCHAR(30) NULL,
+    email VARCHAR(100) NULL,
+    direccion_entrega VARCHAR(MAX) NULL,
     CONSTRAINT fk_pedidos_clientes FOREIGN KEY (cliente_id) REFERENCES clientes(id)
 );
 GO
@@ -1176,22 +1237,28 @@ GO
 -- Módulo: Facturación y Punto de Venta (POS)
 CREATE TABLE pagos (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    venta_id INT NOT NULL,
+    venta_id INT NULL,
+    pedido_web_id INT NULL,
+    origen VARCHAR(20) NOT NULL DEFAULT 'VENTA_POS',
     metodo VARCHAR(50) NOT NULL,
     monto DECIMAL(12,2) NOT NULL,
     referencia VARCHAR(100) NULL,
     fecha DATETIME DEFAULT GETDATE(),
-    CONSTRAINT fk_pagos_ventas FOREIGN KEY (venta_id) REFERENCES ventas(id)
+    CONSTRAINT fk_pagos_ventas FOREIGN KEY (venta_id) REFERENCES ventas(id),
+    CONSTRAINT fk_pagos_pedidos_web FOREIGN KEY (pedido_web_id) REFERENCES pedidos_web(id)
 );
 GO
 
 CREATE TABLE comprobantes (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    venta_id INT NOT NULL,
+    venta_id INT NULL,
+    pedido_web_id INT NULL,
+    origen VARCHAR(20) NOT NULL DEFAULT 'VENTA_POS',
     numero VARCHAR(50) NOT NULL UNIQUE,
     fechaEmision DATETIME DEFAULT GETDATE(),
     total DECIMAL(12,2) NOT NULL,
-    CONSTRAINT fk_comprobantes_ventas FOREIGN KEY (venta_id) REFERENCES ventas(id)
+    CONSTRAINT fk_comprobantes_ventas FOREIGN KEY (venta_id) REFERENCES ventas(id),
+    CONSTRAINT fk_comprobantes_pedidos_web FOREIGN KEY (pedido_web_id) REFERENCES pedidos_web(id)
 );
 GO
 
@@ -1216,43 +1283,7 @@ CREATE TABLE recepciones_compra (
 );
 GO
 
--- Módulo: Recursos Humanos y Nómina
-CREATE TABLE cargos (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    descripcion VARCHAR(255) NULL
-);
-GO
-
-CREATE TABLE empleados (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    nombre_completo VARCHAR(150) NOT NULL,
-    identificacion VARCHAR(30) NULL,
-    cargo_id INT NULL,
-    salario_base DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    fecha_ingreso DATE NULL,
-    activo BIT DEFAULT 1,
-    num_inss VARCHAR(30) NULL,
-    telefono VARCHAR(25) NULL,
-    email VARCHAR(100) NULL,
-    vacacionesDisponibles DECIMAL(5,2) DEFAULT 0.00,
-    created_at DATETIME DEFAULT GETDATE(),
-    CONSTRAINT fk_empleados_cargos FOREIGN KEY (cargo_id) REFERENCES cargos(id)
-);
-GO
-
-CREATE TABLE movimientos_laborales (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    empleado_id INT NOT NULL,
-    tipo VARCHAR(50) NOT NULL,
-    fecha_inicio DATE NOT NULL,
-    fecha_fin DATE NULL,
-    dias_tomados INT DEFAULT 0,
-    observacion VARCHAR(255) NULL,
-    CONSTRAINT fk_mov_laborales_empleados FOREIGN KEY (empleado_id) REFERENCES empleados(id)
-);
-GO
-
+-- Módulo: Recursos Humanos y Nómina (Tablas Complementarias UML)
 CREATE TABLE vacaciones (
     id INT IDENTITY(1,1) PRIMARY KEY,
     empleado_id INT NOT NULL,
@@ -1261,44 +1292,6 @@ CREATE TABLE vacaciones (
     dias INT NOT NULL,
     estado VARCHAR(30) DEFAULT 'Aprobada',
     CONSTRAINT fk_vacaciones_empleados FOREIGN KEY (empleado_id) REFERENCES empleados(id)
-);
-GO
-
-CREATE TABLE nomina (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    periodo_mes INT NOT NULL,
-    periodo_anio INT NOT NULL,
-    fecha_generacion DATETIME DEFAULT GETDATE(),
-    total_ingresos DECIMAL(12,2) DEFAULT 0.00,
-    total_deducciones DECIMAL(12,2) DEFAULT 0.00,
-    total_neto DECIMAL(12,2) DEFAULT 0.00,
-    inss_patronal_total DECIMAL(12,2) DEFAULT 0.00,
-    provision_vac_total DECIMAL(12,2) DEFAULT 0.00,
-    provision_agui_total DECIMAL(12,2) DEFAULT 0.00,
-    estado VARCHAR(30) DEFAULT 'Procesada'
-);
-GO
-
-CREATE TABLE detalle_nomina (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    nomina_id INT NOT NULL,
-    empleado_id INT NOT NULL,
-    salario_base DECIMAL(12,2) DEFAULT 0.00,
-    inss_laboral DECIMAL(12,2) DEFAULT 0.00,
-    ir DECIMAL(12,2) DEFAULT 0.00,
-    otras_deducciones DECIMAL(12,2) DEFAULT 0.00,
-    neto_pagar DECIMAL(12,2) DEFAULT 0.00,
-    ingresos_extra DECIMAL(12,2) DEFAULT 0.00,
-    inss_patronal DECIMAL(12,2) DEFAULT 0.00,
-    provision_vacaciones DECIMAL(12,2) DEFAULT 0.00,
-    provision_aguinaldo DECIMAL(12,2) DEFAULT 0.00,
-    kpi_comision DECIMAL(12,2) DEFAULT 0.00,
-    adelanto_salarial DECIMAL(12,2) DEFAULT 0.00,
-    dias_trabajados INT DEFAULT 30,
-    vac_acumulada DECIMAL(5,2) DEFAULT 0.00,
-    vac_mes DECIMAL(5,2) DEFAULT 0.00,
-    CONSTRAINT fk_detnomina_nomina FOREIGN KEY (nomina_id) REFERENCES nomina(id),
-    CONSTRAINT fk_detnomina_empleados FOREIGN KEY (empleado_id) REFERENCES empleados(id)
 );
 GO
 

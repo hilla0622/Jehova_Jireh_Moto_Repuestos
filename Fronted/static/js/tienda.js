@@ -119,6 +119,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Toggle requerido de dirección según forma de entrega
+    const checkoutDeliveryEl = document.getElementById('checkout-delivery');
+    if (checkoutDeliveryEl) {
+        checkoutDeliveryEl.addEventListener('change', (e) => {
+            const addrInput = document.getElementById('checkout-address');
+            if (addrInput) {
+                if (e.target.value === 'Retiro en Tienda') {
+                    addrInput.required = false;
+                    addrInput.placeholder = 'Opcional (Retiro en sucursal Masatepe)';
+                } else {
+                    addrInput.required = true;
+                    addrInput.placeholder = 'Calle, Barrio o Punto de Referencia';
+                }
+            }
+        });
+    }
+
     let lastOrder = null;
 
     // Simulate Checkout Form Submit
@@ -136,6 +153,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        const deliveryEl = document.getElementById('checkout-delivery');
+        const methodEl = document.getElementById('checkout-method');
+        const phoneEl = document.getElementById('checkout-phone');
+        const addressEl = document.getElementById('checkout-address');
+
+        const formaEntrega = deliveryEl ? deliveryEl.value : 'Envío a Domicilio';
+        const metodoPago = methodEl ? methodEl.value : 'Efectivo';
+        const telefonoVal = phoneEl ? phoneEl.value.trim() : '';
+        let direccionVal = addressEl ? addressEl.value.trim() : '';
+
+        if (!direccionVal && formaEntrega === 'Retiro en Tienda') {
+            direccionVal = 'Retiro en Tienda (Sucursal Principal)';
+        }
+
         // Guardar detalles de la orden antes de limpiar el carrito
         let total = cart.reduce((sum, item) => sum + item.price, 0);
         lastOrder = {
@@ -143,9 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
             backend_items: groupedItems,
             total: total,
             date: new Date().toLocaleString(),
-            name: document.getElementById('checkout-name').value,
-            email: document.getElementById('checkout-email').value,
-            address: document.getElementById('checkout-address').value
+            name: document.getElementById('checkout-name').value.trim(),
+            email: document.getElementById('checkout-email').value.trim(),
+            phone: telefonoVal,
+            address: direccionVal,
+            delivery: formaEntrega,
+            method: metodoPago
         };
 
         // Realizar la petición real al backend
@@ -155,6 +189,11 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({
                 nombre_cliente: lastOrder.name,
                 email: lastOrder.email,
+                telefono: lastOrder.phone,
+                direccion: lastOrder.address,
+                direccion_entrega: lastOrder.address,
+                forma_entrega: lastOrder.delivery,
+                metodo: lastOrder.method,
                 items: lastOrder.backend_items
             })
         })
@@ -166,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cart = []; // clear cart
                 updateCartUI();
             } else {
-                alert("Hubo un problema al procesar el pedido: " + data.error);
+                alert("Hubo un problema al procesar el pedido: " + (data.error || 'Desconocido'));
             }
         })
         .catch(error => {
@@ -222,12 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h3>Datos del Cliente</h3>
                         <p><strong>Nombre:</strong> ${lastOrder.name}</p>
                         <p><strong>Correo:</strong> ${lastOrder.email}</p>
+                        <p><strong>Teléfono:</strong> ${lastOrder.phone || 'N/A'}</p>
                         <p><strong>Dirección:</strong> ${lastOrder.address}</p>
                     </div>
                     <div class="info-box">
                         <h3>Detalles de la Orden</h3>
                         <p><strong>Fecha:</strong> ${lastOrder.date}</p>
-                        <p><strong>Método de Pago:</strong> Contra Entrega / Web</p>
+                        <p><strong>Forma de Entrega:</strong> ${lastOrder.delivery || 'Envío a Domicilio'}</p>
+                        <p><strong>Método de Pago:</strong> ${lastOrder.method || 'Efectivo'}</p>
                     </div>
                 </div>
 

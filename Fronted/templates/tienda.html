@@ -191,8 +191,27 @@
                         <input type="email" id="checkout-email" class="form-control" required placeholder="juan@correo.com" value="{{ session.user.username if session.user and session.user.rol == 'Cliente' else '' }}">
                     </div>
                     <div class="form-group">
-                        <label>Dirección de Envío</label>
-                        <input type="text" id="checkout-address" class="form-control" required placeholder="Calle 123, Ciudad" value="{{ session.user.get('direccion', '') if session.user else '' }}">
+                        <label>Teléfono de Contacto</label>
+                        <input type="tel" id="checkout-phone" class="form-control" placeholder="+505 8888-8888">
+                    </div>
+                    <div class="form-group">
+                        <label>Forma de Entrega</label>
+                        <select id="checkout-delivery" class="form-control">
+                            <option value="Envío a Domicilio">Envío a Domicilio</option>
+                            <option value="Retiro en Tienda">Retiro en Tienda</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="group-checkout-address">
+                        <label>Dirección de Entrega</label>
+                        <input type="text" id="checkout-address" class="form-control" required placeholder="Calle, Barrio o Punto de Referencia" value="{{ session.user.get('direccion', '') if session.user else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select id="checkout-method" class="form-control">
+                            <option value="Efectivo">Efectivo contra entrega</option>
+                            <option value="Transferencia">Transferencia Bancaria</option>
+                            <option value="Tarjeta">Tarjeta de Crédito / Débito</option>
+                        </select>
                     </div>
                     <button type="submit" class="btn-block">Pagar Ahora</button>
                 </form>
@@ -229,7 +248,7 @@
 
 
 
-    <script src="{{ url_for('static', filename='js/tienda.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tienda.js') }}?v=2.1"></script>
 </body>
 
 </html>

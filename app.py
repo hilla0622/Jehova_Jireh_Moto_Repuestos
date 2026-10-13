@@ -12,7 +12,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_supe
 # CONFIGURACIÓN DE BASE DE DATOS SQL SERVER
 # ==============================================================================
 # Cambia 'LAPTOP-CNR3S3I3' por tu nombre de servidor SQL Server.
-DB_SERVER = os.environ.get('DB_SERVER', r'LAPTOP-CNR3S3I3')
+DB_SERVER = os.environ.get('DB_SERVER', r'HILLARY')
 DB_NAME = 'jehova_jireh_db'
 
 def get_db_connection():
@@ -160,7 +160,7 @@ def login():
 
         # 1. Validación como Empleado/Admin en la base de datos SQL Server
         query = """
-            SELECT u.id, u.username, u.nombre_completo AS nombre, r.nombre AS rol
+            SELECT u.id, u.username, u.nombre_completo AS nombre, r.nombre AS rol, u.rol_id
             FROM usuarios u
             INNER JOIN roles r ON u.rol_id = r.id
             WHERE u.username = ? AND u.password_hash = ? AND u.activo = 1
@@ -168,12 +168,54 @@ def login():
         usuario = execute_query(query, (username, password), fetchone=True)
         
         if usuario:
+            # Consultar permisos asignados al rol en la tabla permisos (si existe)
+            user_permisos = []
+            try:
+                perm_rows = execute_query(
+                    "SELECT nombre FROM permisos WHERE rol_id = ?",
+                    params=(usuario.get('rol_id') or 1,),
+                    fetchall=True
+                )
+                if perm_rows:
+                    user_permisos = [p['nombre'] for p in perm_rows]
+            except Exception as e:
+                print(f"[Fase 1] Advertencia al leer permisos: {e}")
+
             session['user'] = {
                 'id': usuario['id'],
                 'username': usuario['username'],
                 'nombre': usuario['nombre'],
-                'rol': usuario['rol']
+                'rol': usuario['rol'],
+                'rol_id': usuario.get('rol_id'),
+                'permisos': user_permisos
             }
+
+            # --- REGISTRO AUDITORÍA FASE 1: Tabla sesiones y ultimo_acceso ---
+            try:
+                ip_cliente = request.remote_addr or '127.0.0.1'
+                conn_s = get_db_connection()
+                cur_s = conn_s.cursor()
+                cur_s.execute(
+                    "INSERT INTO sesiones (usuario_id, fechaInicio, estado, ip) VALUES (?, GETDATE(), 'Activa', ?)",
+                    (usuario['id'], ip_cliente)
+                )
+                cur_s.execute("SELECT @@IDENTITY")
+                ses_row = cur_s.fetchone()
+                if ses_row and ses_row[0]:
+                    session['db_session_id'] = int(ses_row[0])
+
+                # Actualizar también el campo ultimo_acceso en la tabla usuarios
+                cur_s.execute(
+                    "UPDATE usuarios SET ultimo_acceso = GETDATE() WHERE id = ?",
+                    (usuario['id'],)
+                )
+
+                conn_s.commit()
+                cur_s.close()
+                conn_s.close()
+            except Exception as e:
+                print(f"[Fase 1] Advertencia al registrar sesión / ultimo_acceso: {e}")
+
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({"success": True, "redirect": url_for('inicio')})
             return redirect(url_for('inicio'))
@@ -204,8 +246,67 @@ def login():
 
 @app.route('/logout')
 def logout():
+    # --- REGISTRO AUDITORÍA FASE 1: Cerrar sesión en tabla sesiones ---
+    db_session_id = session.get('db_session_id')
+    if db_session_id:
+        try:
+            conn_s = get_db_connection()
+            cur_s = conn_s.cursor()
+            cur_s.execute("UPDATE sesiones SET estado = 'Cerrada' WHERE id = ?", (db_session_id,))
+            conn_s.commit()
+            cur_s.close()
+            conn_s.close()
+        except Exception as e:
+            print(f"[Fase 1] Advertencia al cerrar sesión: {e}")
+
     session.clear()
     return redirect(url_for('tienda'))
+
+# --- SEGURIDAD Y AUDITORÍA (FASE 1: PERMISOS Y SESIONES) ---
+@app.route('/api/permisos', methods=['GET'])
+@login_required
+def api_permisos():
+    """Consulta de permisos del usuario actual o de todos los roles (para Admin)"""
+    user_rol = session['user'].get('rol')
+    user_rol_id = session['user'].get('rol_id')
+    try:
+        if user_rol == 'Administrador' and request.args.get('todos') == 'true':
+            query = """
+                SELECT p.id, p.rol_id, r.nombre AS rol, p.nombre AS permiso, p.descripcion
+                FROM permisos p
+                INNER JOIN roles r ON p.rol_id = r.id
+                ORDER BY p.rol_id, p.nombre
+            """
+            permisos = execute_query(query, fetchall=True)
+            return jsonify(permisos)
+        else:
+            query = """
+                SELECT p.id, p.nombre AS permiso, p.descripcion
+                FROM permisos p
+                WHERE p.rol_id = ?
+            """
+            permisos = execute_query(query, params=(user_rol_id,), fetchall=True) if user_rol_id else []
+            return jsonify({"rol": user_rol, "permisos": permisos})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/sesiones/historial', methods=['GET'])
+@login_required
+def api_sesiones_historial():
+    """Historial de auditoría de sesiones para el Administrador"""
+    if session['user'].get('rol') != 'Administrador':
+        return jsonify({"error": "Acceso denegado: solo Administrador."}), 403
+    try:
+        query = """
+            SELECT TOP 50 s.id, s.usuario_id, u.username, u.nombre_completo, s.fechaInicio, s.estado, s.ip
+            FROM sesiones s
+            INNER JOIN usuarios u ON s.usuario_id = u.id
+            ORDER BY s.fechaInicio DESC
+        """
+        sesiones = execute_query(query, fetchall=True)
+        return jsonify(sesiones)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ==============================================================================
 # ENDPOINTS API (JSON) - CONECTADOS A SQL SERVER
@@ -217,7 +318,7 @@ def logout():
 def api_usuarios():
     if request.method == 'GET':
         query = """
-            SELECT u.id, u.username, u.nombre_completo AS nombre, u.email, u.telefono, r.nombre AS rol 
+            SELECT u.id, u.username, u.nombre_completo AS nombre, u.email, u.telefono, r.nombre AS rol, u.ultimo_acceso 
             FROM usuarios u
             INNER JOIN roles r ON u.rol_id = r.id
             WHERE u.activo = 1
@@ -757,6 +858,21 @@ def api_ventas():
                     VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
                 """, (p_id, cant, stock_ant, stock_post, f"Venta {codigo_v}", 'Venta desde caja', session['user']['id']))
 
+            # --- FASE 2: REGISTRO DE PAGO Y COMPROBANTE EN POS ---
+            try:
+                cursor.execute("""
+                    INSERT INTO pagos (venta_id, pedido_web_id, origen, metodo, monto, referencia, fecha)
+                    VALUES (?, NULL, 'VENTA_POS', ?, ?, ?, GETDATE())
+                """, (venta_id, forma_pago, total_venta, f"Cobro en caja {codigo_v}"))
+
+                numero_comp = f"TICK-{codigo_v}"
+                cursor.execute("""
+                    INSERT INTO comprobantes (venta_id, pedido_web_id, origen, numero, fechaEmision, total)
+                    VALUES (?, NULL, 'VENTA_POS', ?, GETDATE(), ?)
+                """, (venta_id, numero_comp, total_venta))
+            except Exception as e_pago:
+                print(f"[Fase 2] Nota al registrar pago/comprobante POS: {e_pago}")
+
             # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA ---
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
             cta_caja = cursor.fetchone()[0]
@@ -882,28 +998,61 @@ def api_ventas_web():
         admin_row = cursor.fetchone()
         admin_id = admin_row[0] if admin_row else 1
 
-        # usuario_id = NULL para ventas web (o pasamos None)
+        # Extraer datos de contacto y entrega enviados desde la tienda web
+        forma_entrega = data.get('forma_entrega', 'Envío a Domicilio').strip()
+        metodo_pago = data.get('metodo', 'Efectivo').strip()
+        telefono = data.get('telefono', '').strip()
+        direccion = data.get('direccion', '').strip() or data.get('address', '').strip()
+
+        # --- FASE 2: FLUJO EXCLUSIVO DEL PORTAL WEB (UML) ---
+        # 1. Registrar Carrito formal y su detalle
         cursor.execute("""
-            INSERT INTO ventas (codigo_venta, cliente_id, nombre_cliente_invitado, usuario_id, fecha_venta, subtotal, descuento, total, forma_pago, estado)
-            VALUES (?, ?, ?, NULL, GETDATE(), ?, 0, ?, 'Efectivo', 'Completada')
-        """, (codigo_v, cliente_id, nombre_cliente, total_venta, total_venta))
-        
+            INSERT INTO carritos (cliente_id, subtotal, estado)
+            VALUES (?, ?, 'Completado')
+        """, (cliente_id, total_venta))
         cursor.execute("SELECT @@IDENTITY AS id")
-        venta_id = cursor.fetchone()[0]
-        
+        carrito_id = cursor.fetchone()[0]
+
         for (p_id, cant, precio, costo, subtotal, stock_ant) in detalles_a_insertar:
             cursor.execute("""
-                INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio_unitario, costo_historico, subtotal)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (venta_id, p_id, cant, precio, costo, subtotal))
+                INSERT INTO detalle_carritos (carrito_id, producto_id, cantidad, precioUnitario, subtotal)
+                VALUES (?, ?, ?, ?, ?)
+            """, (carrito_id, p_id, cant, precio, subtotal))
+
+        # 2. Registrar Pedido Web formal y su detalle (sin tocar la tabla ventas)
+        cursor.execute("""
+            INSERT INTO pedidos_web (codigo, cliente_id, fecha, subtotal, total, formaEntrega, metodo, estado, nombre_cliente, telefono, email, direccion_entrega)
+            VALUES (?, ?, GETDATE(), ?, ?, ?, ?, 'Completado', ?, ?, ?, ?)
+        """, (codigo_v, cliente_id, total_venta, total_venta, forma_entrega, metodo_pago, nombre_cliente, telefono, email, direccion))
+        cursor.execute("SELECT @@IDENTITY AS id")
+        pedido_id = cursor.fetchone()[0]
+
+        for (p_id, cant, precio, costo, subtotal, stock_ant) in detalles_a_insertar:
+            cursor.execute("""
+                INSERT INTO detalle_pedidos_web (pedido_id, producto_id, cantidad, precioUnitario, subtotal)
+                VALUES (?, ?, ?, ?, ?)
+            """, (pedido_id, p_id, cant, precio, subtotal))
             
+            # Descontar stock y registrar movimiento en Kardex
             stock_post = stock_ant - cant
             cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (stock_post, p_id))
-            
             cursor.execute("""
                 INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, referencia_origen, motivo, usuario_id)
                 VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
-            """, (p_id, cant, stock_ant, stock_post, f"Venta Web {codigo_v}", 'Venta desde la tienda online', admin_id))
+            """, (p_id, cant, stock_ant, stock_post, f"Pedido Web {codigo_v}", 'Venta desde la tienda online', admin_id))
+
+        # 3. Registrar Pago formal con discriminador 'PEDIDO_WEB'
+        cursor.execute("""
+            INSERT INTO pagos (venta_id, pedido_web_id, origen, metodo, monto, referencia, fecha)
+            VALUES (NULL, ?, 'PEDIDO_WEB', ?, ?, ?, GETDATE())
+        """, (pedido_id, metodo_pago, total_venta, f"Pago Online {codigo_v}"))
+
+        # 4. Registrar Comprobante digital con discriminador 'PEDIDO_WEB'
+        numero_comp_web = f"COMP-{codigo_v}"
+        cursor.execute("""
+            INSERT INTO comprobantes (venta_id, pedido_web_id, origen, numero, fechaEmision, total)
+            VALUES (NULL, ?, 'PEDIDO_WEB', ?, GETDATE(), ?)
+        """, (pedido_id, numero_comp_web, total_venta))
 
         # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA WEB ---
         cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
@@ -919,8 +1068,8 @@ def api_ventas_web():
 
         cursor.execute("""
             INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
-            VALUES (GETDATE(), ?, 'VENTAS_WEB', ?, ?)
-        """, (f"Venta Web {codigo_v}", venta_id, admin_id))
+            VALUES (GETDATE(), ?, 'PEDIDOS_WEB', ?, ?)
+        """, (f"Pedido Web {codigo_v}", pedido_id, admin_id))
         
         cursor.execute("SELECT @@IDENTITY AS id")
         asiento_v_id = cursor.fetchone()[0]
@@ -933,12 +1082,161 @@ def api_ventas_web():
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_v_id, cta_inv, total_costo_venta))
 
         conn.commit()
-        return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada con éxito."}), 201
+        return jsonify({
+            "success": True, 
+            "mensaje": f"Venta {codigo_v} procesada con éxito.",
+            "codigo": codigo_v,
+            "comprobante": f"COMP-{codigo_v}"
+        }), 201
 
     except Exception as e:
         if 'conn' in locals():
             conn.rollback()
         return jsonify({"error": str(e)}), 500
+
+# --- CONSULTAS FASE 2: PEDIDOS WEB, PAGOS Y COMPROBANTES ---
+@app.route('/api/pedidos_web', methods=['GET'])
+@login_required
+def api_pedidos_web():
+    """Consulta de pedidos web con sus detalles para el panel administrativo"""
+    query = """
+        SELECT p.id, p.codigo, p.cliente_id, 
+               COALESCE(c.nombre_completo, p.nombre_cliente, 'Cliente Invitado') AS cliente,
+               p.fecha, p.subtotal, p.total, p.formaEntrega, p.metodo, p.estado,
+               p.telefono, p.email, p.direccion_entrega
+        FROM pedidos_web p
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        ORDER BY p.id DESC
+    """
+    pedidos = execute_query(query, fetchall=True)
+    for ped in pedidos:
+        if hasattr(ped['fecha'], 'strftime'):
+            ped['fecha'] = ped['fecha'].strftime('%Y-%m-%d %H:%M:%S')
+        ped['total'] = float(ped['total'])
+        ped['subtotal'] = float(ped['subtotal'])
+        
+        # Obtener detalle de productos del pedido web
+        detalles = execute_query("""
+            SELECT dp.id, dp.producto_id, prod.nombre AS producto_nombre, prod.codigo_sku,
+                   dp.cantidad, dp.precioUnitario, dp.subtotal
+            FROM detalle_pedidos_web dp
+            INNER JOIN productos prod ON dp.producto_id = prod.id
+            WHERE dp.pedido_id = ?
+        """, (ped['id'],), fetchall=True)
+        for d in detalles:
+            d['precioUnitario'] = float(d['precioUnitario'])
+            d['precio_unitario'] = float(d['precioUnitario'])
+            d['subtotal'] = float(d['subtotal'])
+        ped['detalles'] = detalles
+        ped['codigo_venta'] = ped['codigo']
+        ped['forma_pago'] = ped['metodo']
+        ped['vendedor'] = 'Tienda Online'
+        
+    return jsonify(pedidos)
+
+@app.route('/api/pedidos_web/<int:p_id>/anular', methods=['POST'])
+@login_required
+def api_pedido_web_anular(p_id):
+    """Anula un pedido web, retorna el stock al kardex e inserta la reversión contable"""
+    if session.get('user', {}).get('rol') not in ['Administrador', 'Vendedor', 'Gerente de Operaciones']:
+        return jsonify({"error": "No tienes permiso para anular pedidos web."}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT estado, codigo FROM pedidos_web WHERE id = ?", (p_id,))
+        pedido = cursor.fetchone()
+        if not pedido:
+            return jsonify({"error": "Pedido web no encontrado."}), 404
+        if pedido.estado == 'Anulado':
+            return jsonify({"error": "Este pedido ya se encuentra anulado."}), 400
+
+        cursor.execute("UPDATE pedidos_web SET estado = 'Anulado' WHERE id = ?", (p_id,))
+
+        cursor.execute("SELECT producto_id, cantidad FROM detalle_pedidos_web WHERE pedido_id = ?", (p_id,))
+        detalles = cursor.fetchall()
+        user_id = session.get('user', {}).get('id', 1)
+
+        for det in detalles:
+            cursor.execute("SELECT stock_actual FROM productos WHERE id = ?", (det.producto_id,))
+            prod = cursor.fetchone()
+            if prod:
+                stock_ant = prod.stock_actual
+                stock_post = stock_ant + det.cantidad
+                cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (stock_post, det.producto_id))
+                cursor.execute("""
+                    INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, motivo, usuario_id)
+                    VALUES (?, 'DEVOLUCION_CLIENTE', ?, ?, ?, ?, ?)
+                """, (det.producto_id, det.cantidad, stock_ant, stock_post, f"Anulacion de Pedido Web {pedido.codigo}", user_id))
+
+        # Reversión contable
+        cursor.execute("SELECT id FROM asientos_contables WHERE referencia_id = ? AND modulo_origen = 'PEDIDOS_WEB'", (p_id,))
+        asiento = cursor.fetchone()
+        if asiento:
+            cursor.execute("""
+                INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                VALUES (GETDATE(), ?, 'REVERSION_PEDIDO_WEB', ?, ?)
+            """, (f"Anulacion Pedido Web {pedido.codigo}", p_id, user_id))
+            cursor.execute("SELECT @@IDENTITY AS id")
+            new_asiento_id = cursor.fetchone()[0]
+
+            cursor.execute("SELECT cuenta_id, debe, haber FROM movimientos_contables WHERE asiento_id = ?", (asiento.id,))
+            for m in cursor.fetchall():
+                cursor.execute("""
+                    INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber)
+                    VALUES (?, ?, ?, ?)
+                """, (new_asiento_id, m.cuenta_id, m.haber, m.debe))
+
+        conn.commit()
+        return jsonify({"success": True, "mensaje": f"Pedido Web {pedido.codigo} anulado exitosamente. Stock retornado."})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/pagos', methods=['GET'])
+@login_required
+def api_pagos():
+    """Consulta consolidada de pagos (POS y Web)"""
+    origen = request.args.get('origen')
+    if origen:
+        query = """
+            SELECT p.id, p.venta_id, p.pedido_web_id, p.origen, p.metodo, p.monto, p.referencia, p.fecha
+            FROM pagos p
+            WHERE p.origen = ?
+            ORDER BY p.id DESC
+        """
+        pagos = execute_query(query, (origen,), fetchall=True)
+    else:
+        query = """
+            SELECT p.id, p.venta_id, p.pedido_web_id, p.origen, p.metodo, p.monto, p.referencia, p.fecha
+            FROM pagos p
+            ORDER BY p.id DESC
+        """
+        pagos = execute_query(query, fetchall=True)
+        
+    for p in pagos:
+        if hasattr(p['fecha'], 'strftime'):
+            p['fecha'] = p['fecha'].strftime('%Y-%m-%d %H:%M:%S')
+        p['monto'] = float(p['monto'])
+    return jsonify(pagos)
+
+@app.route('/api/comprobantes', methods=['GET'])
+@login_required
+def api_comprobantes():
+    """Consulta consolidada de comprobantes emitidos (POS y Web)"""
+    query = """
+        SELECT c.id, c.venta_id, c.pedido_web_id, c.origen, c.numero, c.fechaEmision, c.total
+        FROM comprobantes c
+        ORDER BY c.id DESC
+    """
+    comps = execute_query(query, fetchall=True)
+    for c in comps:
+        if hasattr(c['fechaEmision'], 'strftime'):
+            c['fechaEmision'] = c['fechaEmision'].strftime('%Y-%m-%d %H:%M:%S')
+        c['total'] = float(c['total'])
+    return jsonify(comps)
 
 
 @app.route('/api/ventas/<int:v_id>', methods=['GET'])
@@ -1224,6 +1522,29 @@ def api_proveedores():
             return jsonify({"success": True, "mensaje": "Proveedor agregado"}), 201
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+@app.route('/api/proveedores/<int:prov_id>', methods=['PUT'])
+@login_required
+def api_proveedor_update(prov_id):
+    if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores']:
+        return jsonify({"error": "No tienes permisos."}), 403
+        
+    data = request.json or {}
+    nombre = data.get('nombre', '').strip()
+    contacto = data.get('contacto', '').strip()
+    telefono = data.get('telefono', '').strip()
+    email = data.get('email', '').strip()
+
+    if not nombre:
+        return jsonify({"error": "Nombre del proveedor es obligatorio."}), 400
+
+    try:
+        execute_query("UPDATE proveedores SET nombre_empresa = ?, contacto_nombre = ?, telefono = ?, email = ? WHERE id = ?", 
+                      (nombre, contacto, telefono, email, prov_id), commit=True)
+        return jsonify({"success": True, "mensaje": "Proveedor actualizado"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/proveedores/<int:prov_id>/estado', methods=['PUT'])
 @login_required
@@ -1511,8 +1832,6 @@ def api_asientos_contables():
             return jsonify({"error": str(e)}), 500
 
     if request.method == 'POST':
-        if session['user']['rol'] == 'Contador':
-            return jsonify({"error": "No tienes permiso para crear cuentas."}), 403
         data = request.json or {}
         fecha = data.get('fecha')
         concepto = data.get('concepto')

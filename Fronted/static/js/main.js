@@ -213,6 +213,7 @@ function switchTab(tabId) {
         if (tabId === 'tab-ventas') {
             loadPOSProducts();
             loadHistorialVentas();
+            loadPedidosWeb();
             verificarEstadoCaja();
         }
         if (tabId === 'tab-compras') loadComprasYProveedores();
@@ -372,6 +373,7 @@ function switchVentasSubtab(subtab, btn) {
     if (view) view.classList.add('active');
 
     if (subtab === 'historial-ventas') loadHistorialVentas();
+    if (subtab === 'pedidos-web') loadPedidosWeb();
     if (subtab === 'pos') loadPOSProducts();
 }
 
@@ -1063,18 +1065,15 @@ async function procesarVentaPOS() {
     }
 }
 
-// --- HISTORIAL DE VENTAS & COMPROBANTES ---
+// --- HISTORIAL DE VENTAS (POS) ---
 async function loadHistorialVentas() {
     try {
         const res = await fetch('/api/ventas');
         const ventas = await res.json();
         ventasCache = ventas;
         
-        const ventasFisicas = ventas.filter(v => v.codigo_venta.startsWith('VEN-'));
-        const ventasWeb = ventas.filter(v => v.codigo_venta.startsWith('WEB-'));
-        
+        const ventasFisicas = ventas.filter(v => !v.codigo_venta || !v.codigo_venta.startsWith('WEB-'));
         renderHistorialVentasTable(ventasFisicas);
-        renderPedidosWebTable(ventasWeb);
     } catch (err) {
         console.error('Error al cargar ventas:', err);
     }
@@ -1108,55 +1107,152 @@ function renderHistorialVentasTable(ventas) {
     `).join('');
 }
 
-function renderPedidosWebTable(ventas) {
-    const tbody = document.getElementById('tbody-pedidos-web');
-    if (!tbody) return;
-
-    if (!Array.isArray(ventas) || ventas.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No hay pedidos web registrados.</td></tr>`;
-        return;
-    }
-
-    const reversed = [...ventas].reverse();
-    tbody.innerHTML = reversed.map(v => `
-        <tr>
-            <td><strong>${v.codigo_venta}</strong></td>
-            <td>${v.fecha}</td>
-            <td>${v.cliente || 'Invitado'}</td>
-            <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${v.forma_pago}</span></td>
-            <td style="font-weight: 700; color: var(--accent-green);">$${v.total.toFixed(2)}</td>
-            <td style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
-                <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="verComprobanteVenta(${v.id})">
-                    <i class="ph-bold ph-receipt"></i> Ver Factura
-                </button>
-                ${v.estado === 'Anulada' ? '<span class="text-accent-red font-bold" style="font-size:0.8rem;"><i class="ph-bold ph-x-circle"></i> Anulada</span>' : `
-                <button class="btn btn-danger icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="anularVenta(${v.id})"><i class="ph-bold ph-trash"></i> Anular</button>
-                <button class="btn icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; background: #f59e0b; border-color: #f59e0b; color: #000;" onclick="abrirModalDevolucion(${v.id})"><i class="ph-bold ph-arrow-counter-clockwise"></i> Devolución</button>
-                `}
-            </td>
-        </tr>
-    `).join('');
-}
-
 function filterHistorialVentasTable(query) {
     const q = query.toLowerCase();
-    const fisicas = ventasCache.filter(v => v.codigo_venta.startsWith('VEN-'));
+    const fisicas = ventasCache.filter(v => !v.codigo_venta || !v.codigo_venta.startsWith('WEB-'));
     const filtrados = fisicas.filter(v => 
-        v.codigo_venta.toLowerCase().includes(q) || 
+        (v.codigo_venta && v.codigo_venta.toLowerCase().includes(q)) || 
         (v.cliente && v.cliente.toLowerCase().includes(q)) || 
         (v.vendedor && v.vendedor.toLowerCase().includes(q))
     );
     renderHistorialVentasTable(filtrados);
 }
 
+// --- GESTIÓN DE PEDIDOS WEB (TABLA pedidos_web) ---
+let pedidosWebCache = [];
+
+async function loadPedidosWeb() {
+    try {
+        const res = await fetch('/api/pedidos_web');
+        const pedidos = await res.json();
+        pedidosWebCache = pedidos;
+        renderPedidosWebTable(pedidos);
+    } catch (err) {
+        console.error('Error al cargar pedidos web:', err);
+    }
+}
+
+function renderPedidosWebTable(pedidos) {
+    const tbody = document.getElementById('tbody-pedidos-web');
+    if (!tbody) return;
+
+    if (!Array.isArray(pedidos) || pedidos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">No hay pedidos web registrados en el sistema.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = pedidos.map(p => {
+        const estadoBadge = p.estado === 'Anulado' 
+            ? '<span class="text-accent-red font-bold" style="font-size:0.8rem;"><i class="ph-bold ph-x-circle"></i> Anulado</span>'
+            : '<span style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">' + (p.estado || 'Completado') + '</span>';
+        
+        const formaEntregaBadge = p.formaEntrega === 'Retiro en Tienda'
+            ? `<span style="font-size: 0.78rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 0.2rem 0.45rem; border-radius: 4px;"><i class="ph-bold ph-storefront"></i> ${p.formaEntrega}</span>`
+            : `<span style="font-size: 0.78rem; background: rgba(245, 158, 11, 0.15); color: #fbbf24; padding: 0.2rem 0.45rem; border-radius: 4px;"><i class="ph-bold ph-truck"></i> ${p.formaEntrega || 'Envío a Domicilio'}</span>`;
+
+        const direccionTexto = p.direccion_entrega ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-top: 3px;" title="${p.direccion_entrega}"><i class="ph-bold ph-map-pin"></i> ${p.direccion_entrega}</div>` : '';
+        const contactoTexto = (p.telefono ? `<div><i class="ph-bold ph-phone"></i> ${p.telefono}</div>` : '') + (p.email ? `<div style="font-size: 0.75rem; color: #94a3b8;"><i class="ph-bold ph-envelope"></i> ${p.email}</div>` : '');
+
+        return `
+            <tr>
+                <td><strong style="color: #f97316;">${p.codigo}</strong></td>
+                <td style="font-size: 0.82rem;">${p.fecha}</td>
+                <td><strong>${p.cliente || 'Invitado'}</strong></td>
+                <td style="font-size: 0.82rem;">${contactoTexto || '<span class="text-muted">N/D</span>'}</td>
+                <td>
+                    ${formaEntregaBadge}
+                    ${direccionTexto}
+                </td>
+                <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${p.metodo || 'Efectivo'}</span></td>
+                <td style="font-weight: 700; color: var(--accent-green); font-size: 0.95rem;">$${p.total.toFixed(2)}</td>
+                <td>${estadoBadge}</td>
+                <td style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                    <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="verComprobantePedidoWeb(${p.id})">
+                        <i class="ph-bold ph-receipt"></i> Ver Factura
+                    </button>
+                    ${p.estado === 'Anulado' ? '' : `
+                    <button class="btn btn-danger icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="anularPedidoWeb(${p.id})">
+                        <i class="ph-bold ph-trash"></i> Anular
+                    </button>
+                    `}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
 function filterPedidosWebTable(query) {
     const q = query.toLowerCase();
-    const web = ventasCache.filter(v => v.codigo_venta.startsWith('WEB-'));
-    const filtrados = web.filter(v => 
-        v.codigo_venta.toLowerCase().includes(q) || 
-        (v.cliente && v.cliente.toLowerCase().includes(q))
+    const filtrados = pedidosWebCache.filter(p => 
+        (p.codigo && p.codigo.toLowerCase().includes(q)) || 
+        (p.cliente && p.cliente.toLowerCase().includes(q)) ||
+        (p.email && p.email.toLowerCase().includes(q)) ||
+        (p.telefono && p.telefono.toLowerCase().includes(q)) ||
+        (p.direccion_entrega && p.direccion_entrega.toLowerCase().includes(q)) ||
+        (p.formaEntrega && p.formaEntrega.toLowerCase().includes(q))
     );
     renderPedidosWebTable(filtrados);
+}
+
+function verComprobantePedidoWeb(pedidoId) {
+    const pedido = pedidosWebCache.find(p => p.id === pedidoId);
+    if (!pedido) {
+        alert('Pedido web no encontrado en memoria.');
+        return;
+    }
+
+    const adaptada = {
+        id: pedido.id,
+        codigo_venta: pedido.codigo,
+        fecha: pedido.fecha,
+        cliente: `${pedido.cliente || 'Invitado'}${pedido.telefono ? ' (Tel: ' + pedido.telefono + ')' : ''}`,
+        vendedor: 'Tienda Online (Portal Web)',
+        forma_pago: `${pedido.metodo || 'Efectivo'} | ${pedido.formaEntrega || 'Envío'}`,
+        total: pedido.total,
+        detalles: (pedido.detalles || []).map(d => ({
+            producto_nombre: d.producto_nombre,
+            cantidad: d.cantidad,
+            precio_unitario: d.precioUnitario || d.precio_unitario || 0,
+            subtotal: d.subtotal || 0
+        }))
+    };
+
+    renderTicketComprobante(adaptada, false);
+    openModal('modal-comprobante');
+}
+
+async function anularPedidoWeb(pedidoId) {
+    const pedido = pedidosWebCache.find(p => p.id === pedidoId);
+    const codigo = pedido ? pedido.codigo : `#${pedidoId}`;
+    
+    if (!confirm(`¿Estás seguro de que deseas anular el Pedido Web ${codigo}?\nSe restituirá el inventario de los productos y se registrará la reversión contable correspondiente.`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/pedidos_web/${pedidoId}/anular`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ ' + data.mensaje);
+            loadPedidosWeb();
+            if (typeof loadPOSProducts === 'function') loadPOSProducts();
+            if (typeof loadInventario === 'function') loadInventario();
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+        } else {
+            alert('❌ ' + (data.error || 'Error al anular el pedido web.'));
+        }
+    } catch (err) {
+        console.error('Error al anular pedido web:', err);
+        alert('Error de conexión al procesar la anulación.');
+    }
+}
+
+function loadHistorialYWeb() {
+    loadHistorialVentas();
+    loadPedidosWeb();
 }
 
 // --- DEVOLUCION DE PRODUCTOS ---
@@ -1550,7 +1646,10 @@ async function loadComprasYProveedores() {
                         <td><strong>${p.nombre}</strong> ${!p.activo ? '<span class="badge" style="background:#dc3545;color:white;font-size:10px;padding:2px 4px;border-radius:4px;margin-left:5px;">Inactivo</span>' : ''}</td>
                         <td>${p.contacto || 'N/A'}</td>
                         <td>${p.telefono || 'N/A'}</td>
-                        <td>
+                        <td style="display: flex; gap: 5px;">
+                            <button class="btn btn-secondary btn-sm" onclick="editarProveedor(${p.id})" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">
+                                <i class="ph-bold ph-pencil-simple"></i> Editar
+                            </button>
                             <button class="btn ${btnClass} btn-sm" onclick="toggleProveedorEstado(${p.id}, ${!p.activo})" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">
                                 <i class="ph-bold ${btnIcon}"></i> ${btnText}
                             </button>
@@ -1610,21 +1709,27 @@ async function guardarCompra(e) {
 
 async function guardarProveedor(e) {
     e.preventDefault();
+    const id = document.getElementById('prov-id').value;
     const nombre = document.getElementById('prov-nombre').value;
     const contacto = document.getElementById('prov-contacto').value;
     const telefono = document.getElementById('prov-telefono').value;
 
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/proveedores/${id}` : '/api/proveedores';
+
     try {
-        const res = await fetch('/api/proveedores', {
-            method: 'POST',
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nombre, contacto, telefono })
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('¡Proveedor registrado!');
+            alert(id ? '¡Proveedor actualizado!' : '¡Proveedor registrado!');
             closeModal('modal-proveedor');
             document.getElementById('form-proveedor').reset();
+            document.getElementById('prov-id').value = '';
+            document.getElementById('modal-proveedor-title').innerHTML = '<i class="ph-bold ph-user-plus"></i> Registrar / Editar Proveedor';
             loadComprasYProveedores();
         } else {
             alert(data.error || 'Error al guardar proveedor.');
@@ -1632,6 +1737,22 @@ async function guardarProveedor(e) {
     } catch (err) {
         console.error('Error:', err);
     }
+}
+
+function editarProveedor(id) {
+    const p = proveedoresCache.find(prov => prov.id === id);
+    if (!p) return;
+    document.getElementById('prov-id').value = p.id;
+    document.getElementById('prov-nombre').value = p.nombre;
+    document.getElementById('prov-contacto').value = p.contacto;
+    document.getElementById('prov-telefono').value = p.telefono;
+    
+    const title = document.getElementById('modal-proveedor-title');
+    if (title) {
+        title.innerHTML = '<i class="ph-bold ph-pencil-simple"></i> Editar Proveedor';
+    }
+    
+    openModal('modal-proveedor');
 }
 
 // ==============================================================================

@@ -107,6 +107,28 @@ window.mostrarMensaje = mostrarMensaje;
 window.mostrarToast = mostrarToast;
 window.showToast = mostrarToast;
 
+// =========================================================================
+// FORMATEADORES NUMÉRICOS ESTANDARIZADOS (Punto decimal y comas de miles)
+// =========================================================================
+function formatMoneda(val, simbolo = '$ ') {
+    if (val === null || val === undefined || isNaN(val)) return `${simbolo}0.00`;
+    return `${simbolo}` + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatCantidad(val, sufijo = '') {
+    if (val === null || val === undefined || isNaN(val)) return `0${sufijo ? ' ' + sufijo : ''}`;
+    return Number(val).toLocaleString('en-US') + (sufijo ? ' ' + sufijo : '');
+}
+
+function formatPorcentaje(val) {
+    if (val === null || val === undefined || isNaN(val)) return '0.0%';
+    return Number(val).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + '%';
+}
+
+window.formatMoneda = formatMoneda;
+window.formatCantidad = formatCantidad;
+window.formatPorcentaje = formatPorcentaje;
+
 // INTERCEPTOR UNIVERSAL DE ALERT:
 // Nunca más saldrá la ventana nativa "192.168.0.7 dice"
 if (!window._nativeAlert) {
@@ -145,6 +167,10 @@ let cartPOS = []; // [{"producto_id": 1, "nombre": "...", "precio": 15.50, "cant
 // Instancias de Chart.js
 let chartTendenciaInstance = null;
 let chartTopProdsInstance = null;
+let chartCategoriaInstance = null;
+let chartMetodosPagoInstance = null;
+let _reporteDataCache = null;
+let _filtroABCActual = 'todos';
 let ventaSeleccionadaActual = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1638,128 +1664,215 @@ async function guardarProveedor(e) {
 // MÁ"DULO 4: REPORTES Y ANÁLISIS CON CHART.JS
 // ==============================================================================
 
-async function loadReportesContabilidad() {
+function aplicarFiltroReportes() {
+    const mesEl = document.getElementById('rep-filtro-mes');
+    const anioEl = document.getElementById('rep-filtro-anio');
+    const mes = mesEl ? mesEl.value : 'todos';
+    const anio = anioEl ? anioEl.value : '2026';
+    loadReportesContabilidad(mes, anio);
+}
+
+async function loadReportesContabilidad(mes = null, anio = null) {
     try {
-        const res = await fetch('/api/reportes');
+        const mesSelect = document.getElementById('rep-filtro-mes');
+        const anioSelect = document.getElementById('rep-filtro-anio');
+
+        if (mes === null && mesSelect) mes = mesSelect.value;
+        if (anio === null && anioSelect) anio = anioSelect.value;
+
+        // Construir query string con filtro mensual y anual
+        let queryParams = [];
+        if (mes && mes !== 'todos') queryParams.push(`mes=${encodeURIComponent(mes)}`);
+        if (anio && anio !== 'todos') queryParams.push(`anio=${encodeURIComponent(anio)}`);
+        const url = '/api/reportes' + (queryParams.length > 0 ? `?${queryParams.join('&')}` : '');
+
+        const res = await fetch(url);
         const data = await res.json();
 
         if (!res.ok) {
-            alert(data.error || 'No tienes acceso a los reportes.');
+            mostrarMensaje({ titulo: 'Error en Estadísticas', texto: data.error || 'No tienes permisos o no se pudieron cargar los datos.', icono: 'error' });
             return;
         }
-        
-        cargarSesionesCaja();
 
-        document.getElementById('rep-ingresos').textContent = `$${data.ventas_totales_monto.toFixed(2)}`;
-        document.getElementById('rep-unidades-vendidas').textContent = `${data.unidades_vendidas_total || 0} unidades vendidas`;
-        document.getElementById('rep-egresos').textContent = `$${data.compras_totales_monto.toFixed(2)}`;
-        document.getElementById('rep-margen').textContent = `$${data.margen_bruto_estimado.toFixed(2)}`;
-        document.getElementById('rep-rotacion').textContent = `${data.rotacion_inventario || 0.00}x`;
+        _reporteDataCache = data;
 
-        // Render Gráficos Chart.js
-        renderCharts(data);
+        // 1. Período Activo
+        const periodoTexto = (data.periodo && data.periodo.texto) ? data.periodo.texto : 'Histórico Completo';
+        const elPeriodoTexto = document.getElementById('rep-periodo-activo-texto');
+        if (elPeriodoTexto) elPeriodoTexto.textContent = periodoTexto;
 
-        // Render Tabla Top Productos
-        const tbodyTop = document.getElementById('tbody-top-productos');
-        if (tbodyTop) {
-            if (!data.top_productos || data.top_productos.length === 0) {
-                tbodyTop.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Sin datos de ventas.</td></tr>`;
-            } else {
-                tbodyTop.innerHTML = data.top_productos.slice(0, 5).map((p, idx) => `
-                    <tr>
-                        <td><strong>#${idx + 1}</strong></td>
-                        <td>${p.nombre}</td>
-                        <td><strong style="color: var(--primary);">${p.cantidad_vendida}</strong> unid</td>
-                        <td style="font-weight: 700; color: var(--accent-green);">$${p.monto_total.toFixed(2)}</td>
-                    </tr>
-                `).join('');
-            }
+        // 2. Indicadores Clave de Rendimiento (KPIs) formateados con comas y puntos
+        const kpis = data.kpis || {};
+
+        const elIngresos = document.getElementById('rep-ingresos');
+        if (elIngresos) elIngresos.textContent = formatMoneda(kpis.ventas_totales_monto ?? data.ventas_totales_monto);
+
+        const elUnidades = document.getElementById('rep-unidades-vendidas');
+        if (elUnidades) {
+            const uTot = kpis.unidades_vendidas_total ?? data.unidades_vendidas_total ?? 0;
+            const cTot = kpis.ventas_totales_conteo ?? data.ventas_totales_conteo ?? 0;
+            elUnidades.textContent = `${formatCantidad(uTot, 'unidades')} | ${formatCantidad(cTot, 'ventas')}`;
         }
 
-        // Render Tabla Stock Bajo
-        const tbodyStock = document.getElementById('tbody-stock-bajo-reporte');
-        if (tbodyStock) {
-            if (!data.productos_bajo_stock || data.productos_bajo_stock.length === 0) {
-                tbodyStock.innerHTML = `<tr><td colspan="4" class="text-center text-accent-green">¡Excelente! Todo el stock está en niveles óptimos.</td></tr>`;
-            } else {
-                tbodyStock.innerHTML = data.productos_bajo_stock.map(p => `
-                    <tr>
-                        <td><strong>${p.codigo}</strong></td>
-                        <td>${p.nombre}</td>
-                        <td><strong style="color: var(--accent-red);">${p.stock}</strong> unid</td>
-                        <td>${p.min_stock} unid</td>
-                    </tr>
-                `).join('');
-            }
+        const elCosto = document.getElementById('rep-costo-ventas');
+        if (elCosto) elCosto.textContent = formatMoneda(kpis.costo_ventas_monto ?? 0);
+
+        const elCompras = document.getElementById('rep-egresos-compras');
+        if (elCompras) {
+            const comMonto = kpis.compras_totales_monto ?? data.compras_totales_monto ?? 0;
+            elCompras.textContent = `Compras del período: ${formatMoneda(comMonto)}`;
         }
 
+        const elMargen = document.getElementById('rep-margen');
+        if (elMargen) elMargen.textContent = formatMoneda(kpis.margen_bruto_monto ?? data.margen_bruto_estimado ?? 0);
+
+        const elMargenPct = document.getElementById('rep-margen-pct');
+        if (elMargenPct) {
+            const mPct = kpis.margen_bruto_porcentaje ?? 0;
+            elMargenPct.textContent = `Margen: ${formatPorcentaje(mPct)}`;
+        }
+
+        const elTicket = document.getElementById('rep-ticket-promedio');
+        if (elTicket) elTicket.textContent = formatMoneda(kpis.ticket_promedio ?? 0);
+
+        const elTicketConteo = document.getElementById('rep-ticket-conteo');
+        if (elTicketConteo) {
+            const vConteo = kpis.ventas_totales_conteo ?? data.ventas_totales_conteo ?? 0;
+            elTicketConteo.textContent = `Ticket medio (${formatCantidad(vConteo)} comprobantes)`;
+        }
+
+        const elRotacion = document.getElementById('rep-rotacion');
+        if (elRotacion) {
+            const rotVal = Number(kpis.rotacion_inventario ?? data.rotacion_inventario ?? 0);
+            elRotacion.textContent = `${rotVal.toFixed(2)}x`;
+        }
+
+        const elRotacionSub = document.getElementById('rep-rotacion-subtext');
+        if (elRotacionSub) {
+            const valInv = kpis.valor_inventario_costo ?? 0;
+            elRotacionSub.textContent = `Inv. al costo: ${formatMoneda(valInv)}`;
+        }
+
+        // Alertas en el KPI
+        const desabastList = (data.alertas && data.alertas.desabastecimiento) ? data.alertas.desabastecimiento : [];
+        const sobrestockList = (data.alertas && data.alertas.sobrestock) ? data.alertas.sobrestock : [];
+        const totalAlertas = desabastList.length + sobrestockList.length;
+
+        const elAlertasTot = document.getElementById('rep-alertas-total');
+        if (elAlertasTot) elAlertasTot.textContent = formatCantidad(totalAlertas);
+
+        const elAlertasDet = document.getElementById('rep-alertas-detalle');
+        if (elAlertasDet) {
+            elAlertasDet.textContent = `${formatCantidad(desabastList.length)} desabast. | ${formatCantidad(sobrestockList.length)} sobre-stock`;
+        }
+
+        // 3. Renderizar Gráficos Chart.js
+        renderChartsEstadisticas(data);
+
+        // 4. Renderizar Matriz de Rotación ABC
+        renderTablaRotacionABC(data.rotacion_abc);
+
+        // 5. Renderizar Alertas de Existencias
+        renderAlertasExistencias(data.alertas);
+
+        // 6. Renderizar Rendimiento por Categoría
+        renderTablaCategorias(data.categorias_analisis);
+
+        // 7. Cargar Sesiones de Caja operativas
+        if (typeof cargarSesionesCaja === 'function') cargarSesionesCaja();
 
     } catch (err) {
-        console.error('Error reportes:', err);
+        console.error('Error al cargar reportes y estadísticas:', err);
     }
 }
 
-function renderCharts(data) {
+// ------------------------------------------------------------------------------
+// RENDERIZADO DE GRÁFICOS DINÁMICOS CON CHART.JS
+// ------------------------------------------------------------------------------
+function renderChartsEstadisticas(data) {
     if (typeof Chart === 'undefined') return;
 
-    // 1. Chart Tendencia Ventas
+    // 1. Gráfico de Tendencia Cronológica de Ventas (Línea)
     const ctxTendencia = document.getElementById('chart-ventas-tendencia');
     if (ctxTendencia) {
         if (chartTendenciaInstance) chartTendenciaInstance.destroy();
 
-        const labels = Object.keys(data.ventas_por_fecha || {});
-        const values = Object.values(data.ventas_por_fecha || {});
+        const listaTendencia = data.tendencia_lista || [];
+        const labels = listaTendencia.length > 0 
+            ? listaTendencia.map(item => item.fecha)
+            : Object.keys(data.ventas_por_fecha || {});
+        const montos = listaTendencia.length > 0
+            ? listaTendencia.map(item => item.monto)
+            : Object.values(data.ventas_por_fecha || {});
 
         chartTendenciaInstance = new Chart(ctxTendencia, {
             type: 'line',
             data: {
-                labels: labels.length > 0 ? labels : ['Sin datos'],
+                labels: labels.length > 0 ? labels : ['Sin ventas en período'],
                 datasets: [{
                     label: 'Ventas ($)',
-                    data: values.length > 0 ? values : [0],
+                    data: montos.length > 0 ? montos : [0],
                     borderColor: '#f59e0b',
                     backgroundColor: 'rgba(245, 158, 11, 0.15)',
                     borderWidth: 3,
                     fill: true,
                     tension: 0.35,
-                    pointBackgroundColor: '#f59e0b'
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: '#ffffff',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` Ventas: ${formatMoneda(ctx.raw)}`
+                        }
+                    }
+                },
                 scales: {
-                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#243049' } },
-                    y: { ticks: { color: '#94a3b8' }, grid: { color: '#243049' } }
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 10 } },
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 10 },
+                            callback: (val) => formatMoneda(val)
+                        },
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    }
                 }
             }
         });
     }
 
-    // 2. Chart Top Productos (Pie/Donut)
-    const ctxTop = document.getElementById('chart-top-productos');
-    if (ctxTop) {
-        if (chartTopProdsInstance) chartTopProdsInstance.destroy();
+    // 2. Gráfico de Distribución por Categoría (Doughnut)
+    const ctxCategoria = document.getElementById('chart-ventas-categoria');
+    if (ctxCategoria) {
+        if (chartCategoriaInstance) chartCategoriaInstance.destroy();
 
-        const topList = (data.top_productos || []).slice(0, 5);
-        const labels = topList.map(p => p.nombre.length > 20 ? p.nombre.substring(0, 20) + '...' : p.nombre);
-        const values = topList.map(p => p.cantidad_vendida);
+        const cats = data.categorias_analisis || [];
+        const catLabels = cats.map(c => c.categoria);
+        const catValores = cats.map(c => c.total_ventas);
 
-        chartTopProdsInstance = new Chart(ctxTop, {
+        chartCategoriaInstance = new Chart(ctxCategoria, {
             type: 'doughnut',
             data: {
-                labels: labels.length > 0 ? labels : ['Sin datos'],
+                labels: catLabels.length > 0 ? catLabels : ['Sin registros'],
                 datasets: [{
-                    data: values.length > 0 ? values : [1],
+                    data: catValores.length > 0 ? catValores : [1],
                     backgroundColor: [
-                        '#f59e0b',
-                        '#38bdf8',
-                        '#10b981',
-                        '#a855f7',
-                        '#ef4444'
+                        '#38bdf8', '#10b981', '#f59e0b', '#a855f7',
+                        '#ec4899', '#6366f1', '#14b8a6', '#f97316'
                     ],
-                    borderWidth: 0
+                    borderWidth: 2,
+                    borderColor: '#1e293b'
                 }]
             },
             options: {
@@ -1768,13 +1881,556 @@ function renderCharts(data) {
                 plugins: {
                     legend: {
                         position: 'right',
-                        labels: { color: '#f1f5f9', font: { size: 11 } }
+                        labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.label}: ${formatMoneda(ctx.raw)}`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Gráfico de Métodos de Pago (Bar / Doughnut)
+    const ctxMetodos = document.getElementById('chart-metodos-pago');
+    if (ctxMetodos) {
+        if (chartMetodosPagoInstance) chartMetodosPagoInstance.destroy();
+
+        const metodos = data.metodos_pago || [];
+        const metLabels = metodos.map(m => m.metodo);
+        const metTotales = metodos.map(m => m.total);
+
+        chartMetodosPagoInstance = new Chart(ctxMetodos, {
+            type: 'doughnut',
+            data: {
+                labels: metLabels.length > 0 ? metLabels : ['Sin datos'],
+                datasets: [{
+                    data: metTotales.length > 0 ? metTotales : [1],
+                    backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'],
+                    borderWidth: 2,
+                    borderColor: '#1e293b'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.label}: ${formatMoneda(ctx.raw)}`
+                        }
                     }
                 }
             }
         });
     }
 }
+
+// ------------------------------------------------------------------------------
+// TABLA Y FILTROS DE EVALUACIÓN DE ROTACIÓN DE INVENTARIO (ABC)
+// ------------------------------------------------------------------------------
+function renderTablaRotacionABC(rotacionData) {
+    if (!rotacionData) return;
+
+    const conteoA = rotacionData.conteo_clase_a || 0;
+    const conteoB = rotacionData.conteo_clase_b || 0;
+    const conteoC = rotacionData.conteo_clase_c || 0;
+    const total = rotacionData.total_productos || (conteoA + conteoB + conteoC);
+
+    const elTotal = document.getElementById('count-abc-todos');
+    const elA = document.getElementById('count-abc-a');
+    const elB = document.getElementById('count-abc-b');
+    const elC = document.getElementById('count-abc-c');
+
+    if (elTotal) elTotal.textContent = formatCantidad(total);
+    if (elA) elA.textContent = formatCantidad(conteoA);
+    if (elB) elB.textContent = formatCantidad(conteoB);
+    if (elC) elC.textContent = formatCantidad(conteoC);
+
+    const prods = rotacionData.productos || [];
+    renderFilasTablaABC(prods);
+}
+
+function renderFilasTablaABC(productos) {
+    const tbody = document.getElementById('tbody-rotacion-abc');
+    if (!tbody) return;
+
+    if (!productos || productos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted" style="padding: 2rem;">No se encontraron repuestos con los criterios seleccionados.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = productos.map(p => {
+        let badgeClase = '';
+        if (p.clase_abc === 'A') {
+            badgeClase = `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-green); font-weight: 800; border: 1px solid rgba(16, 185, 129, 0.4); padding: 3px 8px; border-radius: 4px;">A - Alta</span>`;
+        } else if (p.clase_abc === 'B') {
+            badgeClase = `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: var(--warning); font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.4); padding: 3px 8px; border-radius: 4px;">B - Media</span>`;
+        } else {
+            badgeClase = `<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red); font-weight: 800; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px;">C - Estancado</span>`;
+        }
+
+        const stockCritico = p.stock <= p.min_stock;
+        const stockStyle = stockCritico ? 'color: var(--accent-red); font-weight: 700;' : 'font-weight: 600;';
+
+        return `
+            <tr>
+                <td>${badgeClase}</td>
+                <td><code style="font-size: 0.82rem;">${p.codigo || '-'}</code></td>
+                <td><strong>${p.nombre}</strong></td>
+                <td><span style="font-size: 0.82rem; color: var(--text-muted);">${p.categoria || '-'}</span></td>
+                <td style="text-align: right; ${stockStyle}">${formatCantidad(p.stock)} ${stockCritico ? '⚠️' : ''}</td>
+                <td style="text-align: right; color: var(--text-muted);">${formatCantidad(p.min_stock)}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--primary);">${formatCantidad(p.unidades_vendidas, 'unid')}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(p.ingreso_generado)}</td>
+                <td style="text-align: center; font-weight: 600;">${(p.rotacion || 0).toFixed(2)}x</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filtrarTablaABC(clase) {
+    _filtroABCActual = clase;
+
+    // Actualizar botones de filtro
+    const botones = ['todos', 'a', 'b', 'c'];
+    botones.forEach(b => {
+        const btn = document.getElementById(`btn-filtro-abc-${b}`);
+        if (btn) {
+            if (b === clase.toLowerCase() || (b === 'todos' && clase === 'todos')) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+    });
+
+    aplicarFiltroLocalTablaABC();
+}
+
+function filtrarTablaABCPorTexto(texto) {
+    aplicarFiltroLocalTablaABC();
+}
+
+function aplicarFiltroLocalTablaABC() {
+    if (!_reporteDataCache || !_reporteDataCache.rotacion_abc) return;
+
+    let prods = _reporteDataCache.rotacion_abc.productos || [];
+
+    // Filtro por clase A, B, C
+    if (_filtroABCActual !== 'todos') {
+        prods = prods.filter(p => p.clase_abc === _filtroABCActual);
+    }
+
+    // Filtro por texto de búsqueda
+    const busqInput = document.getElementById('busqueda-tabla-abc');
+    const busq = busqInput ? busqInput.value.trim().toLowerCase() : '';
+
+    if (busq) {
+        prods = prods.filter(p =>
+            (p.nombre && p.nombre.toLowerCase().includes(busq)) ||
+            (p.codigo && p.codigo.toLowerCase().includes(busq)) ||
+            (p.categoria && p.categoria.toLowerCase().includes(busq))
+        );
+    }
+
+    renderFilasTablaABC(prods);
+}
+
+// ------------------------------------------------------------------------------
+// ALERTAS CONSOLIDADAS: DESABASTECIMIENTO Y SOBRE-STOCK
+// ------------------------------------------------------------------------------
+function renderAlertasExistencias(alertas) {
+    if (!alertas) return;
+
+    // 1. Alertas Críticas por Desabastecimiento
+    const desabastList = alertas.desabastecimiento || [];
+    const elBadgeDesabast = document.getElementById('badge-conteo-desabastecimiento');
+    if (elBadgeDesabast) elBadgeDesabast.textContent = `${formatCantidad(desabastList.length)} productos`;
+
+    const tbodyDesabast = document.getElementById('tbody-alertas-desabastecimiento');
+    if (tbodyDesabast) {
+        if (desabastList.length === 0) {
+            tbodyDesabast.innerHTML = `<tr><td colspan="4" class="text-center text-accent-green" style="padding: 1.25rem;">¡Excelente! Ningún repuesto de alta/media rotación está desabastecido.</td></tr>`;
+        } else {
+            tbodyDesabast.innerHTML = desabastList.map(a => {
+                const esAgotado = a.stock_actual <= 0;
+                const badgeEstado = esAgotado
+                    ? `<span class="badge" style="background: #dc2626; color: #ffffff; font-weight: 700;">Agotado (0)</span>`
+                    : `<span class="badge" style="background: #ea580c; color: #ffffff; font-weight: 700;">Bajo Mínimo</span>`;
+                const claseColor = a.clase_abc === 'A' ? 'var(--accent-green)' : 'var(--warning)';
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>${a.nombre}</strong><br>
+                            <small class="text-muted">SKU: ${a.codigo} | Cat: ${a.categoria}</small>
+                        </td>
+                        <td><span style="font-weight: 800; color: ${claseColor};">Clase ${a.clase_abc}</span></td>
+                        <td style="text-align: center; font-weight: 800; color: var(--accent-red);">${formatCantidad(a.stock_actual)}</td>
+                        <td style="text-align: center; color: var(--text-muted);">${formatCantidad(a.stock_minimo)}</td>
+                        <td>${badgeEstado}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    // 2. Advertencias de Sobre-Stock / Inventario Obsoleto
+    const sobrestockList = alertas.sobrestock || [];
+    const elBadgeSobrestock = document.getElementById('badge-conteo-sobrestock');
+    if (elBadgeSobrestock) elBadgeSobrestock.textContent = `${formatCantidad(sobrestockList.length)} productos`;
+
+    const tbodySobrestock = document.getElementById('tbody-alertas-sobrestock');
+    if (tbodySobrestock) {
+        if (sobrestockList.length === 0) {
+            tbodySobrestock.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding: 1.25rem;">No se detectó acumulación de inventario ocioso en el período.</td></tr>`;
+        } else {
+            tbodySobrestock.innerHTML = sobrestockList.map(s => {
+                return `
+                    <tr>
+                        <td>
+                            <strong>${s.nombre}</strong><br>
+                            <small class="text-muted">SKU: ${s.codigo} | Cat: ${s.categoria}</small>
+                        </td>
+                        <td style="text-align: center; font-weight: 700; color: var(--warning);">${formatCantidad(s.stock_actual)}</td>
+                        <td style="text-align: right;">${formatMoneda(s.costo)}</td>
+                        <td style="text-align: right; font-weight: 800; color: var(--accent-red);">${formatMoneda(s.valor_inmovilizado)}</td>
+                        <td><span class="badge" style="background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 700;">Capital Inmovilizado</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------
+// RENDIMIENTO POR CATEGORÍAS
+// ------------------------------------------------------------------------------
+function renderTablaCategorias(categorias) {
+    const tbody = document.getElementById('tbody-rendimiento-categorias');
+    if (!tbody) return;
+
+    if (!categorias || categorias.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Sin datos de ventas por categoría en el período.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = categorias.map(c => `
+        <tr>
+            <td><strong>${c.categoria}</strong></td>
+            <td style="text-align: center; font-weight: 600;">${formatCantidad(c.unidades)}</td>
+            <td style="text-align: right; font-weight: 700; color: var(--primary);">${formatMoneda(c.total_ventas)}</td>
+            <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(c.margen)}</td>
+            <td style="text-align: right; font-weight: 600; color: var(--accent-green);">${formatPorcentaje(c.margen_porcentaje)}</td>
+        </tr>
+    `).join('');
+}
+
+// ------------------------------------------------------------------------------
+// COMPILACIÓN DEL INFORME EJECUTIVO ESTADÍSTICO CONSOLIDADO
+// ------------------------------------------------------------------------------
+function compilarInformeEjecutivo() {
+    if (!_reporteDataCache) {
+        mostrarToast('Primero cargue los datos del informe seleccionando un período.', 'warning');
+        return;
+    }
+
+    const d = _reporteDataCache;
+    const k = d.kpis || {};
+    const ahora = new Date();
+    const fechaEmision = ahora.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) + ' ' + ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    // 1. Encabezado y Período
+    const elFecha = document.getElementById('inf-fecha-emision');
+    if (elFecha) elFecha.textContent = fechaEmision;
+
+    const elPeriodo = document.getElementById('inf-periodo-texto');
+    if (elPeriodo) elPeriodo.textContent = (d.periodo && d.periodo.texto) ? d.periodo.texto : 'Histórico Completo';
+
+    // 2. KPIs Ejecutivos
+    const elVentas = document.getElementById('inf-kpi-ventas');
+    if (elVentas) elVentas.textContent = formatMoneda(k.ventas_totales_monto || 0);
+
+    const elTrans = document.getElementById('inf-kpi-transacciones');
+    if (elTrans) elTrans.textContent = `${formatCantidad(k.ventas_totales_conteo || 0)} comprobantes | ${formatCantidad(k.unidades_vendidas_total || 0)} unidades`;
+
+    const elCosto = document.getElementById('inf-kpi-costo');
+    if (elCosto) elCosto.textContent = formatMoneda(k.costo_ventas_monto || 0);
+
+    const elCompras = document.getElementById('inf-kpi-compras');
+    if (elCompras) elCompras.textContent = `Compras en período: ${formatMoneda(k.compras_totales_monto || 0)}`;
+
+    const elMargen = document.getElementById('inf-kpi-margen');
+    if (elMargen) elMargen.textContent = formatMoneda(k.margen_bruto_monto || 0);
+
+    const elMargenPct = document.getElementById('inf-kpi-margen-pct');
+    if (elMargenPct) elMargenPct.textContent = `Margen Bruto: ${formatPorcentaje(k.margen_bruto_porcentaje || 0)}`;
+
+    const elTicket = document.getElementById('inf-kpi-ticket');
+    if (elTicket) elTicket.textContent = formatMoneda(k.ticket_promedio || 0);
+
+    const elRotacion = document.getElementById('inf-kpi-rotacion');
+    if (elRotacion) elRotacion.textContent = `${(Number(k.rotacion_inventario) || 0).toFixed(2)}x`;
+
+    const elInv = document.getElementById('inf-kpi-inventario');
+    if (elInv) elInv.textContent = formatMoneda(k.valor_inventario_costo || 0);
+
+    const elStockTot = document.getElementById('inf-kpi-stock-total');
+    if (elStockTot) elStockTot.textContent = `${formatCantidad(k.stock_total_actual || 0)} unidades en stock físico`;
+
+    // 3. Tabla Categorías del Informe
+    const tbodyCat = document.getElementById('inf-tbody-categorias');
+    if (tbodyCat) {
+        const cats = d.categorias_analisis || [];
+        if (cats.length === 0) {
+            tbodyCat.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding: 10px;">Sin transacciones por categoría.</td></tr>`;
+        } else {
+            tbodyCat.innerHTML = cats.map(c => `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 5px 8px; font-weight: 700;">${c.categoria}</td>
+                    <td style="padding: 5px 8px; text-align: center;">${formatCantidad(c.unidades)}</td>
+                    <td style="padding: 5px 8px; text-align: right; font-weight: 700;">${formatMoneda(c.total_ventas)}</td>
+                    <td style="padding: 5px 8px; text-align: right;">${formatMoneda(c.costo_ventas)}</td>
+                    <td style="padding: 5px 8px; text-align: right; font-weight: 700; color: #059669;">${formatMoneda(c.margen)}</td>
+                    <td style="padding: 5px 8px; text-align: right; font-weight: 700; color: #059669;">${formatPorcentaje(c.margen_porcentaje)}</td>
+                    <td style="padding: 5px 8px; text-align: right; color: #475569;">${formatPorcentaje(c.participacion_porcentaje)}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    // 4. Métodos de Pago del Informe
+    const contMet = document.getElementById('inf-metodos-container');
+    if (contMet) {
+        const metodos = d.metodos_pago || [];
+        if (metodos.length === 0) {
+            contMet.innerHTML = `<span style="font-size: 0.8rem; color: #64748b;">Sin movimientos de pago registrados.</span>`;
+        } else {
+            contMet.innerHTML = metodos.map(m => `
+                <div style="flex: 1; min-width: 140px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.6rem 0.8rem;">
+                    <div style="font-size: 0.72rem; color: #64748b; font-weight: 600;">${m.metodo}</div>
+                    <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">${formatMoneda(m.total)}</div>
+                    <div style="font-size: 0.7rem; color: #475569;">${formatCantidad(m.transacciones)} ventas (${formatPorcentaje(m.porcentaje)})</div>
+                </div>
+            `).join('');
+        }
+    }
+
+    // 5. Contadores de Rotación ABC
+    const rABC = d.rotacion_abc || {};
+    const elCntA = document.getElementById('inf-abc-count-a');
+    const elCntB = document.getElementById('inf-abc-count-b');
+    const elCntC = document.getElementById('inf-abc-count-c');
+    if (elCntA) elCntA.textContent = formatCantidad(rABC.conteo_clase_a || 0);
+    if (elCntB) elCntB.textContent = formatCantidad(rABC.conteo_clase_b || 0);
+    if (elCntC) elCntC.textContent = formatCantidad(rABC.conteo_clase_c || 0);
+
+    // 6. Alertas Tempranas en el Informe
+    const tbodyDes = document.getElementById('inf-tbody-desabastecimiento');
+    if (tbodyDes) {
+        const desList = (d.alertas && d.alertas.desabastecimiento) ? d.alertas.desabastecimiento : [];
+        if (desList.length === 0) {
+            tbodyDes.innerHTML = `<tr><td colspan="4" style="color: #059669; padding: 8px;">Sin alertas críticas. Stock balanceado.</td></tr>`;
+        } else {
+            tbodyDes.innerHTML = desList.map(item => `
+                <tr style="border-bottom: 1px solid #fee2e2;">
+                    <td style="padding: 4px 6px;"><strong>${item.nombre}</strong> (${item.codigo})</td>
+                    <td style="padding: 4px 6px; color: #dc2626; font-weight: 700;">${formatCantidad(item.stock_actual)}</td>
+                    <td style="padding: 4px 6px;">${formatCantidad(item.stock_minimo)}</td>
+                    <td style="padding: 4px 6px; color: #dc2626; font-weight: 700;">${item.severidad}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    const tbodySob = document.getElementById('inf-tbody-sobrestock');
+    if (tbodySob) {
+        const sobList = (d.alertas && d.alertas.sobrestock) ? d.alertas.sobrestock : [];
+        if (sobList.length === 0) {
+            tbodySob.innerHTML = `<tr><td colspan="3" style="color: #059669; padding: 8px;">Sin advertencias de capital inmovilizado.</td></tr>`;
+        } else {
+            tbodySob.innerHTML = sobList.map(item => `
+                <tr style="border-bottom: 1px solid #fef3c7;">
+                    <td style="padding: 4px 6px;"><strong>${item.nombre}</strong> (${item.codigo})</td>
+                    <td style="padding: 4px 6px; font-weight: 700;">${formatCantidad(item.stock_actual)}</td>
+                    <td style="padding: 4px 6px; font-weight: 700; color: #d97706;">${formatMoneda(item.valor_inmovilizado)}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    // 7. Diagnóstico Gerencial Dinámico
+    const elRec = document.getElementById('inf-recomendaciones');
+    if (elRec) {
+        const margenVal = k.margen_bruto_porcentaje || 0;
+        const desabastCnt = (d.alertas && d.alertas.desabastecimiento) ? d.alertas.desabastecimiento.length : 0;
+        const sobList = (d.alertas && d.alertas.sobrestock) ? d.alertas.sobrestock : [];
+        const capitalParado = sobList.reduce((acc, x) => acc + (x.valor_inmovilizado || 0), 0);
+
+        let diagnosticoHTML = `<ul style="margin: 0; padding-left: 1.25rem;">`;
+
+        if (margenVal >= 30) {
+            diagnosticoHTML += `<li><strong>Rentabilidad Saludable:</strong> El margen bruto del ${formatPorcentaje(margenVal)} supera el estándar comercial del sector de repuestos automotrices.</li>`;
+        } else if (margenVal > 0) {
+            diagnosticoHTML += `<li><strong>Margen Ajustado (${formatPorcentaje(margenVal)}):</strong> Se recomienda revisar los costos de adquisición con proveedores y ponderar los precios de venta de ítems Clase A.</li>`;
+        } else {
+            diagnosticoHTML += `<li><strong>Atención en Margen:</strong> No se han consolidado márgenes positivos en este período. Verificar registro de costos de compra.</li>`;
+        }
+
+        if (desabastCnt > 0) {
+            diagnosticoHTML += `<li><strong>Riesgo Crítico de Pérdida de Ventas:</strong> Se identificaron <strong>${formatCantidad(desabastCnt)} repuestos clave (Clase A o B)</strong> con existencias agotadas o bajo mínimo. Se requiere emitir órdenes de compra prioritarias inmediatas para evitar quiebre de stock.</li>`;
+        } else {
+            diagnosticoHTML += `<li><strong>Abastecimiento Óptimo:</strong> Los productos de mayor rotación disponen de existencias suficientes para cubrir la demanda comercial inmediata.</li>`;
+        }
+
+        if (capitalParado > 0) {
+            diagnosticoHTML += `<li><strong>Optimización de Capital de Trabajo:</strong> Existen <strong>${formatMoneda(capitalParado)}</strong> inmovilizados en ${formatCantidad(sobList.length)} productos Clase C sin rotación activa. Se recomienda implementar combos promocionales o liquidación selectiva para recuperar liquidez inmediata.</li>`;
+        }
+
+        diagnosticoHTML += `</ul>`;
+        elRec.innerHTML = diagnosticoHTML;
+    }
+
+    // Abrir modal con informe consolidado
+    openModal('modal-informe-ejecutivo');
+}
+
+// ------------------------------------------------------------------------------
+// IMPRESIÓN Y EXPORTACIÓN DEL INFORME
+// ------------------------------------------------------------------------------
+function imprimirInformeEjecutivo() {
+    const printArea = document.getElementById('informe-ejecutivo-print-area');
+    if (!printArea) return;
+
+    const printWindow = window.open('', '_blank', 'width=950,height=800');
+    if (!printWindow) {
+        window.print();
+        return;
+    }
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Informe Ejecutivo - Jehová Jireh Moto Repuestos</title>
+            <style>
+                @page { size: portrait; margin: 10mm; }
+                body {
+                    font-family: Arial, Helvetica, sans-serif;
+                    color: #0f172a;
+                    background: #ffffff;
+                    margin: 0;
+                    padding: 10px;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+                th, td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+                th { background: #f1f5f9; font-weight: 700; text-align: left; }
+                .text-right { text-align: right; }
+                .text-center { text-align: center; }
+            </style>
+        </head>
+        <body>
+            ${printArea.innerHTML}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+
+function exportarReporteEstadisticoCSV() {
+    if (!_reporteDataCache) {
+        mostrarToast('Primero cargue los datos de reportes', 'warning');
+        return;
+    }
+
+    const d = _reporteDataCache;
+    const k = d.kpis || {};
+    const periodo = (d.periodo && d.periodo.texto) ? d.periodo.texto : 'Histórico';
+
+    let csv = '\uFEFF'; // UTF-8 BOM
+    csv += `JEHOVÁ JIREH MOTO REPUESTOS - INFORME ESTADÍSTICO Y COMERCIAL\n`;
+    csv += `Período Evaluado:;${periodo}\n`;
+    csv += `Fecha de Emisión:;${new Date().toLocaleString('es-ES')}\n\n`;
+
+    csv += `1. RESUMEN DE INDICADORES CLAVE (KPIS)\n`;
+    csv += `Indicador;Valor\n`;
+    csv += `Ventas Totales ($);${(k.ventas_totales_monto || 0).toFixed(2)}\n`;
+    csv += `Conteo de Ventas;${k.ventas_totales_conteo || 0}\n`;
+    csv += `Unidades Vendidas;${k.unidades_vendidas_total || 0}\n`;
+    csv += `Costo de Mercadería ($);${(k.costo_ventas_monto || 0).toFixed(2)}\n`;
+    csv += `Compras del Período ($);${(k.compras_totales_monto || 0).toFixed(2)}\n`;
+    csv += `Margen Bruto ($);${(k.margen_bruto_monto || 0).toFixed(2)}\n`;
+    csv += `Margen Bruto (%);${(k.margen_bruto_porcentaje || 0).toFixed(2)}%\n`;
+    csv += `Ticket Promedio ($);${(k.ticket_promedio || 0).toFixed(2)}\n`;
+    csv += `Rotación de Inventario;${(k.rotacion_inventario || 0).toFixed(2)}x\n`;
+    csv += `Valor Inventario al Costo ($);${(k.valor_inventario_costo || 0).toFixed(2)}\n\n`;
+
+    csv += `2. DISTRIBUCIÓN POR CATEGORÍAS DE REPUESTOS\n`;
+    csv += `Categoría;Unidades;Ventas ($);Costo ($);Margen ($);Rentabilidad (%);Cuota en Ventas (%)\n`;
+    (d.categorias_analisis || []).forEach(c => {
+        csv += `"${c.categoria}";${c.unidades};${c.total_ventas.toFixed(2)};${c.costo_ventas.toFixed(2)};${c.margen.toFixed(2)};${c.margen_porcentaje}%;${c.participacion_porcentaje}%\n`;
+    });
+    csv += `\n`;
+
+    csv += `3. MÉTODOS DE PAGO\n`;
+    csv += `Método de Pago;Transacciones;Total ($);Participación (%)\n`;
+    (d.metodos_pago || []).forEach(m => {
+        csv += `"${m.metodo}";${m.transacciones};${m.total.toFixed(2)};${m.porcentaje}%\n`;
+    });
+    csv += `\n`;
+
+    csv += `4. EVALUACIÓN DE ROTACIÓN DE INVENTARIO (ABC)\n`;
+    csv += `Clase ABC;Código SKU;Repuesto;Categoría;Stock Actual;Stock Mínimo;Unidades Vendidas;Ingresos Generados ($);Rotación\n`;
+    const prods = (d.rotacion_abc && d.rotacion_abc.productos) ? d.rotacion_abc.productos : [];
+    prods.forEach(p => {
+        csv += `"${p.clase_abc}";"${p.codigo}";"${p.nombre.replace(/"/g, '""')}";"${p.categoria}";${p.stock};${p.min_stock};${p.unidades_vendidas};${p.ingreso_generado.toFixed(2)};${p.rotacion}x\n`;
+    });
+    csv += `\n`;
+
+    csv += `5. ALERTAS CRÍTICAS: RIESGO DE DESABASTECIMIENTO\n`;
+    csv += `Código SKU;Repuesto;Categoría;Clase ABC;Stock Actual;Stock Mínimo;Severidad\n`;
+    ((d.alertas && d.alertas.desabastecimiento) || []).forEach(a => {
+        csv += `"${a.codigo}";"${a.nombre.replace(/"/g, '""')}";"${a.categoria}";"${a.clase_abc}";${a.stock_actual};${a.stock_minimo};"${a.severidad}"\n`;
+    });
+    csv += `\n`;
+
+    csv += `6. ADVERTENCIAS: SOBRE-STOCK / CAPITAL INMOVILIZADO\n`;
+    csv += `Código SKU;Repuesto;Categoría;Stock Actual;Costo Unitario ($);Capital Inmovilizado ($)\n`;
+    ((d.alertas && d.alertas.sobrestock) || []).forEach(s => {
+        csv += `"${s.codigo}";"${s.nombre.replace(/"/g, '""')}";"${s.categoria}";${s.stock_actual};${s.costo.toFixed(2)};${s.valor_inmovilizado.toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const cleanPeriodo = periodo.replace(/[^a-zA-Z0-9]/g, '_');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Informe_Estadistico_Jehova_Jireh_${cleanPeriodo}.csv`;
+    link.click();
+}
+
+window.aplicarFiltroReportes = aplicarFiltroReportes;
+window.loadReportesContabilidad = loadReportesContabilidad;
+window.filtrarTablaABC = filtrarTablaABC;
+window.filtrarTablaABCPorTexto = filtrarTablaABCPorTexto;
+window.compilarInformeEjecutivo = compilarInformeEjecutivo;
+window.imprimirInformeEjecutivo = imprimirInformeEjecutivo;
+window.exportarReporteEstadisticoCSV = exportarReporteEstadisticoCSV;
 
 // ==============================================================================
 // USUARIOS Y ROLES (ADMIN)

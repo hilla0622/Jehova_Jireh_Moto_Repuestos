@@ -1944,4 +1944,85 @@ body {
         padding: 0.6rem 0.9rem;
         font-size: 1rem;
     }
+}
+
+/* ==============================================================================
+   MÓDULO DE REPORTES Y ANÁLISIS ESTADÍSTICO
+   ============================================================================== */
+
+.reportes-toolbar select.form-control {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.reportes-toolbar select.form-control:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.badge-abc-a {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--accent-green);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.badge-abc-b {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.badge-abc-c {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--accent-red);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.informe-print-container {
+    color: #0f172a !important;
+}
+
+.informe-print-container table {
+    color: #0f172a !important;
+}
+
+.informe-print-container th {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
+}
+
+.informe-print-container td {
+    color: #1e293b !important;
+}
+
+/* Reglas de impresión para informe ejecutivo */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #informe-ejecutivo-print-area, #informe-ejecutivo-print-area * {
+        visibility: visible !important;
+    }
+    #informe-ejecutivo-print-area {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 10mm !important;
+        box-shadow: none !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+    }
 }

@@ -589,45 +589,117 @@
                 </section>
                 {% endif %}
 
-                <!-- TAB 5: REPORTES Y CONTABILIDAD -->
+                <!-- TAB 5: REPORTES Y ANÁLISIS ESTADÍSTICO -->
                 {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <section id="tab-reportes" class="tab-content">
-                    <div class="section-header">
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
                         <div>
-                            <h2>Reportes, Análisis y Procesamiento Contable</h2>
-                            <p>Análisis estadístico del comportamiento del negocio para la toma de decisiones y apoyo contable.</p>
+                            <h2>Reportes, Estadísticas y Análisis Comercial</h2>
+                            <p>Análisis estadístico del comportamiento del negocio: rotación ABC, distribución de ventas, métodos de pago y alertas de existencias.</p>
+                        </div>
+                        <!-- Barra de Herramientas y Filtro Temporal Mensual -->
+                        <div class="reportes-toolbar" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <i class="ph-bold ph-calendar" style="color: var(--primary);"></i>
+                                <label style="font-size: 0.82rem; font-weight: 600; margin: 0; color: var(--text-muted);">Mes:</label>
+                                <select id="rep-filtro-mes" class="form-control" style="height: 32px; padding: 0 0.5rem; font-size: 0.82rem;" onchange="aplicarFiltroReportes()">
+                                    <option value="todos">Todos (Año Completo)</option>
+                                    <option value="1">Enero</option>
+                                    <option value="2">Febrero</option>
+                                    <option value="3">Marzo</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Mayo</option>
+                                    <option value="6">Junio</option>
+                                    <option value="7">Julio</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Septiembre</option>
+                                    <option value="10" selected>Octubre</option>
+                                    <option value="11">Noviembre</option>
+                                    <option value="12">Diciembre</option>
+                                </select>
+
+                                <label style="font-size: 0.82rem; font-weight: 600; margin: 0; margin-left: 0.4rem; color: var(--text-muted);">Año:</label>
+                                <select id="rep-filtro-anio" class="form-control" style="height: 32px; padding: 0 0.5rem; font-size: 0.82rem;" onchange="aplicarFiltroReportes()">
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-secondary" onclick="aplicarFiltroReportes()" title="Actualizar datos del período">
+                                <i class="ph-bold ph-arrow-clockwise"></i> Actualizar
+                            </button>
+
+                            <button class="btn btn-primary" onclick="compilarInformeEjecutivo()" title="Generar Informe Ejecutivo Consolidado">
+                                <i class="ph-bold ph-file-text"></i> Compilar Informe Ejecutivo
+                            </button>
+
+                            <button class="btn btn-outline" onclick="exportarReporteEstadisticoCSV()" title="Descargar datos en formato CSV">
+                                <i class="ph-bold ph-download-simple"></i> CSV
+                            </button>
                         </div>
                     </div>
 
-                    <div class="stats-grid margin-bottom">
+                    <!-- Indicador del Período Evaluado -->
+                    <div style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); padding: 0.5rem 1rem; border-radius: var(--radius-sm);">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="ph-bold ph-info" style="color: var(--primary); font-size: 1.2rem;"></i>
+                            <span style="font-size: 0.88rem; color: var(--text-main);">Período Activo: <strong id="rep-periodo-activo-texto" style="color: var(--primary);">Octubre 2026</strong></span>
+                        </div>
+                        <span id="rep-periodo-badge" class="badge" style="background: var(--primary); color: #000; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 4px;">Filtro Mensual Activo</span>
+                    </div>
+
+                    <!-- Cuadrícula de KPIs Principales y Rentabilidad -->
+                    <div class="stats-grid margin-bottom" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));">
+                        <!-- KPI 1: Ingresos por Ventas -->
                         <div class="stat-card">
                             <div class="stat-icon green">
                                 <i class="ph-bold ph-trend-up"></i>
                             </div>
                             <div class="stat-data">
                                 <span class="stat-title">Ingresos por Ventas</span>
-                                <span class="stat-value" id="rep-ingresos">$0.00</span>
-                                <span class="stat-subtext" id="rep-unidades-vendidas">0 unidades vendidas</span>
+                                <span class="stat-value" id="rep-ingresos">$ 0.00</span>
+                                <span class="stat-subtext" id="rep-unidades-vendidas">0 unidades | 0 ventas</span>
                             </div>
                         </div>
+
+                        <!-- KPI 2: Costo de Ventas / Egresos -->
                         <div class="stat-card">
                             <div class="stat-icon orange">
                                 <i class="ph-bold ph-shopping-bag"></i>
                             </div>
                             <div class="stat-data">
-                                <span class="stat-title">Egresos por Compras</span>
-                                <span class="stat-value" id="rep-egresos">$0.00</span>
+                                <span class="stat-title">Costo de Mercadería</span>
+                                <span class="stat-value" id="rep-costo-ventas">$ 0.00</span>
+                                <span class="stat-subtext" id="rep-egresos-compras">Compras del mes: $ 0.00</span>
                             </div>
                         </div>
+
+                        <!-- KPI 3: Margen Bruto y Rentabilidad % -->
                         <div class="stat-card">
                             <div class="stat-icon blue">
                                 <i class="ph-bold ph-coins"></i>
                             </div>
                             <div class="stat-data">
-                                <span class="stat-title">Margen Bruto Estimado</span>
-                                <span class="stat-value" id="rep-margen">$0.00</span>
+                                <span class="stat-title">Margen Bruto (Utilidad)</span>
+                                <span class="stat-value" id="rep-margen">$ 0.00</span>
+                                <span class="stat-subtext" id="rep-margen-pct" style="color: var(--accent-green); font-weight: 600;">Margen: 0.0%</span>
                             </div>
                         </div>
+
+                        <!-- KPI 4: Ticket Promedio -->
+                        <div class="stat-card">
+                            <div class="stat-icon purple">
+                                <i class="ph-bold ph-receipt"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Ticket Promedio</span>
+                                <span class="stat-value" id="rep-ticket-promedio">$ 0.00</span>
+                                <span class="stat-subtext" id="rep-ticket-conteo">Por comprobante emitido</span>
+                            </div>
+                        </div>
+
+                        <!-- KPI 5: Rotación de Inventario -->
                         <div class="stat-card">
                             <div class="stat-icon purple">
                                 <i class="ph-bold ph-arrows-clockwise"></i>
@@ -635,49 +707,162 @@
                             <div class="stat-data">
                                 <span class="stat-title">Rotación de Inventario</span>
                                 <span class="stat-value" id="rep-rotacion">0.00x</span>
-                                <span class="stat-subtext">Índice de movimiento</span>
+                                <span class="stat-subtext" id="rep-rotacion-subtext">Índice del período</span>
+                            </div>
+                        </div>
+
+                        <!-- KPI 6: Alertas Tempranas de Existencias -->
+                        <div class="stat-card">
+                            <div class="stat-icon red">
+                                <i class="ph-bold ph-warning-circle"></i>
+                            </div>
+                            <div class="stat-data">
+                                <span class="stat-title">Alertas de Existencias</span>
+                                <span class="stat-value" id="rep-alertas-total">0</span>
+                                <span class="stat-subtext" id="rep-alertas-detalle" style="color: var(--accent-red);">0 desabast. | 0 sobre-stock</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Gráficos Estadísticos Dinámicos -->
-                    <div class="grid-2col margin-bottom">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Gráfico 1: Tendencia Cronológica de Ventas -->
                         <div class="card">
-                            <div class="card-header">
-                                <h3><i class="ph-bold ph-chart-line"></i> Comportamiento de Ventas (Tendencia)</h3>
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3><i class="ph-bold ph-chart-line"></i> Tendencia Cronológica de Ventas</h3>
+                                <span style="font-size: 0.78rem; color: var(--text-muted);">Evolución temporal</span>
                             </div>
                             <div class="card-body">
-                                <canvas id="chart-ventas-tendencia" style="max-height: 250px;"></canvas>
+                                <div style="position: relative; height: 260px; width: 100%;">
+                                    <canvas id="chart-ventas-tendencia"></canvas>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Gráfico 2: Distribución de Ventas por Categoría -->
                         <div class="card">
-                            <div class="card-header">
-                                <h3><i class="ph-bold ph-chart-pie"></i> Productos Más Vendidos (Top Ventas)</h3>
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3><i class="ph-bold ph-chart-pie-slice"></i> Distribución por Categoría</h3>
+                                <span style="font-size: 0.78rem; color: var(--text-muted);">Cuota por repuestos</span>
                             </div>
                             <div class="card-body">
-                                <canvas id="chart-top-productos" style="max-height: 250px;"></canvas>
+                                <div style="position: relative; height: 260px; width: 100%;">
+                                    <canvas id="chart-ventas-categoria"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico 3: Análisis Estadístico de Métodos de Pago -->
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3><i class="ph-bold ph-credit-card"></i> Métodos de Pago</h3>
+                                <span style="font-size: 0.78rem; color: var(--text-muted);">Composición monetaria</span>
+                            </div>
+                            <div class="card-body">
+                                <div style="position: relative; height: 260px; width: 100%;">
+                                    <canvas id="chart-metodos-pago"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid-2col margin-bottom">
-                        <!-- Tabla Top Productos -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h3><i class="ph-bold ph-trophy"></i> Ranking de Repuestos Más Vendidos</h3>
+                    <!-- SECCIÓN: EVALUACIÓN DE ROTACIÓN DE INVENTARIO (ANÁLISIS ABC) -->
+                    <div class="card margin-bottom">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <div>
+                                <h3 style="margin: 0;"><i class="ph-bold ph-chart-bar"></i> Evaluación de Rotación de Inventario (Análisis ABC)</h3>
+                                <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                                    Clasificación de repuestos según rotación comercial y volumen de ventas del período seleccionado.
+                                </p>
+                            </div>
+                            <!-- Filtros por Clase ABC -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <div class="btn-group" style="display: flex; gap: 0.25rem;">
+                                    <button class="btn btn-outline active btn-sm" id="btn-filtro-abc-todos" onclick="filtrarTablaABC('todos')">Todos (<span id="count-abc-todos">0</span>)</button>
+                                    <button class="btn btn-outline btn-sm" id="btn-filtro-abc-a" onclick="filtrarTablaABC('A')" style="border-color: rgba(16, 185, 129, 0.4); color: var(--accent-green);"><i class="ph-bold ph-circle"></i> Clase A (<span id="count-abc-a">0</span>)</button>
+                                    <button class="btn btn-outline btn-sm" id="btn-filtro-abc-b" onclick="filtrarTablaABC('B')" style="border-color: rgba(245, 158, 11, 0.4); color: var(--warning);"><i class="ph-bold ph-circle"></i> Clase B (<span id="count-abc-b">0</span>)</button>
+                                    <button class="btn btn-outline btn-sm" id="btn-filtro-abc-c" onclick="filtrarTablaABC('C')" style="border-color: rgba(239, 68, 68, 0.4); color: var(--accent-red);"><i class="ph-bold ph-circle"></i> Clase C (<span id="count-abc-c">0</span>)</button>
+                                </div>
+                                <input type="text" id="busqueda-tabla-abc" class="form-control" placeholder="Buscar repuesto..." style="height: 32px; font-size: 0.82rem; width: 180px;" oninput="filtrarTablaABCPorTexto(this.value)">
+                            </div>
+                        </div>
+
+                        <!-- Resumen Informativo de Categorías ABC -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; padding: 1rem 1.5rem; background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="background: rgba(16, 185, 129, 0.15); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent-green); font-weight: 800; font-size: 1.1rem;">A</div>
+                                <div>
+                                    <strong style="color: var(--accent-green); font-size: 0.9rem;">Alta Rotación (Clase A)</strong>
+                                    <div style="font-size: 0.78rem; color: var(--text-muted);">Productos líderes (~75% de ventas). Máxima prioridad de stock.</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="background: rgba(245, 158, 11, 0.15); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--warning); font-weight: 800; font-size: 1.1rem;">B</div>
+                                <div>
+                                    <strong style="color: var(--warning); font-size: 0.9rem;">Rotación Media (Clase B)</strong>
+                                    <div style="font-size: 0.78rem; color: var(--text-muted);">Demanda intermedia (~15-20% ventas). Reposición periódica.</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="background: rgba(239, 68, 68, 0.15); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent-red); font-weight: 800; font-size: 1.1rem;">C</div>
+                                <div>
+                                    <strong style="color: var(--accent-red); font-size: 0.9rem;">Inventario Estancado (Clase C)</strong>
+                                    <div style="font-size: 0.78rem; color: var(--text-muted);">0 o baja rotación en período. Riesgo de sobre-stock / capital parado.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                                <table class="data-table" id="tabla-rotacion-abc">
+                                    <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 1;">
+                                        <tr>
+                                            <th>Clase ABC</th>
+                                            <th>Código SKU</th>
+                                            <th>Repuesto</th>
+                                            <th>Categoría</th>
+                                            <th style="text-align: right;">Stock Actual</th>
+                                            <th style="text-align: right;">Stock Mín.</th>
+                                            <th style="text-align: right;">Vendidas (Período)</th>
+                                            <th style="text-align: right;">Ingresos Generados</th>
+                                            <th style="text-align: center;">Rotación</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-rotacion-abc">
+                                        <!-- Render dinámico de productos clasificados -->
+                                        <tr><td colspan="9" class="text-center text-muted" style="padding: 2rem;">Cargando análisis de rotación...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN: ALERTAS TEMPRANAS DE EXISTENCIAS CONSOLIDADAS -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Alerta 1: Riesgo Crítico de Desabastecimiento -->
+                        <div class="card" style="border-top: 4px solid var(--accent-red);">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="color: var(--accent-red);"><i class="ph-bold ph-shield-warning"></i> Alerta Crítica: Riesgo de Desabastecimiento</h3>
+                                    <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                                        Repuestos de alta/media rotación (Clase A o B) con existencias agotadas o bajo stock mínimo.
+                                    </p>
+                                </div>
+                                <span class="badge" id="badge-conteo-desabastecimiento" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red); font-weight: 700;">0 productos</span>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
+                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
                                     <table class="data-table">
                                         <thead>
                                             <tr>
-                                                <th>#</th>
-                                                <th>Repuesto</th>
-                                                <th>Unid. Vendidas</th>
-                                                <th>Monto Generado</th>
+                                                <th>SKU / Repuesto</th>
+                                                <th>Clase</th>
+                                                <th style="text-align: center;">Stock</th>
+                                                <th style="text-align: center;">Mínimo</th>
+                                                <th>Estado / Nivel</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="tbody-top-productos">
+                                        <tbody id="tbody-alertas-desabastecimiento">
                                             <!-- Render dinámico -->
                                         </tbody>
                                     </table>
@@ -685,29 +870,90 @@
                             </div>
                         </div>
 
-
-
-                    <div class="card margin-bottom">
-                        <div class="card-header">
-                            <h3><i class="ph-bold ph-cash-register"></i> Sesiones de Caja (Reportes Operativos)</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID Sesión</th>
-                                            <th style="text-align: right;">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbody-sesiones-caja">
-                                        <!-- Render dinámico -->
-                                    </tbody>
-                                </table>
+                        <!-- Alerta 2: Advertencia de Sobre-stock / Inventario Obsoleto -->
+                        <div class="card" style="border-top: 4px solid var(--warning);">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="color: var(--warning);"><i class="ph-bold ph-archive-box"></i> Advertencia: Sobre-Stock / Inventario Estancado</h3>
+                                    <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                                        Repuestos Clase C sin movimiento en el período y existencias acumuladas (Capital inmovilizado).
+                                    </p>
+                                </div>
+                                <span class="badge" id="badge-conteo-sobrestock" style="background: rgba(245, 158, 11, 0.2); color: var(--warning); font-weight: 700;">0 productos</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>SKU / Repuesto</th>
+                                                <th style="text-align: center;">Stock</th>
+                                                <th style="text-align: right;">Costo Unid.</th>
+                                                <th style="text-align: right;">Capital Inmovilizado</th>
+                                                <th>Diagnóstico</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-alertas-sobrestock">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- SECCIÓN: RENDIMIENTO POR CATEGORÍAS Y SESIONES DE CAJA -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Tabla Rendimiento por Categoría -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-squares-four"></i> Rendimiento por Categoría de Repuestos</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Categoría</th>
+                                                <th style="text-align: center;">Unid.</th>
+                                                <th style="text-align: right;">Ventas ($)</th>
+                                                <th style="text-align: right;">Margen ($)</th>
+                                                <th style="text-align: right;">Rentab. %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-rendimiento-categorias">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sesiones de Caja -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="ph-bold ph-cash-register"></i> Sesiones de Caja (Reportes Operativos)</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID Sesión</th>
+                                                <th>Usuario</th>
+                                                <th>Apertura</th>
+                                                <th>Estado</th>
+                                                <th style="text-align: right;">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-sesiones-caja">
+                                            <!-- Render dinámico -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                 </section>
                 {% endif %}
@@ -3491,5 +3737,210 @@
             }
         });
     </script>
+
+    <!-- MODAL: INFORME EJECUTIVO ESTADÍSTICO CONSOLIDADO -->
+    <div class="modal" id="modal-informe-ejecutivo">
+        <div class="modal-content modal-lg" style="max-width: 900px; width: 95%; max-height: 92vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;"><i class="ph-bold ph-file-text"></i> Informe Ejecutivo Estadístico Consolidado</h3>
+                <button class="modal-close" onclick="closeModal('modal-informe-ejecutivo')">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; padding: 1.5rem; background: var(--bg-dark);">
+                <div id="informe-ejecutivo-print-area" class="informe-print-container" style="background: #ffffff; color: #0f172a; padding: 2.5rem; border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+                    <!-- Membrete Corporativo -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 1.25rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh" style="width: 70px; height: 70px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div>
+                                <h1 style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px;">JEHOVÁ JIREH MOTO REPUESTOS</h1>
+                                <div style="font-size: 0.85rem; font-weight: 600; color: #475569;">Sistema Centralizado de Gestión Comercial y Control Operativo</div>
+                                <div style="font-size: 0.78rem; color: #64748b;">Masatepe, Masaya • Tel: +505 8899-0000 • RUC: J0310000000000</div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="display: inline-block; background: #0f172a; color: #ffffff; font-weight: 700; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 4px; text-transform: uppercase;">Informe Oficial</span>
+                            <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px;">Emisión: <strong id="inf-fecha-emision">--</strong></div>
+                            <div style="font-size: 0.78rem; color: #64748b;">Generado por: <strong>{{ usuario.nombre }}</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Título y Período del Informe -->
+                    <div style="text-align: center; margin-bottom: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.85rem;">
+                        <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 0.25rem 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                            INFORME EJECUTIVO DE RENDIMIENTO ESTADÍSTICO Y ROTACIÓN COMERCIAL
+                        </h2>
+                        <div style="font-size: 0.9rem; font-weight: 600; color: #d97706;">
+                            Período Evaluado: <span id="inf-periodo-texto">--</span>
+                        </div>
+                    </div>
+
+                    <!-- 1. RESUMEN EJECUTIVO DE INDICADORES CLAVE (KPIS) -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 0.92rem; font-weight: 700; text-transform: uppercase; color: #1e293b; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.35rem; margin-bottom: 0.75rem;">
+                            1. Indicadores Clave de Desempeño Comercial (KPIs)
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Ingresos Totales por Ventas</div>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #059669;" id="inf-kpi-ventas">$ 0.00</div>
+                                <div style="font-size: 0.72rem; color: #64748b;" id="inf-kpi-transacciones">0 transacciones | 0 unidades</div>
+                            </div>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Costo de Ventas (Mercadería)</div>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #d97706;" id="inf-kpi-costo">$ 0.00</div>
+                                <div style="font-size: 0.72rem; color: #64748b;" id="inf-kpi-compras">Compras: $ 0.00</div>
+                            </div>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Margen Bruto (Utilidad Neta)</div>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #2563eb;" id="inf-kpi-margen">$ 0.00</div>
+                                <div style="font-size: 0.72rem; color: #059669; font-weight: 700;" id="inf-kpi-margen-pct">Margen: 0.0%</div>
+                            </div>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Ticket Promedio por Venta</div>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #7c3aed;" id="inf-kpi-ticket">$ 0.00</div>
+                                <div style="font-size: 0.72rem; color: #64748b;">Consumo promedio por comprobante</div>
+                            </div>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Índice de Rotación General</div>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;" id="inf-kpi-rotacion">0.00x</div>
+                                <div style="font-size: 0.72rem; color: #64748b;">Velocidad de movimiento en bodega</div>
+                            </div>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 6px;">
+                                <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Valor de Inventario Activo</div>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;" id="inf-kpi-inventario">$ 0.00</div>
+                                <div style="font-size: 0.72rem; color: #64748b;" id="inf-kpi-stock-total">0 unidades en catálogo</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. ANÁLISIS DE DISTRIBUCIÓN POR CATEGORÍA -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 0.92rem; font-weight: 700; text-transform: uppercase; color: #1e293b; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.35rem; margin-bottom: 0.75rem;">
+                            2. Distribución y Rentabilidad por Categoría de Repuestos
+                        </h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+                            <thead>
+                                <tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1; text-align: left;">
+                                    <th style="padding: 6px 8px;">Categoría</th>
+                                    <th style="padding: 6px 8px; text-align: center;">Unid. Vendidas</th>
+                                    <th style="padding: 6px 8px; text-align: right;">Ventas ($)</th>
+                                    <th style="padding: 6px 8px; text-align: right;">Costo ($)</th>
+                                    <th style="padding: 6px 8px; text-align: right;">Margen ($)</th>
+                                    <th style="padding: 6px 8px; text-align: right;">% Rentabilidad</th>
+                                    <th style="padding: 6px 8px; text-align: right;">Cuota en Ventas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inf-tbody-categorias">
+                                <!-- Dinámico -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 3. MÉTODOS DE PAGO Y COBRANZA -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 0.92rem; font-weight: 700; text-transform: uppercase; color: #1e293b; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.35rem; margin-bottom: 0.75rem;">
+                            3. Composición Estadística de Métodos de Pago
+                        </h3>
+                        <div id="inf-metodos-container" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <!-- Dinámico -->
+                        </div>
+                    </div>
+
+                    <!-- 4. MATRIZ DE EVALUACIÓN DE ROTACIÓN (ABC) -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 0.92rem; font-weight: 700; text-transform: uppercase; color: #1e293b; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.35rem; margin-bottom: 0.75rem;">
+                            4. Evaluación de Rotación y Clasificación ABC del Inventario
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div style="border-left: 4px solid #059669; background: #ecfdf5; padding: 0.6rem 0.8rem; border-radius: 4px;">
+                                <strong style="color: #059669; font-size: 0.85rem;">Clase A: Alta Rotación (<span id="inf-abc-count-a">0</span>)</strong>
+                                <div style="font-size: 0.75rem; color: #475569;">Concentran el volumen principal de ventas y facturación del negocio.</div>
+                            </div>
+                            <div style="border-left: 4px solid #d97706; background: #fffbeb; padding: 0.6rem 0.8rem; border-radius: 4px;">
+                                <strong style="color: #d97706; font-size: 0.85rem;">Clase B: Rotación Media (<span id="inf-abc-count-b">0</span>)</strong>
+                                <div style="font-size: 0.75rem; color: #475569;">Demanda y rotación comercial balanceada periódica.</div>
+                            </div>
+                            <div style="border-left: 4px solid #dc2626; background: #fef2f2; padding: 0.6rem 0.8rem; border-radius: 4px;">
+                                <strong style="color: #dc2626; font-size: 0.85rem;">Clase C: Inventario Estancado (<span id="inf-abc-count-c">0</span>)</strong>
+                                <div style="font-size: 0.75rem; color: #475569;">Cero o mínima rotación en el período. Precisa supervisión por capital dormido.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. ALERTAS TEMPRANAS DE EXISTENCIAS -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 0.92rem; font-weight: 700; text-transform: uppercase; color: #1e293b; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.35rem; margin-bottom: 0.75rem;">
+                            5. Matriz de Alertas Tempranas de Existencias Consolidadas
+                        </h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <!-- Desabastecimiento -->
+                            <div style="border: 1px solid #fecaca; border-radius: 6px; padding: 0.75rem; background: #fffafb;">
+                                <strong style="color: #dc2626; font-size: 0.82rem;"><i class="ph-bold ph-warning-circle"></i> Riesgo de Desabastecimiento (Clase A y B en mínimo)</strong>
+                                <div style="max-height: 160px; overflow-y: auto; margin-top: 0.5rem;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
+                                        <thead><tr style="border-bottom: 1px solid #cbd5e1; text-align: left;"><th>Repuesto</th><th>Stock</th><th>Mínimo</th><th>Severidad</th></tr></thead>
+                                        <tbody id="inf-tbody-desabastecimiento"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Sobre-stock -->
+                            <div style="border: 1px solid #fed7aa; border-radius: 6px; padding: 0.75rem; background: #fffcf9;">
+                                <strong style="color: #d97706; font-size: 0.82rem;"><i class="ph-bold ph-archive-box"></i> Advertencia: Sobre-Stock / Obsoleto (Clase C)</strong>
+                                <div style="max-height: 160px; overflow-y: auto; margin-top: 0.5rem;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
+                                        <thead><tr style="border-bottom: 1px solid #cbd5e1; text-align: left;"><th>Repuesto</th><th>Stock</th><th>Inmovilizado</th></tr></thead>
+                                        <tbody id="inf-tbody-sobrestock"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. DIAGNÓSTICO EJECUTIVO Y RECOMENDACIONES -->
+                    <div style="margin-bottom: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem;">
+                        <h3 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: #1e293b; margin: 0 0 0.5rem 0;">
+                            6. Diagnóstico y Recomendaciones Gerenciales
+                        </h3>
+                        <div id="inf-recomendaciones" style="font-size: 0.8rem; color: #475569; line-height: 1.5;">
+                            <!-- Dinámico -->
+                        </div>
+                    </div>
+
+                    <!-- Firmas de Aprobación -->
+                    <div style="display: flex; justify-content: space-around; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px dashed #cbd5e1; text-align: center; font-size: 0.78rem; color: #475569;">
+                        <div>
+                            ___________________________________<br>
+                            <strong>{{ usuario.nombre }}</strong><br>
+                            {{ usuario.rol }} / Emisor
+                        </div>
+                        <div>
+                            ___________________________________<br>
+                            <strong>Lic. Fernando Rivas</strong><br>
+                            Auditoría Contable y Financiera
+                        </div>
+                        <div>
+                            ___________________________________<br>
+                            <strong>Gerencia General</strong><br>
+                            Jehová Jireh Moto Repuestos
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-informe-ejecutivo')">Cerrar</button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn btn-outline" onclick="exportarReporteEstadisticoCSV()">
+                        <i class="ph-bold ph-file-csv"></i> Descargar Datos CSV
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="imprimirInformeEjecutivo()">
+                        <i class="ph-bold ph-printer"></i> Imprimir / Guardar en PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Principal SPA del Sistema -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

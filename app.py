@@ -1676,61 +1676,422 @@ def api_compras():
 @login_required
 def api_reportes():
     if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
-        return jsonify({"error": "Acceso reservado."}), 403
+        return jsonify({"error": "Acceso reservado a Administrador, Gerencia y Contabilidad."}), 403
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        resumen = {}
-        
-        cursor.execute("SELECT COUNT(id) AS cant, SUM(total) as monto FROM ventas WHERE estado='Completada'")
-        v = cursor.fetchone()
-        resumen['ventas_totales_conteo'] = v.cant if v.cant else 0
-        resumen['ventas_totales_monto'] = float(v.monto) if v.monto else 0.0
 
-        cursor.execute("SELECT COUNT(id) AS cant, SUM(total) as monto FROM compras WHERE estado='Completada'")
-        c = cursor.fetchone()
-        resumen['compras_totales_conteo'] = c.cant if c.cant else 0
-        resumen['compras_totales_monto'] = float(c.monto) if c.monto else 0.0
+        mes_param = request.args.get('mes')
+        anio_param = request.args.get('anio')
 
-        cursor.execute("SELECT * FROM vista_balance_inventario")
-        b = cursor.fetchone()
-        resumen['valor_inventario_costo'] = float(b.valor_total_costo) if b and b.valor_total_costo else 0.0
-        resumen['margen_bruto_estimado'] = float(b.ganancia_proyectada) if b and b.ganancia_proyectada else 0.0
+        # 1. Configuración de Filtro Temporal
+        condiciones_ventas = ["v.estado = 'Completada'"]
+        params_ventas = []
+        condiciones_compras = ["c.estado = 'Completada'"]
+        params_compras = []
 
-        cursor.execute("SELECT id, repuesto AS nombre, stock_actual AS stock, stock_minimo AS min_stock FROM vista_stock_bajo")
-        sb_rows = cursor.fetchall()
-        productos_bajo_stock = []
-        for r in sb_rows:
-            productos_bajo_stock.append({"id": r.id, "nombre": r.nombre, "stock": r.stock, "min_stock": r.min_stock})
-        resumen['alerta_stock_bajo_conteo'] = len(productos_bajo_stock)
-        resumen['productos_bajo_stock'] = productos_bajo_stock
+        mes_int = int(mes_param) if (mes_param and mes_param.isdigit() and 1 <= int(mes_param) <= 12) else None
+        anio_int = int(anio_param) if (anio_param and anio_param.isdigit() and int(anio_param) > 2000) else None
 
-        cursor.execute("SELECT producto_id AS id, repuesto AS nombre, total_unidades_vendidas AS cantidad_vendida, ingreso_total_generado AS monto_total FROM vista_top_productos_vendidos ORDER BY total_unidades_vendidas DESC")
-        top_rows = cursor.fetchall()
-        top_productos = []
-        for r in top_rows:
-            top_productos.append({"id": r.id, "nombre": r.nombre, "cantidad_vendida": r.cantidad_vendida, "monto_total": float(r.monto_total)})
-        resumen['top_productos'] = top_productos
+        meses_nombres = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-        cursor.execute("SELECT CONVERT(varchar, fecha_venta, 23) as f, SUM(total) as t FROM ventas WHERE estado='Completada' GROUP BY CONVERT(varchar, fecha_venta, 23)")
-        vf_rows = cursor.fetchall()
+        if anio_int and mes_int:
+            condiciones_ventas.append("YEAR(v.fecha_venta) = ? AND MONTH(v.fecha_venta) = ?")
+            params_ventas.extend([anio_int, mes_int])
+            condiciones_compras.append("YEAR(c.fecha_compra) = ? AND MONTH(c.fecha_compra) = ?")
+            params_compras.extend([anio_int, mes_int])
+            periodo_texto = f"{meses_nombres[mes_int]} {anio_int}"
+        elif anio_int:
+            condiciones_ventas.append("YEAR(v.fecha_venta) = ?")
+            params_ventas.append(anio_int)
+            condiciones_compras.append("YEAR(c.fecha_compra) = ?")
+            params_compras.append(anio_int)
+            periodo_texto = f"Año {anio_int}"
+        elif mes_int:
+            condiciones_ventas.append("MONTH(v.fecha_venta) = ?")
+            params_ventas.append(mes_int)
+            condiciones_compras.append("MONTH(c.fecha_compra) = ?")
+            params_compras.append(mes_int)
+            periodo_texto = f"Mes de {meses_nombres[mes_int]} (Histórico)"
+        else:
+            periodo_texto = "Histórico Completo"
+
+        where_ventas = "WHERE " + " AND ".join(condiciones_ventas)
+        where_compras = "WHERE " + " AND ".join(condiciones_compras)
+
+        # 2. KPIs de Ventas (Totales y Conteo)
+        q_ventas_kpi = f"SELECT COUNT(v.id) AS cant, ISNULL(SUM(v.total), 0) AS monto FROM ventas v {where_ventas}"
+        cursor.execute(q_ventas_kpi, tuple(params_ventas))
+        vk = cursor.fetchone()
+        ventas_totales_conteo = vk.cant if vk and vk.cant else 0
+        ventas_totales_monto = float(vk.monto) if vk and vk.monto else 0.0
+
+        ticket_promedio = round(ventas_totales_monto / ventas_totales_conteo, 2) if ventas_totales_conteo > 0 else 0.0
+
+        # 3. KPIs de Compras
+        q_compras_kpi = f"SELECT COUNT(c.id) AS cant, ISNULL(SUM(c.total), 0) AS monto FROM compras c {where_compras}"
+        cursor.execute(q_compras_kpi, tuple(params_compras))
+        ck = cursor.fetchone()
+        compras_totales_conteo = ck.cant if ck and ck.cant else 0
+        compras_totales_monto = float(ck.monto) if ck and ck.monto else 0.0
+
+        # 4. Costo de Ventas y Unidades Físicas Vendidas en el Período
+        q_detalles_kpi = f"""
+            SELECT 
+                ISNULL(SUM(dv.cantidad), 0) AS unidades_vendidas,
+                ISNULL(SUM(dv.cantidad * dv.costo_historico), 0) AS costo_ventas_total,
+                ISNULL(SUM(dv.subtotal), 0) AS total_subtotal
+            FROM detalle_ventas dv
+            INNER JOIN ventas v ON dv.venta_id = v.id
+            {where_ventas}
+        """
+        cursor.execute(q_detalles_kpi, tuple(params_ventas))
+        dk = cursor.fetchone()
+        unidades_vendidas_total = int(dk.unidades_vendidas) if dk and dk.unidades_vendidas else 0
+        costo_ventas_total = float(dk.costo_ventas_total) if dk and dk.costo_ventas_total else 0.0
+
+        margen_bruto_monto = round(ventas_totales_monto - costo_ventas_total, 2)
+        margen_bruto_porcentaje = round((margen_bruto_monto / ventas_totales_monto * 100), 2) if ventas_totales_monto > 0 else 0.0
+
+        # 5. Inventario Actual Global
+        valor_inventario_costo = 0.0
+        valor_inventario_venta = 0.0
+        stock_total_actual = 0
+        try:
+            cursor.execute("SELECT * FROM vista_balance_inventario")
+            b = cursor.fetchone()
+            if b:
+                valor_inventario_costo = float(b.valor_total_costo) if b.valor_total_costo else 0.0
+                valor_inventario_venta = float(b.valor_total_venta) if b.valor_total_venta else 0.0
+                stock_total_actual = int(b.total_unidades_fisicas) if b.total_unidades_fisicas else 0
+        except Exception:
+            cursor.execute("SELECT ISNULL(SUM(stock_actual * costo), 0) AS val_costo, ISNULL(SUM(stock_actual * precio_venta), 0) AS val_venta, ISNULL(SUM(stock_actual), 0) AS tot_stock FROM productos WHERE activo = 1")
+            b = cursor.fetchone()
+            if b:
+                valor_inventario_costo = float(b.val_costo) if b.val_costo else 0.0
+                valor_inventario_venta = float(b.val_venta) if b.val_venta else 0.0
+                stock_total_actual = int(b.tot_stock) if b.tot_stock else 0
+
+        rotacion_inventario = round(unidades_vendidas_total / (stock_total_actual if stock_total_actual > 0 else 1), 2)
+
+        # 6. Tendencias Cronológicas de Ventas
+        q_tendencia = f"""
+            SELECT CONVERT(varchar, v.fecha_venta, 23) AS fecha, 
+                   COUNT(v.id) AS transacciones,
+                   ISNULL(SUM(v.total), 0) AS monto
+            FROM ventas v
+            {where_ventas}
+            GROUP BY CONVERT(varchar, v.fecha_venta, 23)
+            ORDER BY fecha ASC
+        """
+        cursor.execute(q_tendencia, tuple(params_ventas))
+        tendencia_rows = cursor.fetchall()
         ventas_por_fecha = {}
-        for r in vf_rows:
-            ventas_por_fecha[r.f] = float(r.t)
-        resumen['ventas_por_fecha'] = ventas_por_fecha
-        
-        resumen['unidades_vendidas_total'] = sum(p['cantidad_vendida'] for p in top_productos)
-        
-        stock_total_actual = b.total_unidades_fisicas if b and b.total_unidades_fisicas else 0
-        resumen['rotacion_inventario'] = round(resumen['unidades_vendidas_total'] / (stock_total_actual if stock_total_actual > 0 else 1), 2)
+        tendencia_lista = []
+        for r in tendencia_rows:
+            f_str = r.fecha
+            m_val = float(r.monto)
+            ventas_por_fecha[f_str] = m_val
+            tendencia_lista.append({
+                "fecha": f_str,
+                "monto": m_val,
+                "transacciones": r.transacciones
+            })
+
+        # 7. Distribución y Rendimiento por Categoría de Repuestos
+        q_categorias = f"""
+            SELECT 
+                c.id AS categoria_id,
+                c.nombre AS categoria,
+                ISNULL(SUM(dv.cantidad), 0) AS unidades,
+                ISNULL(SUM(dv.subtotal), 0) AS total_ventas,
+                ISNULL(SUM(dv.cantidad * dv.costo_historico), 0) AS costo_ventas
+            FROM detalle_ventas dv
+            INNER JOIN ventas v ON dv.venta_id = v.id
+            INNER JOIN productos p ON dv.producto_id = p.id
+            INNER JOIN categorias c ON p.categoria_id = c.id
+            {where_ventas}
+            GROUP BY c.id, c.nombre
+            ORDER BY total_ventas DESC
+        """
+        cursor.execute(q_categorias, tuple(params_ventas))
+        categorias_rows = cursor.fetchall()
+        categorias_analisis = []
+        for cr in categorias_rows:
+            t_v = float(cr.total_ventas)
+            c_v = float(cr.costo_ventas)
+            m_v = round(t_v - c_v, 2)
+            pct_v = round((t_v / ventas_totales_monto * 100), 2) if ventas_totales_monto > 0 else 0.0
+            pct_m = round((m_v / t_v * 100), 2) if t_v > 0 else 0.0
+            categorias_analisis.append({
+                "categoria_id": cr.categoria_id,
+                "categoria": cr.categoria,
+                "unidades": int(cr.unidades),
+                "total_ventas": t_v,
+                "costo_ventas": c_v,
+                "margen": m_v,
+                "margen_porcentaje": pct_m,
+                "participacion_porcentaje": pct_v
+            })
+
+        # 8. Análisis Estadístico de Métodos de Pago
+        q_metodos_pago = f"""
+            SELECT 
+                ISNULL(v.forma_pago, 'Efectivo') AS metodo,
+                COUNT(v.id) AS transacciones,
+                ISNULL(SUM(v.total), 0) AS total
+            FROM ventas v
+            {where_ventas}
+            GROUP BY v.forma_pago
+            ORDER BY total DESC
+        """
+        cursor.execute(q_metodos_pago, tuple(params_ventas))
+        metodos_rows = cursor.fetchall()
+        metodos_pago = []
+        for mr in metodos_rows:
+            m_tot = float(mr.total)
+            pct_p = round((m_tot / ventas_totales_monto * 100), 2) if ventas_totales_monto > 0 else 0.0
+            metodos_pago.append({
+                "metodo": mr.metodo,
+                "transacciones": mr.transacciones,
+                "total": m_tot,
+                "porcentaje": pct_p
+            })
+
+        # 9. Clasificación ABC de Rotación y Alertas de Existencias
+        q_todos_prods = """
+            SELECT p.id, p.codigo_sku AS codigo, p.nombre, c.nombre AS categoria,
+                   p.precio_venta AS precio, p.costo, p.stock_actual AS stock, p.stock_minimo AS min_stock
+            FROM productos p
+            INNER JOIN categorias c ON p.categoria_id = c.id
+            WHERE p.activo = 1
+        """
+        cursor.execute(q_todos_prods)
+        all_prods_rows = cursor.fetchall()
+
+        q_prods_periodo = f"""
+            SELECT dv.producto_id,
+                   ISNULL(SUM(dv.cantidad), 0) AS unidades_vendidas,
+                   ISNULL(SUM(dv.subtotal), 0) AS ingreso_generado,
+                   ISNULL(SUM(dv.subtotal - (dv.cantidad * dv.costo_historico)), 0) AS ganancia_generada
+            FROM detalle_ventas dv
+            INNER JOIN ventas v ON dv.venta_id = v.id
+            {where_ventas}
+            GROUP BY dv.producto_id
+        """
+        cursor.execute(q_prods_periodo, tuple(params_ventas))
+        prods_periodo_dict = {
+            r.producto_id: {
+                "unidades_vendidas": int(r.unidades_vendidas),
+                "ingreso_generado": float(r.ingreso_generado),
+                "ganancia_generada": float(r.ganancia_generada)
+            }
+            for r in cursor.fetchall()
+        }
+
+        productos_evaluados = []
+        for pr in all_prods_rows:
+            p_id = pr.id
+            p_data = prods_periodo_dict.get(p_id, {"unidades_vendidas": 0, "ingreso_generado": 0.0, "ganancia_generada": 0.0})
+            u_vend = p_data["unidades_vendidas"]
+            ing_gen = p_data["ingreso_generado"]
+            gan_gen = p_data["ganancia_generada"]
+            stock_act = int(pr.stock)
+            stock_min = int(pr.min_stock)
+            costo_val = float(pr.costo)
+            precio_val = float(pr.precio)
+
+            rot_indiv = round(u_vend / (stock_act if stock_act > 0 else 1), 2)
+
+            productos_evaluados.append({
+                "id": p_id,
+                "codigo": pr.codigo,
+                "nombre": pr.nombre,
+                "categoria": pr.categoria,
+                "precio": precio_val,
+                "costo": costo_val,
+                "stock": stock_act,
+                "min_stock": stock_min,
+                "unidades_vendidas": u_vend,
+                "ingreso_generado": ing_gen,
+                "ganancia_generada": gan_gen,
+                "rotacion": rot_indiv
+            })
+
+        # Ordenar por ingresos generados desc, luego unidades vendidas
+        productos_evaluados.sort(key=lambda x: (x["ingreso_generado"], x["unidades_vendidas"]), reverse=True)
+
+        total_ingresos_prods = sum(p["ingreso_generado"] for p in productos_evaluados)
+        acumulado_ing = 0.0
+
+        total_clase_a = 0
+        total_clase_b = 0
+        total_clase_c = 0
+
+        alertas_desabastecimiento = []
+        alertas_sobrestock = []
+        productos_bajo_stock_general = []
+
+        total_evaluados = len(productos_evaluados)
+
+        for idx, p in enumerate(productos_evaluados):
+            acumulado_ing += p["ingreso_generado"]
+            pct_acum = (acumulado_ing / total_ingresos_prods * 100) if total_ingresos_prods > 0 else 100.0
+
+            # Determinación Clase ABC
+            if p["unidades_vendidas"] > 0:
+                if pct_acum <= 75.0 or idx < max(3, int(total_evaluados * 0.15)):
+                    p["clase_abc"] = "A"
+                    p["clase_nombre"] = "Alta Rotación (Clase A)"
+                    total_clase_a += 1
+                elif pct_acum <= 92.0 or idx < max(8, int(total_evaluados * 0.40)):
+                    p["clase_abc"] = "B"
+                    p["clase_nombre"] = "Rotación Media (Clase B)"
+                    total_clase_b += 1
+                else:
+                    p["clase_abc"] = "C"
+                    p["clase_nombre"] = "Baja Rotación (Clase C)"
+                    total_clase_c += 1
+            else:
+                p["clase_abc"] = "C"
+                p["clase_nombre"] = "Inventario Estancado (Clase C)"
+                total_clase_c += 1
+
+            # Alerta stock bajo general
+            if p["stock"] <= p["min_stock"]:
+                productos_bajo_stock_general.append({
+                    "id": p["id"],
+                    "codigo": p["codigo"],
+                    "nombre": p["nombre"],
+                    "categoria": p["categoria"],
+                    "stock": p["stock"],
+                    "min_stock": p["min_stock"],
+                    "clase_abc": p["clase_abc"]
+                })
+
+            # 1. Alerta Crítica por Riesgo de Desabastecimiento
+            # Repuestos de alta o media rotación (Clase A o B) con stock agotado o en/bajo el mínimo
+            if p["clase_abc"] in ["A", "B"] and (p["stock"] <= p["min_stock"] or p["stock"] <= 2):
+                severidad = "Crítica" if (p["stock"] == 0 or p["clase_abc"] == "A") else "Alta"
+                alertas_desabastecimiento.append({
+                    "producto_id": p["id"],
+                    "codigo": p["codigo"],
+                    "nombre": p["nombre"],
+                    "categoria": p["categoria"],
+                    "clase_abc": p["clase_abc"],
+                    "stock_actual": p["stock"],
+                    "stock_minimo": p["min_stock"],
+                    "unidades_vendidas": p["unidades_vendidas"],
+                    "ingreso_generado": p["ingreso_generado"],
+                    "severidad": severidad,
+                    "mensaje": f"Repuesto de alta/media rotación ({p['clase_abc']}) con stock crítico ({p['stock']} de {p['min_stock']} mín.). Riesgo inminente de perder ventas."
+                })
+
+            # 2. Advertencia de Sobre-stock / Obsoleto
+            # Repuestos de baja rotación o estancados (Clase C) con stock detenido en bodega
+            if p["clase_abc"] == "C" and (p["stock"] > p["min_stock"] or p["stock"] >= 5):
+                val_inmovilizado = round(p["stock"] * p["costo"], 2)
+                alertas_sobrestock.append({
+                    "producto_id": p["id"],
+                    "codigo": p["codigo"],
+                    "nombre": p["nombre"],
+                    "categoria": p["categoria"],
+                    "clase_abc": "C",
+                    "stock_actual": p["stock"],
+                    "stock_minimo": p["min_stock"],
+                    "costo": p["costo"],
+                    "valor_inmovilizado": val_inmovilizado,
+                    "unidades_vendidas": p["unidades_vendidas"],
+                    "severidad": "Advertencia",
+                    "mensaje": f"Repuesto estancado (0 o baja rotación) con {p['stock']} unid. en bodega (C$ {val_inmovilizado:,.2f} inmovilizados)."
+                })
+
+        # Top productos vendidos en el período
+        top_productos = [
+            {
+                "id": p["id"],
+                "codigo": p["codigo"],
+                "nombre": p["nombre"],
+                "categoria": p["categoria"],
+                "cantidad_vendida": p["unidades_vendidas"],
+                "monto_total": p["ingreso_generado"],
+                "ganancia": p["ganancia_generada"],
+                "clase_abc": p["clase_abc"]
+            }
+            for p in productos_evaluados if p["unidades_vendidas"] > 0
+        ][:15]
+
+        # 10. Períodos Disponibles en Base de Datos
+        cursor.execute("""
+            SELECT DISTINCT YEAR(fecha_venta) AS anio, MONTH(fecha_venta) AS mes
+            FROM ventas
+            WHERE estado = 'Completada'
+            ORDER BY anio DESC, mes DESC
+        """)
+        periodos_db = cursor.fetchall()
+        periodos_disponibles = [{"anio": pr.anio, "mes": pr.mes} for pr in periodos_db]
+
+        resumen = {
+            "periodo": {
+                "mes": mes_int,
+                "anio": anio_int,
+                "texto": periodo_texto
+            },
+            "periodos_disponibles": periodos_disponibles,
+            "kpis": {
+                "ventas_totales_monto": ventas_totales_monto,
+                "ventas_totales_conteo": ventas_totales_conteo,
+                "ticket_promedio": ticket_promedio,
+                "costo_ventas_monto": costo_ventas_total,
+                "margen_bruto_monto": margen_bruto_monto,
+                "margen_bruto_porcentaje": margen_bruto_porcentaje,
+                "compras_totales_monto": compras_totales_monto,
+                "compras_totales_conteo": compras_totales_conteo,
+                "unidades_vendidas_total": unidades_vendidas_total,
+                "rotacion_inventario": rotacion_inventario,
+                "valor_inventario_costo": valor_inventario_costo,
+                "valor_inventario_venta": valor_inventario_venta,
+                "stock_total_actual": stock_total_actual
+            },
+            # Campos compatibles con versiones previas
+            "ventas_totales_monto": ventas_totales_monto,
+            "ventas_totales_conteo": ventas_totales_conteo,
+            "compras_totales_monto": compras_totales_monto,
+            "margen_bruto_estimado": margen_bruto_monto,
+            "rotacion_inventario": rotacion_inventario,
+            "unidades_vendidas_total": unidades_vendidas_total,
+            "productos_bajo_stock": productos_bajo_stock_general,
+            "alerta_stock_bajo_conteo": len(alertas_desabastecimiento),
+
+            # Análisis Estadístico Detallado
+            "categorias_analisis": categorias_analisis,
+            "metodos_pago": metodos_pago,
+            "rotacion_abc": {
+                "conteo_clase_a": total_clase_a,
+                "conteo_clase_b": total_clase_b,
+                "conteo_clase_c": total_clase_c,
+                "total_productos": total_evaluados,
+                "productos": productos_evaluados
+            },
+            "alertas": {
+                "desabastecimiento": alertas_desabastecimiento,
+                "sobrestock": alertas_sobrestock,
+                "total_criticas": len(alertas_desabastecimiento),
+                "total_sobrestock": len(alertas_sobrestock)
+            },
+            "ventas_por_fecha": ventas_por_fecha,
+            "tendencia_lista": tendencia_lista,
+            "top_productos": top_productos
+        }
 
         return jsonify(resumen)
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        if 'conn' in locals():
+        if 'conn' in locals() and conn:
             conn.close()
 
 # ==============================================================================

@@ -598,18 +598,52 @@
                 <!-- TAB 5: REPORTES Y ANÁLISIS ESTADÍSTICO -->
                 {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
                 <section id="tab-reportes" class="tab-content">
-                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                    <!-- ENCABEZADO Y ACCIONES PRINCIPALES UNIFICADAS -->
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
                         <div>
                             <h2>Reportes, Estadísticas y Análisis Comercial</h2>
-                            <p>Análisis estadístico del comportamiento del negocio: rotación ABC, distribución de ventas, métodos de pago y alertas de existencias.</p>
+                            <p>Comercialización de repuestos y accesorios para motocicletas: análisis de ventas, rotación ABC, rentabilidad y medidas estadísticas.</p>
                         </div>
-                        <!-- Barra de Herramientas y Filtro Temporal Mensual -->
-                        <div class="reportes-toolbar" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                                <i class="ph-bold ph-calendar" style="color: var(--primary);"></i>
-                                <label style="font-size: 0.82rem; font-weight: 600; margin: 0; color: var(--text-muted);">Mes:</label>
-                                <select id="rep-filtro-mes" class="form-control" style="height: 32px; padding: 0 0.5rem; font-size: 0.82rem;" onchange="aplicarFiltroReportes()">
-                                    <option value="todos">Todos (Año Completo)</option>
+                        
+                        <!-- BOTONERA PRINCIPAL SIMPLIFICADA (SOLO 2 CONTROLES UNIFICADOS) -->
+                        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-primary" onclick="generarInformeEjecutivo()" title="Generar y visualizar el informe oficial consolidado">
+                                <i class="ph-bold ph-file-text"></i> Generar informe
+                            </button>
+
+                            <div style="position: relative; display: inline-block;">
+                                <button type="button" class="btn btn-secondary" onclick="toggleMenuExportar(event)" id="btn-exportar-reporte" title="Descargar informe en formato oficial">
+                                    <i class="ph-bold ph-download-simple"></i> Exportar <i class="ph-bold ph-caret-down" style="font-size: 0.75rem;"></i>
+                                </button>
+                                <div id="dropdown-menu-exportar" style="display: none; position: absolute; right: 0; top: 110%; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-md); z-index: 1000; min-width: 210px; padding: 0.35rem 0;">
+                                    <a href="javascript:void(0)" onclick="exportarExcelReal()" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1rem; color: var(--text-main); text-decoration: none; font-size: 0.85rem; font-weight: 500;">
+                                        <i class="ph-bold ph-file-xls" style="color: #10b981; font-size: 1.2rem;"></i> Descargar Excel (.xlsx)
+                                    </a>
+                                    <a href="javascript:void(0)" onclick="imprimirInformeEjecutivo()" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1rem; color: var(--text-main); text-decoration: none; font-size: 0.85rem; font-weight: 500; border-top: 1px solid var(--border-color);">
+                                        <i class="ph-bold ph-file-pdf" style="color: #ef4444; font-size: 1.2rem;"></i> Descargar / Imprimir PDF
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE FILTROS TEMPORALES Y CRITERIOS -->
+                    <div class="card" style="margin-bottom: 1.25rem; padding: 0.85rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+                            <!-- Botones Rápidos de Rango -->
+                            <div style="display: flex; gap: 3px; background: var(--bg-body); padding: 3px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-wrap: wrap;">
+                                <button type="button" class="btn btn-secondary btn-preset-reporte" data-preset="hoy" onclick="aplicarFiltroReportesPreset('hoy')" style="padding: 4px 8px; font-size: 0.78rem;">Hoy</button>
+                                <button type="button" class="btn btn-secondary btn-preset-reporte" data-preset="7dias" onclick="aplicarFiltroReportesPreset('7dias')" style="padding: 4px 8px; font-size: 0.78rem;">7 Días</button>
+                                <button type="button" class="btn btn-secondary btn-preset-reporte active" data-preset="mes" onclick="aplicarFiltroReportesPreset('mes')" style="padding: 4px 8px; font-size: 0.78rem;">Mes Actual</button>
+                                <button type="button" class="btn btn-secondary btn-preset-reporte" data-preset="anio" onclick="aplicarFiltroReportesPreset('anio')" style="padding: 4px 8px; font-size: 0.78rem;">Año</button>
+                                <button type="button" class="btn btn-secondary btn-preset-reporte" data-preset="historico" onclick="aplicarFiltroReportesPreset('historico')" style="padding: 4px 8px; font-size: 0.78rem;">Histórico</button>
+                                <button type="button" class="btn btn-secondary btn-preset-reporte" data-preset="personalizado" onclick="aplicarFiltroReportesPreset('personalizado')" style="padding: 4px 8px; font-size: 0.78rem;">Personalizado</button>
+                            </div>
+
+                            <!-- Selector Directo de Mes y Año Específico -->
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <select id="rep-select-mes" class="form-control" style="height: 32px; font-size: 0.8rem; padding: 0 6px;" onchange="cambiarMesAnioDirecto()">
+                                    <option value="">-- Todos los Meses --</option>
                                     <option value="1">Enero</option>
                                     <option value="2">Febrero</option>
                                     <option value="3">Marzo</option>
@@ -623,344 +657,706 @@
                                     <option value="11">Noviembre</option>
                                     <option value="12">Diciembre</option>
                                 </select>
-
-                                <label style="font-size: 0.82rem; font-weight: 600; margin: 0; margin-left: 0.4rem; color: var(--text-muted);">Año:</label>
-                                <select id="rep-filtro-anio" class="form-control" style="height: 32px; padding: 0 0.5rem; font-size: 0.82rem;" onchange="aplicarFiltroReportes()">
+                                <select id="rep-select-anio" class="form-control" style="height: 32px; font-size: 0.8rem; padding: 0 6px;" onchange="cambiarMesAnioDirecto()">
+                                    <option value="2027">2027</option>
                                     <option value="2026" selected>2026</option>
                                     <option value="2025">2025</option>
                                     <option value="2024">2024</option>
                                 </select>
+                                <button type="button" class="btn btn-secondary" id="btn-toggle-comparar" onclick="toggleModoComparar()" style="padding: 4px 9px; font-size: 0.78rem;" title="Comparar dos períodos (ej. Oct 2025 vs Oct 2026)">
+                                    <i class="ph-bold ph-arrows-left-right"></i> Comparar
+                                </button>
                             </div>
 
-                            <button class="btn btn-secondary" onclick="aplicarFiltroReportes()" title="Actualizar datos del período">
-                                <i class="ph-bold ph-arrow-clockwise"></i> Actualizar
+                            <!-- Selector Criterio ABC (Inversión vs Consumo) -->
+                            <div style="display: flex; align-items: center; gap: 0.35rem; background: var(--bg-body); padding: 3px 6px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Criterio ABC:</span>
+                                <button type="button" class="btn btn-secondary active btn-sm" id="btn-abc-inversion" onclick="cambiarCriterioABC('inversion')" style="padding: 3px 7px; font-size: 0.75rem;" title="Basado en el capital inmovilizado (stock * costo)">
+                                    <i class="ph-bold ph-coins"></i> Inversión en Bodega
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-abc-consumo" onclick="cambiarCriterioABC('consumo')" style="padding: 3px 7px; font-size: 0.75rem;" title="Basado en facturación y demanda del período">
+                                    <i class="ph-bold ph-chart-line-up"></i> Ventas / Consumo
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Panel Filtro Personalizado (Desde/Hasta) -->
+                        <div id="rep-filtro-fechas-custom" style="display: none; align-items: center; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-color);">
+                            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Desde:</label>
+                            <input type="date" id="rep-fecha-inicio" class="form-control" style="height: 30px; font-size: 0.8rem; width: 140px;">
+                            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Hasta:</label>
+                            <input type="date" id="rep-fecha-fin" class="form-control" style="height: 30px; font-size: 0.8rem; width: 140px;">
+                            <button class="btn btn-primary" onclick="ejecutarConsultaReportes()" style="padding: 3px 10px; font-size: 0.78rem;">Aplicar Rango</button>
+                        </div>
+
+                        <!-- Panel Comparativo de Dos Períodos -->
+                        <div id="rep-panel-comparacion" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-color); background: rgba(59, 130, 246, 0.05); padding: 0.6rem 0.8rem; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem;">
+                                    <strong>Período A (Base):</strong>
+                                    <select id="comp-mes-a" class="form-control" style="height: 28px; font-size: 0.78rem;">
+                                        <option value="10" selected>Octubre</option>
+                                        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                                        <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                                        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                                        <option value="11">Noviembre</option><option value="12">Diciembre</option>
+                                    </select>
+                                    <select id="comp-anio-a" class="form-control" style="height: 28px; font-size: 0.78rem;">
+                                        <option value="2025" selected>2025</option>
+                                        <option value="2026">2026</option>
+                                    </select>
+                                </div>
+                                <div style="font-weight: 800; color: var(--primary);">VS</div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem;">
+                                    <strong>Período B (Comparado):</strong>
+                                    <select id="comp-mes-b" class="form-control" style="height: 28px; font-size: 0.78rem;">
+                                        <option value="10" selected>Octubre</option>
+                                        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                                        <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                                        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                                        <option value="11">Noviembre</option><option value="12">Diciembre</option>
+                                    </select>
+                                    <select id="comp-anio-b" class="form-control" style="height: 28px; font-size: 0.78rem;">
+                                        <option value="2026" selected>2026</option>
+                                        <option value="2025">2025</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="ejecutarComparacionPeriodos()" style="padding: 3px 10px; font-size: 0.78rem;">
+                                    <i class="ph-bold ph-chart-bar"></i> Comparar Ahora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INDICADOR DEL PERÍODO Y ROTACIÓN ACTIVA -->
+                    <div style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); padding: 0.6rem 1rem; border-radius: var(--radius-sm); flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="ph-bold ph-calendar-check" style="color: var(--primary); font-size: 1.3rem;"></i>
+                            <span style="font-size: 0.9rem; color: var(--text-main);">Período Activo: <strong id="rep-periodo-activo-texto" style="color: var(--primary);">Octubre 2026</strong></span>
+                            <span id="rep-criterio-badge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-green); font-weight: 700;">ABC: Inversión en Bodega</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.82rem; color: var(--text-muted);">
+                            <span>Rotación Monetaria: <strong id="rep-badge-rotacion" style="color: var(--text-main);">0.00x</strong></span>
+                            <span>Días en Inventario: <strong id="rep-badge-dias" style="color: var(--text-main);">0 días</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- SISTEMA DE 7 PESTAÑAS INTERNAS DE ESTADÍSTICA -->
+                    <div class="reportes-tabs-wrapper mode-all">
+                        <nav class="reportes-tabs-nav" role="tablist">
+                            <button class="reportes-tab-btn active" data-rep-tab="all" role="tab" onclick="switchReportesTab('all')">
+                                <i class="ph-bold ph-squares-four"></i> <span>Vista General</span>
                             </button>
-
-                            <button class="btn btn-primary" onclick="compilarInformeEjecutivo()" title="Generar Informe Ejecutivo Consolidado">
-                                <i class="ph-bold ph-file-text"></i> Compilar Informe Ejecutivo
+                            <button class="reportes-tab-btn" data-rep-tab="rep-resumen" role="tab" onclick="switchReportesTab('rep-resumen')">
+                                <i class="ph-bold ph-gauge"></i> <span>Resumen General</span>
                             </button>
-
-                            <button class="btn btn-outline" onclick="exportarReporteEstadisticoCSV()" title="Descargar datos en formato CSV">
-                                <i class="ph-bold ph-download-simple"></i> CSV
+                            <button class="reportes-tab-btn" data-rep-tab="rep-ventas" role="tab" onclick="switchReportesTab('rep-ventas')">
+                                <i class="ph-bold ph-trend-up"></i> <span>Ventas y Tendencias</span>
                             </button>
-                        </div>
-                    </div>
+                            <button class="reportes-tab-btn" data-rep-tab="rep-rentabilidad" role="tab" onclick="switchReportesTab('rep-rentabilidad')">
+                                <i class="ph-bold ph-coins"></i> <span>Rentabilidad y Márgenes</span>
+                            </button>
+                            <button class="reportes-tab-btn" data-rep-tab="rep-inventario" role="tab" onclick="switchReportesTab('rep-inventario')">
+                                <i class="ph-bold ph-package"></i> <span>Inventario y ABC</span>
+                            </button>
+                            <button class="reportes-tab-btn" data-rep-tab="rep-devoluciones" role="tab" onclick="switchReportesTab('rep-devoluciones')">
+                                <i class="ph-bold ph-arrows-counter-clockwise"></i> <span>Devoluciones</span>
+                            </button>
+                            <button class="reportes-tab-btn" data-rep-tab="rep-estadisticas" role="tab" onclick="switchReportesTab('rep-estadisticas')">
+                                <i class="ph-bold ph-calculator"></i> <span>Medidas Estadísticas</span>
+                            </button>
+                            <button class="reportes-tab-btn" data-rep-tab="rep-informes" role="tab" onclick="switchReportesTab('rep-informes')">
+                                <i class="ph-bold ph-file-text"></i> <span>Informes</span>
+                            </button>
+                        </nav>
 
-                    <!-- Indicador del Período Evaluado -->
-                    <div style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); padding: 0.5rem 1rem; border-radius: var(--radius-sm);">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="ph-bold ph-info" style="color: var(--primary); font-size: 1.2rem;"></i>
-                            <span style="font-size: 0.88rem; color: var(--text-main);">Período Activo: <strong id="rep-periodo-activo-texto" style="color: var(--primary);">Octubre 2026</strong></span>
-                        </div>
-                        <span id="rep-periodo-badge" class="badge" style="background: var(--primary); color: #000; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 4px;">Filtro Mensual Activo</span>
-                    </div>
+                        <!-- ═══ SECCIÓN 1: RESUMEN GENERAL ═══ -->
+                        <div class="rep-tab-panel active" id="rep-resumen" role="tabpanel">
+                            <!-- Banner de Variaciones si Modo Comparativo está activo -->
+                            <div id="rep-banner-variaciones" style="display: none; margin-bottom: 1.25rem; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.85rem 1rem; border-radius: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <strong style="color: #3b82f6;"><i class="ph-bold ph-arrows-left-right"></i> Comparativa de Períodos: <span id="comp-label-titulos">Oct 2025 vs Oct 2026</span></strong>
+                                    <button class="btn btn-outline btn-sm" onclick="cerrarModoComparativo()">Volver a vista regular</button>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;" id="comp-grid-variaciones">
+                                    <!-- Render dinámico de variaciones -->
+                                </div>
+                            </div>
 
-                    <!-- Cuadrícula de KPIs Principales y Rentabilidad -->
-                    <div class="stats-grid margin-bottom" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));">
-                        <!-- KPI 1: Ingresos por Ventas -->
-                        <div class="stat-card">
-                            <div class="stat-icon green">
-                                <i class="ph-bold ph-trend-up"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Ingresos por Ventas</span>
-                                <span class="stat-value" id="rep-ingresos">$ 0.00</span>
-                                <span class="stat-subtext" id="rep-unidades-vendidas">0 unidades | 0 ventas</span>
-                            </div>
-                        </div>
+                            <div class="stats-grid margin-bottom" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                                <!-- KPI 1: Ventas Netas -->
+                                <div class="stat-card">
+                                    <div class="stat-icon green"><i class="ph-bold ph-trend-up"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Ventas Netas Totales</span>
+                                        <span class="stat-value" id="rep-ingresos">C$ 0.00</span>
+                                        <span class="stat-subtext" id="rep-unidades-vendidas">0 unidades | 0 ventas</span>
+                                    </div>
+                                </div>
 
-                        <!-- KPI 2: Costo de Ventas / Egresos -->
-                        <div class="stat-card">
-                            <div class="stat-icon orange">
-                                <i class="ph-bold ph-shopping-bag"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Costo de Mercadería</span>
-                                <span class="stat-value" id="rep-costo-ventas">$ 0.00</span>
-                                <span class="stat-subtext" id="rep-egresos-compras">Compras del mes: $ 0.00</span>
-                            </div>
-                        </div>
+                                <!-- KPI 2: Costo de Ventas (COGS de repuestos vendidos) -->
+                                <div class="stat-card">
+                                    <div class="stat-icon orange"><i class="ph-bold ph-shopping-bag"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Costo de Ventas (COGS)</span>
+                                        <span class="stat-value" id="rep-costo-ventas">C$ 0.00</span>
+                                        <span class="stat-subtext" id="rep-cogs-subtext">Costo histórico de productos vendidos</span>
+                                    </div>
+                                </div>
 
-                        <!-- KPI 3: Margen Bruto y Rentabilidad % -->
-                        <div class="stat-card">
-                            <div class="stat-icon blue">
-                                <i class="ph-bold ph-coins"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Margen Bruto (Utilidad)</span>
-                                <span class="stat-value" id="rep-margen">$ 0.00</span>
-                                <span class="stat-subtext" id="rep-margen-pct" style="color: var(--accent-green); font-weight: 600;">Margen: 0.0%</span>
-                            </div>
-                        </div>
+                                <!-- KPI 3: Utilidad Bruta -->
+                                <div class="stat-card">
+                                    <div class="stat-icon blue"><i class="ph-bold ph-coins"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Utilidad Bruta</span>
+                                        <span class="stat-value" id="rep-margen">C$ 0.00</span>
+                                        <span class="stat-subtext" id="rep-margen-pct" style="color: var(--accent-green); font-weight: 700;">Margen Bruto: 0.00%</span>
+                                    </div>
+                                </div>
 
-                        <!-- KPI 4: Ticket Promedio -->
-                        <div class="stat-card">
-                            <div class="stat-icon purple">
-                                <i class="ph-bold ph-receipt"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Ticket Promedio</span>
-                                <span class="stat-value" id="rep-ticket-promedio">$ 0.00</span>
-                                <span class="stat-subtext" id="rep-ticket-conteo">Por comprobante emitido</span>
-                            </div>
-                        </div>
+                                <!-- KPI 4: Ticket Promedio -->
+                                <div class="stat-card">
+                                    <div class="stat-icon purple"><i class="ph-bold ph-receipt"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Ticket Promedio</span>
+                                        <span class="stat-value" id="rep-ticket-promedio">C$ 0.00</span>
+                                        <span class="stat-subtext" id="rep-ticket-conteo">Por comprobante emitido</span>
+                                    </div>
+                                </div>
 
-                        <!-- KPI 5: Rotación de Inventario -->
-                        <div class="stat-card">
-                            <div class="stat-icon purple">
-                                <i class="ph-bold ph-arrows-clockwise"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Rotación de Inventario</span>
-                                <span class="stat-value" id="rep-rotacion">0.00x</span>
-                                <span class="stat-subtext" id="rep-rotacion-subtext">Índice del período</span>
-                            </div>
-                        </div>
+                                <!-- KPI 5: Rotación Monetaria -->
+                                <div class="stat-card">
+                                    <div class="stat-icon purple"><i class="ph-bold ph-arrows-clockwise"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Rotación Monetaria</span>
+                                        <span class="stat-value" id="rep-rotacion">0.0000x</span>
+                                        <span class="stat-subtext" id="rep-rotacion-subtext">Costo Ventas / Inventario Costo</span>
+                                    </div>
+                                </div>
 
-                        <!-- KPI 6: Alertas Tempranas de Existencias -->
-                        <div class="stat-card">
-                            <div class="stat-icon red">
-                                <i class="ph-bold ph-warning-circle"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Alertas de Existencias</span>
-                                <span class="stat-value" id="rep-alertas-total">0</span>
-                                <span class="stat-subtext" id="rep-alertas-detalle" style="color: var(--accent-red);">0 desabast. | 0 sobre-stock</span>
-                            </div>
-                        </div>
-                    </div>
+                                <!-- KPI 6: Días de Inventario -->
+                                <div class="stat-card">
+                                    <div class="stat-icon orange"><i class="ph-bold ph-timer"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Días en Inventario</span>
+                                        <span class="stat-value" id="rep-dias-inventario">0 días</span>
+                                        <span class="stat-subtext">Plazo estimado rotación total</span>
+                                    </div>
+                                </div>
 
-                    <!-- Gráficos Estadísticos Dinámicos -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-                        <!-- Gráfico 1: Tendencia Cronológica de Ventas -->
-                        <div class="card">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <h3><i class="ph-bold ph-chart-line"></i> Tendencia Cronológica de Ventas</h3>
-                                <span style="font-size: 0.78rem; color: var(--text-muted);">Evolución temporal</span>
-                            </div>
-                            <div class="card-body">
-                                <div style="position: relative; height: 260px; width: 100%;">
-                                    <canvas id="chart-ventas-tendencia"></canvas>
+                                <!-- KPI 7: Inventario a Costo -->
+                                <div class="stat-card">
+                                    <div class="stat-icon blue"><i class="ph-bold ph-warehouse"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Inventario a Costo</span>
+                                        <span class="stat-value" id="rep-kpi-inv-costo">C$ 0.00</span>
+                                        <span class="stat-subtext" id="rep-kpi-stock-fisico">0 unidades en bodega</span>
+                                    </div>
+                                </div>
+
+                                <!-- KPI 8: Alertas Universales de Stock -->
+                                <div class="stat-card">
+                                    <div class="stat-icon red"><i class="ph-bold ph-warning-circle"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Existencias Bajo Mínimo</span>
+                                        <span class="stat-value" id="rep-alertas-total">0</span>
+                                        <span class="stat-subtext" style="color: var(--accent-red);" id="rep-alertas-sub">Auditoría sobre 235 repuestos</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Gráfico 2: Distribución de Ventas por Categoría -->
-                        <div class="card">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <h3><i class="ph-bold ph-chart-pie-slice"></i> Distribución por Categoría</h3>
-                                <span style="font-size: 0.78rem; color: var(--text-muted);">Cuota por repuestos</span>
+                        <!-- ═══ SECCIÓN 2: VENTAS Y TENDENCIAS ═══ -->
+                        <div class="rep-tab-panel active" id="rep-ventas" role="tabpanel">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                                <!-- Gráfico 1: Tendencia de Ventas (con Empty State limpio) -->
+                                <div class="card">
+                                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <h3><i class="ph-bold ph-chart-line"></i> Tendencia Cronológica de Ventas</h3>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Evolución temporal del período</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="container-chart-tendencia" style="position: relative; height: 260px; width: 100%;">
+                                            <canvas id="chart-ventas-tendencia"></canvas>
+                                            <div id="empty-state-tendencia" class="chart-empty-state" style="display: none; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center;">
+                                                <i class="ph-bold ph-chart-line" style="font-size: 2.2rem; opacity: 0.35; margin-bottom: 0.5rem;"></i>
+                                                <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">Sin datos suficientes para graficar</span>
+                                                <small style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">No se registraron ventas en el período seleccionado.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Gráfico 2: Métodos de Pago -->
+                                <div class="card">
+                                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <h3><i class="ph-bold ph-credit-card"></i> Métodos de Pago</h3>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Distribución por forma de cobro</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="container-chart-metodos" style="position: relative; height: 260px; width: 100%;">
+                                            <canvas id="chart-metodos-pago"></canvas>
+                                            <div id="empty-state-metodos" class="chart-empty-state" style="display: none; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center;">
+                                                <i class="ph-bold ph-credit-card" style="font-size: 2.2rem; opacity: 0.35; margin-bottom: 0.5rem;"></i>
+                                                <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">Sin movimientos de cobro</span>
+                                                <small style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">No hay transacciones registradas en este período.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div style="position: relative; height: 260px; width: 100%;">
-                                    <canvas id="chart-ventas-categoria"></canvas>
+
+                            <!-- Desglose Anual de los 12 Meses -->
+                            <div class="card" style="margin-bottom: 1.5rem;">
+                                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h3><i class="ph-bold ph-calendar"></i> Desglose Anual por Meses (Enero a Diciembre)</h3>
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">Comportamiento mensual del año evaluado</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Mes</th>
+                                                    <th style="text-align: center;">Transacciones</th>
+                                                    <th style="text-align: center;">Unid. Vendidas</th>
+                                                    <th style="text-align: right;">Ventas Totales</th>
+                                                    <th style="text-align: right;">Costo de Ventas</th>
+                                                    <th style="text-align: right;">Utilidad Bruta</th>
+                                                    <th style="text-align: right;">Margen %</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-desglose-meses">
+                                                <!-- Render dinámico -->
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Gráfico 3: Análisis Estadístico de Métodos de Pago -->
-                        <div class="card">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <h3><i class="ph-bold ph-credit-card"></i> Métodos de Pago</h3>
-                                <span style="font-size: 0.78rem; color: var(--text-muted);">Composición monetaria</span>
+                        <!-- ═══ SECCIÓN 3: RENTABILIDAD Y MÁRGENES ═══ -->
+                        <div class="rep-tab-panel active" id="rep-rentabilidad" role="tabpanel">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                                <!-- Gráfico Rentabilidad por Categoría -->
+                                <div class="card">
+                                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <h3><i class="ph-bold ph-chart-bar"></i> Rentabilidad por Categoría de Repuestos</h3>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Utilidad Bruta (C$) y Margen %</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="container-chart-rentabilidad" style="position: relative; height: 260px; width: 100%;">
+                                            <canvas id="chart-rentabilidad-categoria"></canvas>
+                                            <div id="empty-state-rentabilidad" class="chart-empty-state" style="display: none; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center;">
+                                                <i class="ph-bold ph-chart-bar" style="font-size: 2.2rem; opacity: 0.35; margin-bottom: 0.5rem;"></i>
+                                                <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">Sin transacciones por categoría</span>
+                                                <small style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">No se registraron ventas en este período.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Gráfico Distribución de Ventas por Categoría -->
+                                <div class="card">
+                                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <h3><i class="ph-bold ph-chart-pie-slice"></i> Cuota de Participación en Ventas</h3>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Proporción sobre el total facturado</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="container-chart-categoria" style="position: relative; height: 260px; width: 100%;">
+                                            <canvas id="chart-ventas-categoria"></canvas>
+                                            <div id="empty-state-categoria" class="chart-empty-state" style="display: none; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center;">
+                                                <i class="ph-bold ph-chart-pie-slice" style="font-size: 2.2rem; opacity: 0.35; margin-bottom: 0.5rem;"></i>
+                                                <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">Sin registros de ventas</span>
+                                                <small style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">No se registraron ventas en las categorías en este período.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div style="position: relative; height: 260px; width: 100%;">
-                                    <canvas id="chart-metodos-pago"></canvas>
+
+                            <!-- Tabla Completa de Rendimiento por Categoría -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3><i class="ph-bold ph-squares-four"></i> Tabla Detallada de Rendimiento y Márgenes por Categoría</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Categoría de Repuestos</th>
+                                                    <th style="text-align: center;">Unidades Vendidas</th>
+                                                    <th style="text-align: right;">Ventas Totales</th>
+                                                    <th style="text-align: right;">Costo de Ventas</th>
+                                                    <th style="text-align: right;">Utilidad Bruta</th>
+                                                    <th style="text-align: right;">Margen %</th>
+                                                    <th style="text-align: right;">Participación %</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-rendimiento-categorias">
+                                                <!-- Render dinámico -->
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- SECCIÓN: EVALUACIÓN DE ROTACIÓN DE INVENTARIO (ANÁLISIS ABC) -->
-                    <div class="card margin-bottom">
-                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                            <div>
-                                <h3 style="margin: 0;"><i class="ph-bold ph-chart-bar"></i> Evaluación de Rotación de Inventario (Análisis ABC)</h3>
-                                <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
-                                    Clasificación de repuestos según rotación comercial y volumen de ventas del período seleccionado.
-                                </p>
-                            </div>
-                            <!-- Filtros por Clase ABC -->
-                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                                <div class="btn-group" style="display: flex; gap: 0.25rem;">
-                                    <button class="btn btn-outline active btn-sm" id="btn-filtro-abc-todos" onclick="filtrarTablaABC('todos')">Todos (<span id="count-abc-todos">0</span>)</button>
-                                    <button class="btn btn-outline btn-sm" id="btn-filtro-abc-a" onclick="filtrarTablaABC('A')" style="border-color: rgba(16, 185, 129, 0.4); color: var(--accent-green);"><i class="ph-bold ph-circle"></i> Clase A (<span id="count-abc-a">0</span>)</button>
-                                    <button class="btn btn-outline btn-sm" id="btn-filtro-abc-b" onclick="filtrarTablaABC('B')" style="border-color: rgba(245, 158, 11, 0.4); color: var(--warning);"><i class="ph-bold ph-circle"></i> Clase B (<span id="count-abc-b">0</span>)</button>
-                                    <button class="btn btn-outline btn-sm" id="btn-filtro-abc-c" onclick="filtrarTablaABC('C')" style="border-color: rgba(239, 68, 68, 0.4); color: var(--accent-red);"><i class="ph-bold ph-circle"></i> Clase C (<span id="count-abc-c">0</span>)</button>
+                        <!-- ═══ SECCIÓN 4: INVENTARIO Y CLASIFICACIÓN ABC ═══ -->
+                        <div class="rep-tab-panel active" id="rep-inventario" role="tabpanel">
+                            <!-- Resumen Informativo de Categorías ABC -->
+                            <div class="card" style="margin-bottom: 1.5rem;">
+                                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                    <div>
+                                        <h3 style="margin: 0;"><i class="ph-bold ph-chart-bar"></i> Clasificación ABC de Repuestos y Accesorios</h3>
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;" id="txt-criterio-abc-desc">
+                                            Criterio actual: Inversión en Inventario (Capital en Bodega = stock * costo).
+                                        </p>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                        <div class="btn-group" style="display: flex; gap: 0.25rem;">
+                                            <button class="btn btn-outline active btn-sm" id="btn-filtro-abc-todos" onclick="filtrarTablaABC('todos')">Todos (<span id="count-abc-todos">0</span>)</button>
+                                            <button class="btn btn-outline btn-sm" id="btn-filtro-abc-a" onclick="filtrarTablaABC('A')" style="border-color: rgba(16, 185, 129, 0.4); color: var(--accent-green);">Clase A (<span id="count-abc-a">0</span>)</button>
+                                            <button class="btn btn-outline btn-sm" id="btn-filtro-abc-b" onclick="filtrarTablaABC('B')" style="border-color: rgba(245, 158, 11, 0.4); color: var(--warning);">Clase B (<span id="count-abc-b">0</span>)</button>
+                                            <button class="btn btn-outline btn-sm" id="btn-filtro-abc-c" onclick="filtrarTablaABC('C')" style="border-color: rgba(239, 68, 68, 0.4); color: var(--accent-red);">Clase C (<span id="count-abc-c">0</span>)</button>
+                                        </div>
+                                        <input type="text" id="busqueda-tabla-abc" class="form-control" placeholder="Buscar repuesto..." style="height: 32px; font-size: 0.82rem; width: 170px;" oninput="filtrarTablaABCPorTexto(this.value)">
+                                    </div>
                                 </div>
-                                <input type="text" id="busqueda-tabla-abc" class="form-control" placeholder="Buscar repuesto..." style="height: 32px; font-size: 0.82rem; width: 180px;" oninput="filtrarTablaABCPorTexto(this.value)">
+
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; padding: 1rem 1.5rem; background: rgba(0,0,0,0.06); border-bottom: 1px solid var(--border-color);">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="background: rgba(16, 185, 129, 0.15); width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent-green); font-weight: 800; font-size: 1.1rem;">A</div>
+                                        <div>
+                                            <strong style="color: var(--accent-green); font-size: 0.88rem;">Clase A (~75% del Valor)</strong>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">Ítems de mayor impacto financiero. Máximo control de stock.</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="background: rgba(245, 158, 11, 0.15); width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--warning); font-weight: 800; font-size: 1.1rem;">B</div>
+                                        <div>
+                                            <strong style="color: var(--warning); font-size: 0.88rem;">Clase B (~20% del Valor)</strong>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">Impacto intermedio. Reposición periódica programada.</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="background: rgba(239, 68, 68, 0.15); width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent-red); font-weight: 800; font-size: 1.1rem;">C</div>
+                                        <div>
+                                            <strong style="color: var(--accent-red); font-size: 0.88rem;">Clase C (~5% del Valor)</strong>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">Tornillería, empaques, accesorios menores. Control visual.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card-body">
+                                    <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                                        <table class="data-table" id="tabla-rotacion-abc">
+                                            <thead>
+                                                <tr>
+                                                    <th>Clase</th>
+                                                    <th>Código SKU</th>
+                                                    <th>Repuesto</th>
+                                                    <th>Categoría</th>
+                                                    <th style="text-align: center;">Stock</th>
+                                                    <th style="text-align: right;">Costo Unid.</th>
+                                                    <th style="text-align: right;">Capital en Bodega</th>
+                                                    <th style="text-align: center;">Vendidas</th>
+                                                    <th style="text-align: right;">Ingresos</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-rotacion-abc">
+                                                <!-- Render dinámico -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECCIÓN: RANKING POR UNIDADES Y REPUESTOS SIN MOVIMIENTO -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                                <!-- Ranking por Unidades Vendidas -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3><i class="ph-bold ph-sort-descending"></i> Ranking por Unidades Físicas Vendidas</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                            <table class="data-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Repuesto</th>
+                                                        <th style="text-align: center;">Unidades</th>
+                                                        <th style="text-align: right;">Ingreso Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbody-ranking-unidades">
+                                                    <!-- Render dinámico -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Repuestos Sin Movimiento (0 ventas en el período) -->
+                                <div class="card">
+                                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <h3><i class="ph-bold ph-archive-box"></i> Repuestos Sin Movimiento en el Período</h3>
+                                        <span class="badge" id="badge-conteo-sin-movimiento" style="background: rgba(245, 158, 11, 0.2); color: var(--warning); font-weight: 700;">0 repuestos</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                            <table class="data-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>SKU / Repuesto</th>
+                                                        <th style="text-align: center;">Stock</th>
+                                                        <th style="text-align: right;">Costo Unid.</th>
+                                                        <th style="text-align: right;">Capital Inmovilizado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbody-repuestos-sin-movimiento">
+                                                    <!-- Render dinámico -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ALERTA UNIVERSAL DE STOCK MÍNIMO (AUDITORÍA SOBRE TODOS LOS 235 PRODUCTOS) -->
+                            <div class="card" style="border-top: 4px solid var(--accent-red);">
+                                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="color: var(--accent-red); margin: 0;"><i class="ph-bold ph-warning"></i> Alerta Universal: Repuestos en o Bajo Stock Mínimo</h3>
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                                            Auditoría integral sobre todo el catálogo. Se listan todos los repuestos con stock menor o igual a su stock mínimo de seguridad.
+                                        </p>
+                                    </div>
+                                    <span class="badge" id="badge-alerta-universal-count" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red); font-weight: 700;">0 repuestos</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nivel</th>
+                                                    <th>Código SKU</th>
+                                                    <th>Repuesto</th>
+                                                    <th>Categoría</th>
+                                                    <th style="text-align: center;">Stock Actual</th>
+                                                    <th style="text-align: center;">Stock Mínimo</th>
+                                                    <th style="text-align: center;">Déficit Físico</th>
+                                                    <th style="text-align: right;">Costo Reposición</th>
+                                                    <th style="text-align: center;">Clase</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-alertas-stock-universal">
+                                                <!-- Render dinámico -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Resumen Informativo de Categorías ABC -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; padding: 1rem 1.5rem; background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
-                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <div style="background: rgba(16, 185, 129, 0.15); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent-green); font-weight: 800; font-size: 1.1rem;">A</div>
-                                <div>
-                                    <strong style="color: var(--accent-green); font-size: 0.9rem;">Alta Rotación (Clase A)</strong>
-                                    <div style="font-size: 0.78rem; color: var(--text-muted);">Productos líderes (~75% de ventas). Máxima prioridad de stock.</div>
+                        <!-- ═══ SECCIÓN 5: DEVOLUCIONES Y GARANTÍAS ═══ -->
+                        <div class="rep-tab-panel active" id="rep-devoluciones" role="tabpanel">
+                            <div class="stats-grid margin-bottom" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                                <div class="stat-card">
+                                    <div class="stat-icon red"><i class="ph-bold ph-arrows-counter-clockwise"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Operaciones de Devolución</span>
+                                        <span class="stat-value" id="kpi-dev-operaciones">0</span>
+                                        <span class="stat-subtext">Garantías y reintegros</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon orange"><i class="ph-bold ph-package"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Unidades Físicas Reingresadas</span>
+                                        <span class="stat-value" id="kpi-dev-unidades">0 uds.</span>
+                                        <span class="stat-subtext">Repuestos retornados</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-icon red"><i class="ph-bold ph-currency-dollar"></i></div>
+                                    <div class="stat-data">
+                                        <span class="stat-title">Monto Total Reintegrado</span>
+                                        <span class="stat-value" id="kpi-dev-monto">C$ 0.00</span>
+                                        <span class="stat-subtext">Impacto comercial</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <div style="background: rgba(245, 158, 11, 0.15); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--warning); font-weight: 800; font-size: 1.1rem;">B</div>
-                                <div>
-                                    <strong style="color: var(--warning); font-size: 0.9rem;">Rotación Media (Clase B)</strong>
-                                    <div style="font-size: 0.78rem; color: var(--text-muted);">Demanda intermedia (~15-20% ventas). Reposición periódica.</div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3><i class="ph-bold ph-clipboard-text"></i> Registro Detallado de Devoluciones y Garantías</h3>
                                 </div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <div style="background: rgba(239, 68, 68, 0.15); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent-red); font-weight: 800; font-size: 1.1rem;">C</div>
-                                <div>
-                                    <strong style="color: var(--accent-red); font-size: 0.9rem;">Inventario Estancado (Clase C)</strong>
-                                    <div style="font-size: 0.78rem; color: var(--text-muted);">0 o baja rotación en período. Riesgo de sobre-stock / capital parado.</div>
+                                <div class="card-body">
+                                    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Comprobante</th>
+                                                    <th>Venta Original</th>
+                                                    <th>Fecha</th>
+                                                    <th>Repuesto</th>
+                                                    <th>Motivo</th>
+                                                    <th style="text-align: right;">Total Devuelto</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-devoluciones-estadisticas">
+                                                <!-- Render dinámico -->
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="card-body">
-                            <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
-                                <table class="data-table" id="tabla-rotacion-abc">
-                                    <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 1;">
-                                        <tr>
-                                            <th>Clase ABC</th>
-                                            <th>Código SKU</th>
-                                            <th>Repuesto</th>
-                                            <th>Categoría</th>
-                                            <th style="text-align: right;">Stock Actual</th>
-                                            <th style="text-align: right;">Stock Mín.</th>
-                                            <th style="text-align: right;">Vendidas (Período)</th>
-                                            <th style="text-align: right;">Ingresos Generados</th>
-                                            <th style="text-align: center;">Rotación</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbody-rotacion-abc">
-                                        <!-- Render dinámico de productos clasificados -->
-                                        <tr><td colspan="9" class="text-center text-muted" style="padding: 2rem;">Cargando análisis de rotación...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECCIÓN: ALERTAS TEMPRANAS DE EXISTENCIAS CONSOLIDADAS -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-                        <!-- Alerta 1: Riesgo Crítico de Desabastecimiento -->
-                        <div class="card" style="border-top: 4px solid var(--accent-red);">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h3 style="color: var(--accent-red);"><i class="ph-bold ph-shield-warning"></i> Alerta Crítica: Riesgo de Desabastecimiento</h3>
-                                    <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
-                                        Repuestos de alta/media rotación (Clase A o B) con existencias agotadas o bajo stock mínimo.
+                        <!-- ═══ SECCIÓN 6: MEDIDAS ESTADÍSTICAS DESCRIPTIVAS ═══ -->
+                        <div class="rep-tab-panel active" id="rep-estadisticas" role="tabpanel">
+                            <div class="card" style="margin-bottom: 1.5rem;">
+                                <div class="card-header">
+                                    <h3><i class="ph-bold ph-calculator"></i> Medidas Estadísticas Descriptivas de las Ventas</h3>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                                        Análisis matemático formal de la serie de montos facturados en el período evaluado.
                                     </p>
                                 </div>
-                                <span class="badge" id="badge-conteo-desabastecimiento" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red); font-weight: 700;">0 productos</span>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>SKU / Repuesto</th>
-                                                <th>Clase</th>
-                                                <th style="text-align: center;">Stock</th>
-                                                <th style="text-align: center;">Mínimo</th>
-                                                <th>Estado / Nivel</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tbody-alertas-desabastecimiento">
-                                            <!-- Render dinámico -->
-                                        </tbody>
-                                    </table>
+                                <div class="card-body">
+                                    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                                        <div class="stat-card">
+                                            <div class="stat-icon blue"><i class="ph-bold ph-hash"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Tamaño de Muestra (N)</span>
+                                                <span class="stat-value" id="stat-n">0</span>
+                                                <span class="stat-subtext">Transacciones analizadas</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon green"><i class="ph-bold ph-chart-line"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Media Aritmética (μ)</span>
+                                                <span class="stat-value" id="stat-media">C$ 0.00</span>
+                                                <span class="stat-subtext">Promedio por venta</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon purple"><i class="ph-bold ph-arrows-down-up"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Mediana</span>
+                                                <span class="stat-value" id="stat-mediana">C$ 0.00</span>
+                                                <span class="stat-subtext">Punto medio de la serie</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon green"><i class="ph-bold ph-arrow-up-right"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Venta Máxima</span>
+                                                <span class="stat-value" id="stat-max">C$ 0.00</span>
+                                                <span class="stat-subtext">Mayor venta individual</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon orange"><i class="ph-bold ph-arrow-down-right"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Venta Mínima</span>
+                                                <span class="stat-value" id="stat-min">C$ 0.00</span>
+                                                <span class="stat-subtext">Menor venta individual</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon blue"><i class="ph-bold ph-arrows-out-line-horizontal"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Rango Estadístico</span>
+                                                <span class="stat-value" id="stat-rango">C$ 0.00</span>
+                                                <span class="stat-subtext">Máximo menos Mínimo</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon purple"><i class="ph-bold ph-chart-scatter"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Varianza Muestral (s²)</span>
+                                                <span class="stat-value" id="stat-varianza">0.00</span>
+                                                <span class="stat-subtext">Dispersión cuadrática</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon orange"><i class="ph-bold ph-trend-down"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Desviación Estándar (s)</span>
+                                                <span class="stat-value" id="stat-desv">C$ 0.00</span>
+                                                <span class="stat-subtext">Dispersión en Córdobas</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="stat-card">
+                                            <div class="stat-icon green"><i class="ph-bold ph-percent"></i></div>
+                                            <div class="stat-data">
+                                                <span class="stat-title">Coeficiente de Variación (CV)</span>
+                                                <span class="stat-value" id="stat-cv">0.00%</span>
+                                                <span class="stat-subtext">Volatilidad relativa de ventas</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Diagnóstico Matemático -->
+                                    <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 1rem 1.25rem;">
+                                        <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                                            <i class="ph-bold ph-lightbulb" style="color: var(--primary); font-size: 1.5rem; margin-top: 2px;"></i>
+                                            <div>
+                                                <strong style="color: var(--text-main); font-size: 0.95rem;">Interpretación Estadística del Negocio:</strong>
+                                                <p id="stat-interpretacion" style="margin: 0.35rem 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+                                                    Sin transacciones registradas en el período para cálculo estadístico.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Alerta 2: Advertencia de Sobre-stock / Inventario Obsoleto -->
-                        <div class="card" style="border-top: 4px solid var(--warning);">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h3 style="color: var(--warning);"><i class="ph-bold ph-archive-box"></i> Advertencia: Sobre-Stock / Inventario Estancado</h3>
-                                    <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
-                                        Repuestos Clase C sin movimiento en el período y existencias acumuladas (Capital inmovilizado).
-                                    </p>
+                        <!-- ═══ SECCIÓN 7: INFORMES GERENCIALES ═══ -->
+                        <div class="rep-tab-panel active" id="rep-informes" role="tabpanel">
+                            <div class="card">
+                                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h3 style="margin: 0;"><i class="ph-bold ph-file-text"></i> Emisión y Formalización de Informes Oficiales</h3>
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                                            Generación de informes ejecutivos consolidados para gerencia, auditoría y contabilidad.
+                                        </p>
+                                    </div>
                                 </div>
-                                <span class="badge" id="badge-conteo-sobrestock" style="background: rgba(245, 158, 11, 0.2); color: var(--warning); font-weight: 700;">0 productos</span>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>SKU / Repuesto</th>
-                                                <th style="text-align: center;">Stock</th>
-                                                <th style="text-align: right;">Costo Unid.</th>
-                                                <th style="text-align: right;">Capital Inmovilizado</th>
-                                                <th>Diagnóstico</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tbody-alertas-sobrestock">
-                                            <!-- Render dinámico -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SECCIÓN: RENDIMIENTO POR CATEGORÍAS Y SESIONES DE CAJA -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-                        <!-- Tabla Rendimiento por Categoría -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h3><i class="ph-bold ph-squares-four"></i> Rendimiento por Categoría de Repuestos</h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Categoría</th>
-                                                <th style="text-align: center;">Unid.</th>
-                                                <th style="text-align: right;">Ventas ($)</th>
-                                                <th style="text-align: right;">Margen ($)</th>
-                                                <th style="text-align: right;">Rentab. %</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tbody-rendimiento-categorias">
-                                            <!-- Render dinámico -->
-                                        </tbody>
-                                    </table>
+                                <div class="card-body">
+                                    <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center; max-width: 650px; margin: 0 auto;">
+                                        <i class="ph-bold ph-file-arrow-up" style="font-size: 3rem; color: var(--primary); margin-bottom: 0.75rem;"></i>
+                                        <h4 style="margin: 0 0 0.5rem 0; font-size: 1.15rem;">Informe Ejecutivo Consolidado del Negocio</h4>
+                                        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1.25rem 0;">
+                                            Compila las ventas netas, utilidades, rotación monetaria, auditoría ABC, medidas estadísticas y alertas de existencias del período seleccionado.
+                                        </p>
+                                        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+                                            <button type="button" class="btn btn-primary" onclick="generarInformeEjecutivo()" style="padding: 0.6rem 1.25rem;">
+                                                <i class="ph-bold ph-eye"></i> Previsualizar e Imprimir
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" onclick="exportarExcelReal()" style="padding: 0.6rem 1.25rem;">
+                                                <i class="ph-bold ph-file-xls" style="color: #10b981;"></i> Descargar Excel (.xlsx)
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Sesiones de Caja -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h3><i class="ph-bold ph-cash-register"></i> Sesiones de Caja (Reportes Operativos)</h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>ID Sesión</th>
-                                                <th>Usuario</th>
-                                                <th>Apertura</th>
-                                                <th>Estado</th>
-                                                <th style="text-align: right;">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tbody-sesiones-caja">
-                                            <!-- Render dinámico -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                    </div><!-- /reportes-tabs-wrapper -->
                 </section>
                 {% endif %}
 
@@ -1208,15 +1604,31 @@
                             </button>
                             <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-directorio" role="tab" aria-selected="false" id="rrhh-tab-btn-directorio" onclick="switchRrhhTab('rrhh-directorio')">
                                 <i class="ph-bold ph-address-book"></i>
-                                <span>Directorio de Empleados</span>
+                                <span>Directorio</span>
                             </button>
-                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-historial" role="tab" aria-selected="false" id="rrhh-tab-btn-historial" onclick="switchRrhhTab('rrhh-historial')">
-                                <i class="ph-bold ph-clipboard-text"></i>
-                                <span>Historial de Planillas</span>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-reclutamiento" role="tab" aria-selected="false" id="rrhh-tab-btn-reclutamiento" onclick="switchRrhhTab('rrhh-reclutamiento')">
+                                <i class="ph-bold ph-user-focus"></i>
+                                <span>Reclutamiento y Contratos</span>
+                            </button>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-asistencia" role="tab" aria-selected="false" id="rrhh-tab-btn-asistencia" onclick="switchRrhhTab('rrhh-asistencia')">
+                                <i class="ph-bold ph-clock-user"></i>
+                                <span>Asistencia y H. Extras</span>
                             </button>
                             <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-ausencias" role="tab" aria-selected="false" id="rrhh-tab-btn-ausencias" onclick="switchRrhhTab('rrhh-ausencias')">
                                 <i class="ph-bold ph-calendar-x"></i>
-                                <span>Control de Ausencias</span>
+                                <span>Vacaciones y Permisos</span>
+                            </button>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-historial" role="tab" aria-selected="false" id="rrhh-tab-btn-historial" onclick="switchRrhhTab('rrhh-historial')">
+                                <i class="ph-bold ph-clipboard-text"></i>
+                                <span>Planillas y Liquidaciones</span>
+                            </button>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-seguridad" role="tab" aria-selected="false" id="rrhh-tab-btn-seguridad" onclick="switchRrhhTab('rrhh-seguridad')">
+                                <i class="ph-bold ph-shield-check"></i>
+                                <span>Seguridad e Higiene (Ley 618)</span>
+                            </button>
+                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-legal" role="tab" aria-selected="false" id="rrhh-tab-btn-legal" onclick="switchRrhhTab('rrhh-legal')">
+                                <i class="ph-bold ph-scales"></i>
+                                <span>Marco Legal y Parámetros</span>
                             </button>
                         </nav>
 
@@ -1306,6 +1718,68 @@
                                     </table>
                                 </div>
                             </div>
+
+                            <!-- RF108: Liquidaciones Laborales (Finiquito Ley 185) -->
+                            <div class="rrhh-panel-toolbar" style="margin-top: 1.5rem;">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-receipt"></i>
+                                    <span>Liquidaciones Laborales y Finiquitos (Ley 185)</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <button class="btn btn-secondary rrhh-action-btn" onclick="abrirModalNuevaLiquidacion()">
+                                        <i class="ph-bold ph-calculator"></i>
+                                        <span>Calcular Liquidación</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Empleado</th>
+                                                <th>Causa de Salida</th>
+                                                <th>Antigüedad</th>
+                                                <th style="text-align: right;">Neto a Pagar</th>
+                                                <th>Estado</th>
+                                                <th style="text-align: center;">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-liquidaciones-laborales">
+                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando liquidaciones...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- RF109: Registro y Seguimiento de Pagos de Nómina -->
+                            <div class="rrhh-panel-toolbar" style="margin-top: 1.5rem;">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-bank"></i>
+                                    <span>Seguimiento de Pagos de Nómina</span>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Empleado</th>
+                                                <th>Nómina</th>
+                                                <th>Fecha Pago</th>
+                                                <th>Método</th>
+                                                <th>Nº Referencia</th>
+                                                <th style="text-align: right;">Monto Pagado</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-pagos-nomina">
+                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando pagos...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- ═══ PANEL 3: CONTROL DE AUSENCIAS ═══ -->
@@ -1347,6 +1821,289 @@
                                             <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">
                                                 <i class="ph-bold ph-calendar-blank" style="font-size:1.5rem;opacity:0.4;"></i><br>Sin registros de movimientos laborales.
                                             </td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ PANEL 4: RECLUTAMIENTO Y CONTRATOS LABORALES (RF95, RF96, RF98, RF99) ═══ -->
+                        <div class="rrhh-tab-panel active" id="rrhh-reclutamiento" role="tabpanel">
+                            <!-- Sección Solicitudes de Empleo -->
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-user-focus"></i>
+                                    <span>Solicitudes de Empleo y Reclutamiento</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <button class="btn btn-primary rrhh-action-btn" onclick="abrirModalNuevaSolicitud()">
+                                        <i class="ph-bold ph-user-plus"></i>
+                                        <span>Nueva Solicitud</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card" style="margin-bottom: 1.5rem;">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Aspirante / Contacto</th>
+                                                <th>Puesto Solicitado</th>
+                                                <th style="text-align: right;">Salario Pretendido</th>
+                                                <th>Estado</th>
+                                                <th>Fecha</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-solicitudes-empleo">
+                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando solicitudes...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Sección Contratos Laborales -->
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-file-text"></i>
+                                    <span>Contratos Laborales y Control de Vigencia</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <button class="btn btn-secondary rrhh-action-btn" onclick="abrirModalNuevoContrato()">
+                                        <i class="ph-bold ph-plus-circle"></i>
+                                        <span>Registrar Contrato</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Nº Contrato</th>
+                                                <th>Empleado</th>
+                                                <th>Modalidad</th>
+                                                <th style="text-align: right;">Salario</th>
+                                                <th>Vigencia</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-contratos-laborales">
+                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando contratos...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ PANEL 5: ASISTENCIA Y HORAS EXTRAS (RF102, RF103, RF104) ═══ -->
+                        <div class="rrhh-tab-panel active" id="rrhh-asistencia" role="tabpanel">
+                            <!-- Asistencia Diaria -->
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-clock-user"></i>
+                                    <span>Registro Diario de Asistencia</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <input type="date" id="filtro-asistencia-fecha" class="form-control rrhh-select" style="height:34px;" onchange="cargarAsistenciaDiaria(this.value)">
+                                    <button class="btn btn-primary rrhh-action-btn" onclick="abrirModalNuevaAsistencia()">
+                                        <i class="ph-bold ph-check-circle"></i>
+                                        <span>Registrar Asistencia</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card" style="margin-bottom: 1.5rem;">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Empleado</th>
+                                                <th>Fecha</th>
+                                                <th>Entrada</th>
+                                                <th>Salida</th>
+                                                <th>Estado</th>
+                                                <th>Observaciones</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-asistencia-diaria">
+                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando asistencia...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Horas Extras con recargo 100% -->
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-timer"></i>
+                                    <span>Horas Extraordinarias (+100% Ley 185)</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <button class="btn btn-secondary rrhh-action-btn" onclick="abrirModalHorasExtras()">
+                                        <i class="ph-bold ph-plus-circle"></i>
+                                        <span>Registrar Horas Extras</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Empleado</th>
+                                                <th>Fecha</th>
+                                                <th style="text-align: center;">Horas</th>
+                                                <th style="text-align: center;">Recargo Legal</th>
+                                                <th style="text-align: right;">Total Remuneración</th>
+                                                <th>Motivo</th>
+                                                <th>Autorización</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-horas-extras">
+                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando horas extras...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ PANEL 6: HIGIENE Y SEGURIDAD OCUPACIONAL (LEY 618) (RF110 - RF114) ═══ -->
+                        <div class="rrhh-tab-panel active" id="rrhh-seguridad" role="tabpanel">
+                            <!-- Inspección Periódica 6 Puntos Preventivos -->
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-shield-check"></i>
+                                    <span>Inspecciones de Seguridad (6 Puntos en Tienda y Bodega)</span>
+                                </div>
+                                <div class="rrhh-panel-actions">
+                                    <button class="btn btn-primary rrhh-action-btn" onclick="abrirModalInspeccion6Puntos()">
+                                        <i class="ph-bold ph-clipboard-check"></i>
+                                        <span>Nueva Inspección</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card" style="margin-bottom: 1.5rem;">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Inspector</th>
+                                                <th>Resultado</th>
+                                                <th>Observaciones</th>
+                                                <th>Medidas Correctivas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-higiene-inspecciones">
+                                            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando inspecciones...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Matriz de Riesgos y Control de EPP -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                                <!-- Riesgos Laborales -->
+                                <div class="card rrhh-panel-card">
+                                    <div class="card-header">
+                                        <h3><i class="ph-bold ph-warning"></i> Matriz de Riesgos Identificados</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr><th>Área</th><th>Riesgo</th><th>Nivel</th><th>Medida Preventiva</th><th>Seguimiento</th></tr>
+                                            </thead>
+                                            <tbody id="tbody-higiene-riesgos">
+                                                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Cargando riesgos...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Control de Entrega de EPP -->
+                                <div class="card rrhh-panel-card">
+                                    <div class="card-header">
+                                        <h3><i class="ph-bold ph-t-shirt"></i> Dotación de EPP a Trabajadores</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr><th>Empleado</th><th>Equipo EPP</th><th>Cant.</th><th>Entrega</th><th>Estado</th></tr>
+                                            </thead>
+                                            <tbody id="tbody-higiene-epp">
+                                                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Cargando EPP...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Incidentes y Capacitaciones -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem;">
+                                <div class="card rrhh-panel-card">
+                                    <div class="card-header">
+                                        <h3><i class="ph-bold ph-first-aid"></i> Registro de Accidentes e Incidentes</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="data-table">
+                                            <thead><tr><th>Fecha</th><th>Área</th><th>Afectado</th><th>Suceso</th><th>Medida</th><th>Estado</th></tr></thead>
+                                            <tbody id="tbody-higiene-incidentes"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Sin incidentes registrados.</td></tr></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="card rrhh-panel-card">
+                                    <div class="card-header">
+                                        <h3><i class="ph-bold ph-graduation-cap"></i> Capacitaciones en Prevención</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="data-table">
+                                            <thead><tr><th>Tema</th><th>Fecha</th><th>Instructor</th><th>Participantes</th><th>Estado</th></tr></thead>
+                                            <tbody id="tbody-higiene-capacitaciones"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Cargando capacitaciones...</td></tr></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ PANEL 7: MARCO LEGAL Y PARÁMETROS DEL SISTEMA (RF115, RF116) ═══ -->
+                        <div class="rrhh-tab-panel active" id="rrhh-legal" role="tabpanel">
+                            <!-- Marco Legal -->
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-scales"></i>
+                                    <span>Marco Normativo Laboral y Tributario Nicaragüense</span>
+                                </div>
+                            </div>
+                            <div id="container-marco-legal" style="margin-bottom: 2rem;">
+                                <!-- Render dinámico de leyes y enlaces -->
+                            </div>
+
+                            <!-- Parámetros Legales del Sistema -->
+                            <div class="rrhh-panel-toolbar">
+                                <div class="rrhh-panel-title">
+                                    <i class="ph-bold ph-sliders"></i>
+                                    <span>Parámetros Legales Configurables del Negocio</span>
+                                </div>
+                            </div>
+                            <div class="card rrhh-panel-card">
+                                <div class="card-body">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Nombre del Parámetro</th>
+                                                <th style="text-align: right;">Valor Oficial</th>
+                                                <th>Base Legal</th>
+                                                <th>Vigencia</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-parametros-laborales">
+                                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando parámetros...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -2697,6 +3454,430 @@
         </div>
     </div>
 
+    <!-- ═══ MODALES DE RECURSOS HUMANOS - CORTE V ═══ -->
+
+    <!-- MODAL 1: SOLICITUD DE EMPLEO (RF95, RF96) -->
+    <div class="modal" id="modal-solicitud-empleo">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-user-plus"></i> Nueva Solicitud de Empleo (Reclutamiento)</h3>
+                <button class="modal-close" onclick="closeModal('modal-solicitud-empleo')">&times;</button>
+            </div>
+            <form id="form-nueva-solicitud" onsubmit="guardarSolicitudEmpleo(event)">
+                <div class="modal-body">
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Nombres y Apellidos: *</label>
+                            <input type="text" id="sol-nombre" class="form-control" placeholder="Ej. Carlos Mendoza" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Cédula de Identidad: *</label>
+                            <input type="text" id="sol-cedula" class="form-control" placeholder="Ej. 401-100598-0002B" required>
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Teléfono de Contacto: *</label>
+                            <input type="text" id="sol-telefono" class="form-control" placeholder="Ej. 8899-7766" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Correo Electrónico:</label>
+                            <input type="email" id="sol-email" class="form-control" placeholder="carlos@correo.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección Domiciliar:</label>
+                        <input type="text" id="sol-direccion" class="form-control" placeholder="Barrio o Comunidad, Masatepe">
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Puesto Solicitado: *</label>
+                            <input type="text" id="sol-puesto" class="form-control" placeholder="Ej. Bodeguero / Vendedor de Mostrador" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Salario Pretendido (C$):</label>
+                            <input type="number" step="0.01" id="sol-salario" class="form-control" placeholder="Ej. 7500.00">
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Formación Académica:</label>
+                            <input type="text" id="sol-formacion" class="form-control" placeholder="Ej. Bachiller / Técnico">
+                        </div>
+                        <div class="form-group">
+                            <label>Disponibilidad:</label>
+                            <select id="sol-disponibilidad" class="form-control">
+                                <option value="Inmediata">Inmediata</option>
+                                <option value="15 días">En 15 días</option>
+                                <option value="1 mes">En 1 mes</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Experiencia Laboral Previa:</label>
+                        <textarea id="sol-experiencia" class="form-control" style="height: 60px;" placeholder="Empresas, funciones desempeñadas..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Referencias Laborales:</label>
+                        <input type="text" id="sol-referencias" class="form-control" placeholder="Nombre y contacto de referencia">
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones del Reclutador:</label>
+                        <input type="text" id="sol-observaciones" class="form-control" placeholder="Notas iniciales de la entrevista">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-solicitud-empleo')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-floppy-disk"></i> Registrar Solicitud</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CONTRATO LABORAL (RF98, RF99) -->
+    <div class="modal" id="modal-contrato-laboral">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-file-text"></i> Registro de Contrato de Trabajo (Ley 185)</h3>
+                <button class="modal-close" onclick="closeModal('modal-contrato-laboral')">&times;</button>
+            </div>
+            <form id="form-nuevo-contrato" onsubmit="guardarContratoLaboral(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Empleado Contratado: *</label>
+                        <select id="cont-empleado-id" class="form-control" onchange="autocompletarDatosContrato()" required>
+                            <option value="">-- Seleccionar Empleado --</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Cargo / Función: *</label>
+                            <input type="text" id="cont-cargo" class="form-control" placeholder="Ej. Encargado de Bodega" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Contratación: *</label>
+                            <select id="cont-tipo" class="form-control">
+                                <option value="Por Tiempo Indeterminado">Por Tiempo Indeterminado</option>
+                                <option value="Por Tiempo Determinado">Por Tiempo Determinado (1 año)</option>
+                                <option value="Período de Prueba (30 días)">Período de Prueba (30 días)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Funciones y Responsabilidades:</label>
+                        <input type="text" id="cont-funciones" class="form-control" placeholder="Descripción de labores comerciales o de almacén">
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Fecha de Inicio: *</label>
+                            <input type="date" id="cont-fecha-inicio" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Finalización (si aplica):</label>
+                            <input type="date" id="cont-fecha-fin" class="form-control">
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Salario Contractual (C$): *</label>
+                            <input type="number" step="0.01" id="cont-salario" class="form-control" placeholder="Ej. 8500.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Forma de Pago:</label>
+                            <select id="cont-forma-pago" class="form-control">
+                                <option value="Quincenal">Quincenal</option>
+                                <option value="Mensual">Mensual</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Jornada Laboral:</label>
+                        <select id="cont-jornada" class="form-control">
+                            <option value="Jornada Ordinaria Diurna (8 hrs diarias / 48 hrs semanales)">Jornada Ordinaria Diurna (8 hrs diarias / 48 hrs semanales)</option>
+                            <option value="Jornada Mixta (7 hrs diarias / 42 hrs semanales)">Jornada Mixta (7 hrs diarias / 42 hrs semanales)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-contrato-laboral')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-file-plus"></i> Generar Contrato</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: EXPEDIENTE DIGITAL DEL EMPLEADO (RF97) -->
+    <div class="modal" id="modal-expediente-digital">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-folder-user"></i> Expediente Digital: <span id="lbl-expediente-empleado"></span></h3>
+                <button class="modal-close" onclick="closeModal('modal-expediente-digital')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-expediente-doc" onsubmit="guardarDocumentoExpediente(event)" style="background:var(--bg-card); padding:1rem; border-radius:6px; margin-bottom:1rem; border:1px solid var(--border-color);">
+                    <div style="font-weight:700; margin-bottom:0.5rem; font-size:0.85rem;"><i class="ph-bold ph-plus-circle"></i> Anexar Documento al Expediente</div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Tipo de Documento:</label>
+                            <select id="exp-tipo-doc" class="form-control">
+                                <option value="Cédula de Identidad">Cédula de Identidad</option>
+                                <option value="Afiliación al INSS">Afiliación al INSS</option>
+                                <option value="Contrato de Trabajo Firmado">Contrato de Trabajo Firmado</option>
+                                <option value="Currículum Vitae">Currículum Vitae</option>
+                                <option value="Título / Certificado">Título / Certificado</option>
+                                <option value="Récord de Policía">Récord de Policía</option>
+                                <option value="Certificado de Salud">Certificado de Salud</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre / Referencia de Archivo:</label>
+                            <input type="text" id="exp-nombre-archivo" class="form-control" placeholder="Ej. Cedula_Frente_Dorso.pdf" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones:</label>
+                        <input type="text" id="exp-observaciones" class="form-control" placeholder="Notas sobre el documento anexado">
+                    </div>
+                    <button type="submit" class="btn btn-secondary" style="font-size:0.8rem; padding:4px 10px;">
+                        <i class="ph-bold ph-upload-simple"></i> Registrar Documento
+                    </button>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Tipo de Archivo</th><th>Referencia</th><th>Fecha Registro</th><th>Responsable</th><th>Estado</th></tr>
+                        </thead>
+                        <tbody id="tbody-expediente-documentos">
+                            <tr><td colspan="5" class="text-center text-muted">Cargando expediente...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-expediente-digital')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: HISTORIAL DE MODIFICACIONES LABORALES (RF101) -->
+    <div class="modal" id="modal-historial-laboral">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-clock-counter-clockwise"></i> Historial Laboral: <span id="lbl-historial-empleado"></span></h3>
+                <button class="modal-close" onclick="closeModal('modal-historial-laboral')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Modificación</th><th>Antes</th><th>Ahora</th><th>Vigencia</th><th>Motivo</th><th>Registrado Por</th></tr>
+                        </thead>
+                        <tbody id="tbody-historial-laboral">
+                            <tr><td colspan="6" class="text-center text-muted">Cargando historial...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-historial-laboral')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: REGISTRO DE ASISTENCIA DIARIA (RF103) -->
+    <div class="modal" id="modal-registro-asistencia">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-clock-user"></i> Registrar Asistencia</h3>
+                <button class="modal-close" onclick="closeModal('modal-registro-asistencia')">&times;</button>
+            </div>
+            <form onsubmit="guardarAsistencia(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Empleado: *</label>
+                        <select id="asist-empleado-id" class="form-control" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha: *</label>
+                        <input type="date" id="asist-fecha" class="form-control" required>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Hora Entrada:</label>
+                            <input type="time" id="asist-hora-entrada" class="form-control" value="08:00">
+                        </div>
+                        <div class="form-group">
+                            <label>Hora Salida:</label>
+                            <input type="time" id="asist-hora-salida" class="form-control" value="17:00">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Estado de Asistencia: *</label>
+                        <select id="asist-estado" class="form-control">
+                            <option value="Presente">Presente (Puntual)</option>
+                            <option value="Llegada Tardía">Llegada Tardía</option>
+                            <option value="Falta Injustificada">Falta Injustificada</option>
+                            <option value="Permiso">Permiso</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones:</label>
+                        <input type="text" id="asist-observaciones" class="form-control" placeholder="Notas sobre la jornada">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-registro-asistencia')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 6: HORAS EXTRAS (RF104) -->
+    <div class="modal" id="modal-horas-extras">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-timer"></i> Registrar Horas Extras (+100%)</h3>
+                <button class="modal-close" onclick="closeModal('modal-horas-extras')">&times;</button>
+            </div>
+            <form onsubmit="guardarHorasExtras(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Empleado: *</label>
+                        <select id="he-empleado-id" class="form-control" required></select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Fecha: *</label>
+                            <input type="date" id="he-fecha" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Cantidad de Horas: *</label>
+                            <input type="number" step="0.5" id="he-horas" class="form-control" placeholder="Ej. 2.5" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Motivo de la Hora Extraordinaria: *</label>
+                        <input type="text" id="he-motivo" class="form-control" placeholder="Ej. Descarga y conteo de pedido de proveedores" required>
+                    </div>
+                    <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); padding:0.6rem; border-radius:6px; font-size:0.78rem; color:#3b82f6;">
+                        <i class="ph-bold ph-scales"></i> <strong>Art. 62 Ley 185:</strong> Las horas extraordinarias se remuneran con un 100% de recargo sobre el valor de la hora ordinaria.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-horas-extras')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Registrar y Autorizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 7: LIQUIDACIÓN LABORAL (RF108) -->
+    <div class="modal" id="modal-liquidacion-laboral">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-receipt"></i> Calcular Liquidación / Finiquito (Ley 185)</h3>
+                <button class="modal-close" onclick="closeModal('modal-liquidacion-laboral')">&times;</button>
+            </div>
+            <form onsubmit="guardarLiquidacion(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Empleado a Liquidar: *</label>
+                        <select id="liq-empleado-id" class="form-control" required></select>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Fecha de Egreso / Salida: *</label>
+                            <input type="date" id="liq-fecha-salida" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Causa de Terminación: *</label>
+                            <select id="liq-motivo" class="form-control">
+                                <option value="Renuncia Voluntaria">Renuncia Voluntaria (Art. 77 y 93)</option>
+                                <option value="Despido Injustificado (Art. 45)">Despido Injustificado (Art. 45 con Indemnización)</option>
+                                <option value="Mutuo Acuerdo">Mutuo Acuerdo</option>
+                                <option value="Vencimiento de Contrato">Vencimiento de Contrato Determinado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Días Laborados Pendientes de Pago:</label>
+                            <input type="number" id="liq-dias-pendientes" class="form-control" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Deducciones Aplicables (C$):</label>
+                            <input type="number" step="0.01" id="liq-deducciones" class="form-control" value="0.00">
+                        </div>
+                    </div>
+                    <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.25); border-radius:6px; padding:0.75rem; font-size:0.8rem; color:#15803d;">
+                        <i class="ph-bold ph-info"></i> El sistema calculará de forma automática la antigüedad exacta (años, meses y días), el aguinaldo proporcional desde el 1 de diciembre, el saldo compensable de vacaciones y la indemnización legal por años de servicio (si corresponde).
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-liquidacion-laboral')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-calculator"></i> Liquidar y Generar Finiquito</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 8: INSPECCIÓN DE HIGIENE Y SEGURIDAD (RF114) -->
+    <div class="modal" id="modal-inspeccion-higiene">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-shield-check"></i> Inspección Preventiva de 6 Puntos (Ley 618)</h3>
+                <button class="modal-close" onclick="closeModal('modal-inspeccion-higiene')">&times;</button>
+            </div>
+            <form onsubmit="guardarInspeccion6Puntos(event)">
+                <div class="modal-body">
+                    <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
+                        Verifique las condiciones físicas en las áreas de ventas, mostrador y almacén de repuestos:
+                    </p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-card); padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">
+                            <input type="checkbox" id="chk-estanterias" checked>
+                            <span>1. Estanterías firmes y niveladas</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-card); padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">
+                            <input type="checkbox" id="chk-pasillos" checked>
+                            <span>2. Pasillos libres de obstáculos</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-card); padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">
+                            <input type="checkbox" id="chk-extintores" checked>
+                            <span>3. Extintores vigentes y accesibles</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-card); padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">
+                            <input type="checkbox" id="chk-senalizacion" checked>
+                            <span>4. Señalización visible y rotulada</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-card); padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">
+                            <input type="checkbox" id="chk-orden" checked>
+                            <span>5. Orden y estiba adecuada</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-card); padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">
+                            <input type="checkbox" id="chk-salidas" checked>
+                            <span>6. Salidas de emergencia libres</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones de la Inspección:</label>
+                        <textarea id="insp-observaciones" class="form-control" style="height:60px;" placeholder="Detalles de hallazgos durante el recorrido"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Medidas Correctivas Inmediatas:</label>
+                        <input type="text" id="insp-medidas" class="form-control" placeholder="Acciones preventivas requeridas">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-inspeccion-higiene')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Registrar Dictamen de Inspección</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- JavaScript del Módulo RRHH -->
     <script>
         // ---- Variables globales RRHH ----
@@ -2755,6 +3936,10 @@
                     panel.classList.toggle('active', panel.id === targetId);
                 }
             });
+
+            if (typeof initRrhhCorteVTab === 'function') {
+                initRrhhCorteVTab(targetId);
+            }
         }
 
         function inicializarRRHH() {
@@ -2763,6 +3948,9 @@
             cargarEmpleadosRRHH();
             cargarHistorialNominas();
             cargarMovimientosLaborales();
+            if (typeof initRrhhCorteVTab === 'function') {
+                initRrhhCorteVTab('all');
+            }
         }
 
         // =========================================================================
@@ -3021,6 +4209,8 @@
                         <td><span style="background:${e.activo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}; color:${e.activo ? '#22c55e' : '#ef4444'}; padding:2px 8px; border-radius:20px; font-size:0.75rem;">${e.activo ? 'Activo' : 'Inactivo'}</span></td>
                         <td><div style="display:flex;gap:4px;">
                             <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="editarEmpleado(${e.id})" title="Editar"><i class="ph-bold ph-pencil"></i></button>
+                            <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="abrirExpedienteDigital(${e.id}, '${e.nombre_completo.replace(/'/g, "\\'")}')" title="Expediente Digital"><i class="ph-bold ph-folder-user"></i></button>
+                            <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="abrirHistorialLaboral(${e.id}, '${e.nombre_completo.replace(/'/g, "\\'")}')" title="Historial Laboral"><i class="ph-bold ph-clock-counter-clockwise"></i></button>
                             <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;color:${e.activo ? '#ef4444' : '#22c55e'};" onclick="toggleEmpleadoEstado(${e.id}, ${!e.activo})" title="${e.activo ? 'Inactivar' : 'Activar'}"><i class="ph-bold ph-${e.activo ? 'user-minus' : 'user-check'}"></i></button>
                         </div></td>
                     </tr>`;
@@ -3929,19 +5119,16 @@
             </div>
             <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('modal-informe-ejecutivo')">Cerrar</button>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button type="button" class="btn btn-outline" onclick="exportarReporteEstadisticoCSV()">
-                        <i class="ph-bold ph-file-csv"></i> Descargar Datos CSV
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="imprimirInformeEjecutivo()">
-                        <i class="ph-bold ph-printer"></i> Imprimir / Guardar en PDF
-                    </button>
-                </div>
+                <button type="button" class="btn btn-primary" onclick="imprimirInformeEjecutivo()">
+                    <i class="ph-bold ph-printer"></i> Imprimir Informe
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Script Principal SPA del Sistema -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
+    <script src="{{ url_for('static', filename='js/corte_v.js') }}"></script>
 </body>
 </html>

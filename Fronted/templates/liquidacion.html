@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Liquidación de Prestaciones Laborales - {{ l.empleado }}</title>
+    <style>
+        body {
+            font-family: 'Outfit', Arial, sans-serif;
+            font-size: 12px;
+            color: #1e293b;
+            background-color: #f8fafc;
+            margin: 20px;
+        }
+        .container {
+            width: 740px;
+            margin: 0 auto;
+            padding: 30px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .header h1 {
+            font-size: 17px;
+            margin: 0;
+            color: #0f172a;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+        .header .sub {
+            font-size: 11px;
+            color: #64748b;
+        }
+        .table-data {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14px;
+        }
+        .table-data th, .table-data td {
+            padding: 6px 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .table-data th {
+            background-color: #f1f5f9;
+            font-weight: 700;
+            text-align: left;
+        }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .total-box {
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: right;
+            margin-top: 14px;
+            font-size: 14px;
+        }
+        .firmas {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .firma-line {
+            width: 42%;
+            border-top: 1px solid #334155;
+            padding-top: 6px;
+            font-size: 11px;
+        }
+        @media print {
+            body { background: #fff; margin: 0; }
+            .container { border: none; box-shadow: none; width: 100%; padding: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print" style="text-align:center; margin-bottom: 15px;">
+    <button onclick="window.print()" style="background:#0f172a; color:#fff; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:bold;">
+        🖨️ Imprimir Hoja de Finiquito / Liquidación
+    </button>
+</div>
+
+<div class="container">
+    <div class="header">
+        <h1>JEHOVÁ JIREH MOTO REPUESTOS</h1>
+        <div class="sub">Masatepe, Masaya &mdash; RUC: J0310000000000</div>
+        <div style="font-weight:bold; font-size:13px; margin-top:4px; color:#0f172a;">FINIQUITO Y LIQUIDACIÓN FINAL DE PRESTACIONES LABORALES</div>
+        <div style="font-size:11px; color:#64748b;">Código: {{ l.codigo }} &mdash; Fecha: {{ l.fecha_elaboracion }}</div>
+    </div>
+
+    <!-- Datos del Trabajador -->
+    <table class="table-data">
+        <tr>
+            <th width="20%">Trabajador:</th>
+            <td width="30%"><strong>{{ l.empleado }}</strong></td>
+            <th width="20%">Cédula:</th>
+            <td width="30%">{{ l.cedula }}</td>
+        </tr>
+        <tr>
+            <th>Cargo / Puesto:</th>
+            <td>{{ l.cargo }}</td>
+            <th>N° INSS:</th>
+            <td>{{ l.inss }}</td>
+        </tr>
+        <tr>
+            <th>Fecha Ingreso:</th>
+            <td>{{ l.fecha_ingreso }}</td>
+            <th>Fecha Egreso:</th>
+            <td>{{ l.fecha_salida }}</td>
+        </tr>
+        <tr>
+            <th>Causa de Salida:</th>
+            <td><strong>{{ l.motivo_salida }}</strong></td>
+            <th>Tiempo Laborado:</th>
+            <td>{{ l.antiguedad_anios }} año(s), {{ l.antiguedad_meses }} mes(es), {{ l.antiguedad_dias }} día(s)</td>
+        </tr>
+        <tr>
+            <th>Salario Ordinario:</th>
+            <td>C$ {{ "%.2f"|format(l.salario_base) }}</td>
+            <th>Valor Día (&divide;30):</th>
+            <td>C$ {{ "%.2f"|format(l.salario_base / 30.0) }}</td>
+        </tr>
+    </table>
+
+    <!-- Desglose de Prestaciones Sociales (Ley 185) -->
+    <div style="font-weight:bold; margin-bottom:6px; font-size:12px; color:#0f172a;">1. PERCEPCIONES Y PRESTACIONES DE LEY</div>
+    <table class="table-data">
+        <thead>
+            <tr>
+                <th>Concepto Legal</th>
+                <th>Base / Tiempo Computable</th>
+                <th class="text-right">Monto (C$)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Salario por Días Trabajados Pendientes</td>
+                <td>Días pendientes en último período</td>
+                <td class="text-right">C$ {{ "%.2f"|format(l.monto_dias_pendientes) }}</td>
+            </tr>
+            <tr>
+                <td>Vacaciones Proporcionales no Descansadas (Art. 76 y 77 Ley 185)</td>
+                <td>{{ "%.2f"|format(l.dias_vacaciones_pendientes) }} días acumulados</td>
+                <td class="text-right">C$ {{ "%.2f"|format(l.monto_vacaciones) }}</td>
+            </tr>
+            <tr>
+                <td>Décimo Tercer Mes / Aguinaldo Proporcional (Art. 93 Ley 185)</td>
+                <td>Fracción del año calendario corriente</td>
+                <td class="text-right">C$ {{ "%.2f"|format(l.monto_aguinaldo_proporcional) }}</td>
+            </tr>
+            <tr>
+                <td>Indemnización por Años de Servicio (Art. 45 Ley 185)</td>
+                <td>{% if l.monto_indemnizacion_antiguedad > 0 %}Aplicable según causa de terminación{% else %}No aplicable por causa de retiro{% endif %}</td>
+                <td class="text-right">C$ {{ "%.2f"|format(l.monto_indemnizacion_antiguedad) }}</td>
+            </tr>
+            <tr style="background:#f8fafc; font-weight:bold;">
+                <td colspan="2">TOTAL PERCEPCIONES BRUTAS</td>
+                <td class="text-right">C$ {{ "%.2f"|format(l.total_percepciones) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Deducciones -->
+    <div style="font-weight:bold; margin-bottom:6px; font-size:12px; color:#0f172a;">2. DEDUCCIONES LEGALES Y AUTORIZADAS</div>
+    <table class="table-data">
+        <tbody>
+            <tr>
+                <td>Deducciones Totales (Retenciones aplicables / Préstamos / Anticipos)</td>
+                <td class="text-right text-danger">(-) C$ {{ "%.2f"|format(l.deducciones_totales) }}</td>
+            </tr>
+            <tr style="background:#f8fafc; font-weight:bold;">
+                <td>TOTAL DEDUCCIONES</td>
+                <td class="text-right text-danger">(-) C$ {{ "%.2f"|format(l.deducciones_totales) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Total Neto -->
+    <div class="total-box">
+        TOTAL NETO A RECIBIR POR EL TRABAJADOR: <strong style="font-size:16px; color:#065f46;">C$ {{ "%.2f"|format(l.neto_a_pagar) }}</strong>
+    </div>
+
+    <div style="margin-top:16px; font-size:10.5px; color:#475569; text-align:justify; line-height:1.4;">
+        DECLARACIÓN DE FINIQUITO: Con la entrega y pago de la cantidad antes descrita, el trabajador declara recibir a su entera satisfacción la totalidad de sus salarios, descansos, aguinaldo y prestaciones laborales que en derecho le corresponden con arreglo al Código del Trabajo de Nicaragua, no teniendo reclamo alguno de índole laboral, civil ni administrativo presente o futuro en contra de JEHOVÁ JIREH MOTO REPUESTOS.
+    </div>
+
+    <div class="firmas">
+        <div class="firma-line">
+            <strong>RECIBÍ CONFORME (TRABAJADOR)</strong><br>
+            {{ l.empleado }}<br>
+            Cédula: {{ l.cedula }}
+        </div>
+        <div class="firma-line">
+            <strong>POR EL EMPLEADOR</strong><br>
+            JEHOVÁ JIREH MOTO REPUESTOS<br>
+            Gilda Pérez &mdash; Propietaria
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1763,7 +1763,8 @@ body {
 }
 
 /* ─── BARRA DE NAVEGACIÓN DE PESTAÑAS ─── */
-.rrhh-tabs-nav {
+.rrhh-tabs-nav,
+.reportes-tabs-nav {
     display: flex;
     gap: 0.4rem;
     padding: 0.75rem 1rem;
@@ -1773,9 +1774,11 @@ body {
     scrollbar-width: none;
 }
 
-.rrhh-tabs-nav::-webkit-scrollbar { display: none; }
+.rrhh-tabs-nav::-webkit-scrollbar,
+.reportes-tabs-nav::-webkit-scrollbar { display: none; }
 
-.rrhh-tab-btn {
+.rrhh-tab-btn,
+.reportes-tab-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -1793,41 +1796,48 @@ body {
     position: relative;
 }
 
-.rrhh-tab-btn i {
+.rrhh-tab-btn i,
+.reportes-tab-btn i {
     font-size: 1rem;
 }
 
-.rrhh-tab-btn:hover {
+.rrhh-tab-btn:hover,
+.reportes-tab-btn:hover {
     background: var(--bg-card-hover);
     color: var(--text-main);
     border-color: var(--border-color);
 }
 
-.rrhh-tab-btn.active {
+.rrhh-tab-btn.active,
+.reportes-tab-btn.active {
     background: var(--primary-light);
     border-color: var(--primary);
     color: var(--primary);
     font-weight: 600;
 }
 
-.rrhh-tab-btn.active i {
+.rrhh-tab-btn.active i,
+.reportes-tab-btn.active i {
     color: var(--primary);
 }
 
 
 /* ─── PANELES DE CONTENIDO ─── */
-.rrhh-tab-panel {
+.rrhh-tab-panel,
+.rep-tab-panel {
     display: none;
     padding: 1.5rem;
     animation: rrhh-fade-in 0.25s ease;
 }
 
-.rrhh-tab-panel.active {
+.rrhh-tab-panel.active,
+.rep-tab-panel.active {
     display: block;
 }
 
 /* Divisor entre paneles cuando están todos visibles en Vista General */
-.rrhh-tabs-wrapper.mode-all .rrhh-tab-panel.active + .rrhh-tab-panel.active {
+.rrhh-tabs-wrapper.mode-all .rrhh-tab-panel.active + .rrhh-tab-panel.active,
+.reportes-tabs-wrapper.mode-all .rep-tab-panel.active + .rep-tab-panel.active {
     border-top: 1px dashed var(--border-color);
     margin-top: 0;
     padding-top: 1.5rem;

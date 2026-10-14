@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Ejecutivo Estadístico - Jehová Jireh Moto Repuestos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --bg-light: #f8fafc;
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body {
+            background-color: #e2e8f0;
+            padding: 24px;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        .page-container {
+            max-width: 960px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 36px 44px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 18px;
+            margin-bottom: 22px;
+        }
+        .brand-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+        .brand-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+        .report-tag {
+            text-align: right;
+        }
+        .report-badge {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .report-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-left: 4px solid var(--accent);
+            padding-left: 8px;
+            margin: 20px 0 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .kpi-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 14px;
+        }
+        .kpi-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .kpi-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 4px;
+        }
+        .kpi-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+        th {
+            background: var(--bg-light);
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10.5px;
+            padding: 8px 10px;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        tr:nth-child(even) td {
+            background: #fafafa;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: 700; }
+        .badge-abc {
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+        .badge-a { background: #dcfce7; color: #15803d; }
+        .badge-b { background: #fef3c7; color: #b45309; }
+        .badge-c { background: #f1f5f9; color: #475569; }
+
+        .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 45px;
+            padding-top: 10px;
+        }
+        .sign-box {
+            text-align: center;
+        }
+        .sign-line {
+            border-top: 1px solid #334155;
+            margin-top: 50px;
+            padding-top: 6px;
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--primary);
+        }
+        .sign-title {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .actions-bar {
+            max-width: 960px;
+            margin: 0 auto 16px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .btn-outline {
+            background: white;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .page-container {
+                box-shadow: none;
+                padding: 15px 20px;
+                max-width: 100%;
+            }
+            .actions-bar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="actions-bar">
+        <a href="javascript:window.history.back()" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Volver al Sistema
+        </a>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="window.print()" class="btn">
+                <i class="fas fa-print"></i> Imprimir / Guardar como PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="page-container">
+        <!-- Encabezado -->
+        <div class="report-header">
+            <div>
+                <h1 class="brand-title">{{ r.empresa }}</h1>
+                <div class="brand-subtitle">Venta y Distribución de Repuestos para Motocicletas</div>
+                <div class="brand-subtitle">Masatepe, Masaya - Tel: +505 8899-0011 / RUC: J0310000000001</div>
+            </div>
+            <div class="report-tag">
+                <span class="report-badge">Informe Ejecutivo Estadístico</span>
+                <div class="report-meta">Período: <strong>{{ r.periodo }}</strong></div>
+                <div class="report-meta">Fecha de Emisión: <strong>{{ r.fecha_emision }}</strong></div>
+                <div class="report-meta">Moneda: <strong>Córdobas (C$)</strong></div>
+            </div>
+        </div>
+
+        <!-- KPIs Principales -->
+        <div class="section-title">
+            <span>1. Resumen Ejecutivo de Métricas Clave (KPIs)</span>
+            <small style="font-size: 11px; color: var(--text-muted); text-transform: none;">Base de operaciones comerciales</small>
+        </div>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Ventas Netas Totales</div>
+                <div class="kpi-value">C$ {{ "{:,.2f}".format(r.ventas_monto) }}</div>
+                <div class="kpi-sub">{{ r.ventas_conteo }} transacciones confirmadas</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Ticket Promedio</div>
+                <div class="kpi-value">C$ {{ "{:,.2f}".format(r.ticket_promedio) }}</div>
+                <div class="kpi-sub">Por operación de venta</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Compras a Proveedores</div>
+                <div class="kpi-value">C$ {{ "{:,.2f}".format(r.compras_monto) }}</div>
+                <div class="kpi-sub">Reabastecimiento de stock</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Utilidad Bruta Estimada</div>
+                <div class="kpi-value" style="color: var(--success);">C$ {{ "{:,.2f}".format(r.margen_bruto) }}</div>
+                <div class="kpi-sub">Margen comercial positivo</div>
+            </div>
+        </div>
+
+        <!-- Inventario Global -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: -6px;">
+            <div class="kpi-card">
+                <div class="kpi-label">Unidades Físicas en Bodega</div>
+                <div class="kpi-value">{{ r.stock_total }} uds.</div>
+                <div class="kpi-sub">Total de repuestos registrados</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Valuación a Costo de Compra</div>
+                <div class="kpi-value">C$ {{ "{:,.2f}".format(r.inventario_costo) }}</div>
+                <div class="kpi-sub">Capital invertido en inventario</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Valor Proyectado a Venta</div>
+                <div class="kpi-value">C$ {{ "{:,.2f}".format(r.inventario_venta) }}</div>
+                <div class="kpi-sub">Potencial de realización</div>
+            </div>
+        </div>
+
+        <!-- Top Productos Más Vendidos -->
+        <div class="section-title">
+            <span>2. Top Repuestos Más Vendidos del Período</span>
+            <small style="font-size: 11px; color: var(--text-muted); text-transform: none;">Mayor demanda comercial</small>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 45%;">Descripción del Repuesto</th>
+                    <th class="text-center" style="width: 20%;">Unidades Vendidas</th>
+                    <th class="text-right" style="width: 20%;">Total Ingresos (C$)</th>
+                    <th class="text-center" style="width: 15%;">Clasificación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in r.top_productos %}
+                <tr>
+                    <td><strong>{{ p.nombre }}</strong></td>
+                    <td class="text-center font-bold">{{ p.cant }} uds.</td>
+                    <td class="text-right font-bold">C$ {{ "{:,.2f}".format(p.tot) }}</td>
+                    <td class="text-center">
+                        <span class="badge-abc badge-a">ALTA ROTACIÓN (A)</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center" style="color: var(--text-muted); padding: 16px;">
+                        No se registraron ventas en el período seleccionado.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Dictamen y Conclusiones del Período -->
+        <div class="section-title">
+            <span>3. Conclusiones y Recomendaciones Operativas</span>
+        </div>
+        <div style="background: var(--bg-light); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-size: 11.5px; color: #334155;">
+            <p>• <strong>Liquidez y Rotación:</strong> Las categorías con mayor rotación (Frenos, Lubricantes y Transmisión) concentran el mayor flujo de caja. Se recomienda mantener stock de seguridad en artículos Clase A para mitigar quiebres de inventario.</p>
+            <p style="margin-top: 6px;">• <strong>Control de Devoluciones:</strong> Las incidencias por garantías de repuestos se mantienen dentro de los márgenes tolerables. Se debe auditar con proveedores todo lote que supere el 2% de devolución.</p>
+            <p style="margin-top: 6px;">• <strong>Capital Inmovilizado:</strong> Se aconseja realizar promociones comerciales sobre repuestos catalogados como Clase C con baja rotación en bodega masatepina.</p>
+        </div>
+
+        <!-- Firmas Legales y Ejecutivas -->
+        <div class="signatures">
+            <div class="sign-box">
+                <div class="sign-line">Gerente Administrativo y Financiero</div>
+                <div class="sign-title">Jehová Jireh Moto Repuestos</div>
+            </div>
+            <div class="sign-box">
+                <div class="sign-line">Contador Externo Colegiado</div>
+                <div class="sign-title">Granada - Masatepe, Nicaragua</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

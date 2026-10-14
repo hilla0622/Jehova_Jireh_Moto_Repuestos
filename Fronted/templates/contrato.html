@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Contrato Individual de Trabajo - {{ c.empleado }}</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #111827;
+            background-color: #f8fafc;
+            margin: 20px;
+        }
+        .contrato-container {
+            width: 760px;
+            margin: 0 auto;
+            padding: 40px 50px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #1e293b;
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            font-size: 18px;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 800;
+        }
+        .header h2 {
+            font-size: 13px;
+            margin: 4px 0 0 0;
+            color: #475569;
+            font-weight: normal;
+        }
+        .clausula {
+            margin-bottom: 14px;
+            text-align: justify;
+        }
+        .clausula strong {
+            text-transform: uppercase;
+        }
+        .firmas-grid {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-between;
+            text-align: center;
+        }
+        .firma-box {
+            width: 45%;
+            border-top: 1px solid #111827;
+            padding-top: 8px;
+        }
+        @media print {
+            body { background: #fff; margin: 0; }
+            .contrato-container { border: none; box-shadow: none; width: 100%; padding: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print" style="text-align:center; margin-bottom: 20px;">
+    <button onclick="window.print()" style="background:#1e293b; color:#fff; border:none; padding:10px 22px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;">
+        🖨️ Imprimir / Guardar Contrato en PDF
+    </button>
+</div>
+
+<div class="contrato-container">
+    <div class="header">
+        <h1>JEHOVÁ JIREH MOTO REPUESTOS</h1>
+        <h2>Masatepe, Masaya, Nicaragua &mdash; RUC: J0310000000000</h2>
+        <h3 style="margin-top:8px; font-size:14px; text-decoration:underline;">CONTRATO INDIVIDUAL DE TRABAJO (N° {{ c.numero_contrato }})</h3>
+    </div>
+
+    <div class="clausula">
+        Nosotros, por una parte <strong>JEHOVÁ JIREH MOTO REPUESTOS</strong>, representada en este acto por la propietaria y administradora general <strong>GILDA PÉREZ</strong>, con cédula de identidad N° 001-150480-0023K, quien en lo sucesivo se denominará <strong>EL EMPLEADOR</strong>; y por otra parte el/la ciudadano(a) <strong>{{ c.empleado }}</strong>, mayor de edad, con cédula de identidad N° <strong>{{ c.cedula }}</strong>, con domicilio en <strong>{{ c.direccion or 'Masatepe, Masaya' }}</strong>, quien en lo sucesivo se denominará <strong>EL TRABAJADOR</strong>, hemos convenido celebrar el presente Contrato Individual de Trabajo conforme a las disposiciones del Código del Trabajo de la República de Nicaragua (Ley N° 185), bajo las siguientes cláusulas:
+    </div>
+
+    <div class="clausula">
+        <strong>PRIMERA (CARGO Y OBJETO):</strong> EL EMPLEADOR contrata a EL TRABAJADOR para desempeñar el cargo de <strong>{{ c.cargo }}</strong>, asignado al área de <strong>{{ c.area or 'Ventas y Operaciones' }}</strong>. EL TRABAJADOR se compromete a poner su mayor capacidad, honradez y diligencia en las funciones asignadas, cumpliendo con la custodia de mercadería, repuestos y normas internas del negocio.
+    </div>
+
+    <div class="clausula">
+        <strong>SEGUNDA (LUGAR DE PRESTACIÓN DEL SERVICIO):</strong> El trabajo se prestará en el establecimiento comercial de EL EMPLEADOR ubicado en <strong>{{ c.lugar_trabajo }}</strong>, o en los lugares que por la naturaleza de las operaciones comerciales de la empresa sean necesarios dentro de Masatepe.
+    </div>
+
+    <div class="clausula">
+        <strong>TERCERA (MODALIDAD Y VIGENCIA):</strong> El presente contrato se celebra por <strong>{{ c.tipo_contratacion }}</strong>, con fecha de inicio el día <strong>{{ c.fecha_inicio }}</strong>{% if c.fecha_fin %} y con fecha prevista de vencimiento el día <strong>{{ c.fecha_fin }}</strong>{% endif %}.
+    </div>
+
+    <div class="clausula">
+        <strong>CUARTA (JORNADA LABORAL):</strong> La jornada de trabajo será <strong>{{ c.jornada_laboral }}</strong>, respetando los límites legales de 48 horas semanales para la jornada diurna ordinaria, con un día de descanso semanal preferentemente en domingo.
+    </div>
+
+    <div class="clausula">
+        <strong>QUINTA (REMUNERACIÓN Y FORMA DE PAGO):</strong> EL TRABAJADOR devengará un salario mensual ordinario de <strong>C$ {{ "%.2f"|format(c.salario_mensual) }} (CÓRDOBAS NETOS/BRUTOS)</strong>, el cual será liquidado y pagado de forma <strong>{{ c.forma_pago }}</strong> en moneda de curso legal. De este salario se efectuarán las deducciones de ley relativas a la Seguridad Social (INSS Laboral 7%) y Retención en la Fuente del IR (Ley 822) cuando aplique.
+    </div>
+
+    <div class="clausula">
+        <strong>SEXTA (PRESTACIONES Y DESCANSO):</strong> EL TRABAJADOR gozará de las prestaciones de ley establecidas en el Código del Trabajo de Nicaragua: Décimo Tercer Mes o Aguinaldo (Art. 93), 15 días continuos de vacaciones remuneradas por cada seis meses ininterrumpidos de trabajo (Art. 76) y cobertura médica y previsional ante el Instituto Nicaragüense de Seguridad Social (INSS).
+    </div>
+
+    <div class="clausula">
+        <strong>SÉPTIMA (SEGURIDAD E HIGIENE OCUPACIONAL):</strong> En cumplimiento de la Ley 618 (Ley General de Higiene y Seguridad del Trabajo), EL TRABAJADOR se obliga a acatar las medidas preventivas para el levantamiento y manipulación segura de cajas de repuestos, uso de equipos de protección personal (EPP) suministrados y conservación de pasillos y accesos despejados.
+    </div>
+
+    <div class="clausula">
+        En fe de lo acordado y conformes con el contenido de todas y cada una de las cláusulas, firmamos en dos tantos de un mismo tenor en la ciudad de Masatepe, a los {{ c.fecha_actual }}.
+    </div>
+
+    <div class="firmas-grid">
+        <div class="firma-box">
+            <strong>POR EL EMPLEADOR</strong><br>
+            JEHOVÁ JIREH MOTO REPUESTOS<br>
+            Gilda Pérez &mdash; Propietaria
+        </div>
+        <div class="firma-box">
+            <strong>EL TRABAJADOR</strong><br>
+            {{ c.empleado }}<br>
+            Cédula: {{ c.cedula }}
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,259 @@
+<mxfile host="app.diagrams.net" modified="2026-10-14T05:10:00.000Z" agent="Antigravity" version="21.6.8" type="device">
+  <diagram id="CU_RRHH_JJ_Final" name="Casos de Uso - Módulo Recursos Humanos">
+    <mxGraphModel dx="1600" dy="1450" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1550" pageHeight="1450" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <!-- Marco del Sistema -->
+        <mxCell id="sys_boundary" value="" style="shape=rect;html=1;whiteSpace=wrap;align=center;verticalAlign=bottom;strokeColor=#104E8B;strokeWidth=2.5;fillColor=#FFFFFF;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="190" y="30" width="1060" height="1360" as="geometry" />
+        </mxCell>
+        <!-- Título Superior -->
+        <mxCell id="title_header" value="Módulo: Gestión de Personal, Nómina y Recursos Humanos" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=15;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
+          <mxGeometry x="215" y="42" width="600" height="30" as="geometry" />
+        </mxCell>
+        <!-- Pie de Página -->
+        <mxCell id="footer_text" value="Aplicación Web Administrativa para la Gestión de Ventas, Inventario y Procesos Operativos de Jehová Jireh Masatepe Moto Repuestos" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=11.5;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
+          <mxGeometry x="215" y="1360" width="950" height="25" as="geometry" />
+        </mxCell>
+        <!-- Actor: Responsable de Recursos Humanos (Izquierda) -->
+        <mxCell id="actor_rrhh" value="RESPONSABLE DE&#xa;RECURSOS HUMANOS" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fontColor=#000000;strokeColor=#2E7D32;strokeWidth=2;fillColor=#4CAF50;" vertex="1" parent="1">
+          <mxGeometry x="45" y="580" width="55" height="105" as="geometry" />
+        </mxCell>
+        <!-- Actor: Gerente Administrativo y Financiero (Derecha Arriba/Medio) -->
+        <mxCell id="actor_admin" value="GERENTE ADMINISTRATIVO&#xa;Y FINANCIERO" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fontColor=#000000;strokeColor=#A0522D;strokeWidth=2;fillColor=#FF8C00;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="480" width="55" height="105" as="geometry" />
+        </mxCell>
+        <!-- Actor: Módulo de Elaboración de Estados Financieros (Derecha Abajo) -->
+        <mxCell id="actor_contabilidad" value="MÓDULO DE ELABORACIÓN&#xa;DE ESTADOS FINANCIEROS" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=10;fontStyle=1;fontColor=#000000;strokeColor=#6B21A8;strokeWidth=2;fillColor=#A855F7;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="1030" width="55" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_login" value="Iniciar Sesión" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="80" width="240" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_auth" value="Autenticar Usuario" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="570" y="80" width="200" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf58" value="Registrar Empleado" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="142" width="250" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf60" value="Actualizar Datos del Empleado" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="204" width="250" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf61" value="Controlar Estado Laboral&#xa;(Activar / Inactivar)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="266" width="250" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf63" value="Gestionar Cargos y Puestos" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="328" width="250" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf98" value="Gestionar Expediente Digital&#xa;del Empleado" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="390" width="250" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf96" value="Registrar y Gestionar Solicitudes&#xa;de Empleo (Reclutamiento)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="452" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf99" value="Registrar y Generar Contratos&#xa;Laborales" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="516" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_print_cont" value="Imprimir Contrato Laboral" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
+          <mxGeometry x="580" y="516" width="190" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf103" value="Configurar Jornadas Laborales" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="580" width="260" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf104" value="Registrar y Controlar Asistencia&#xa;y Horas Extras" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="642" width="260" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf64" value="Registrar Vacaciones" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="706" width="250" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_act_vac" value="Actualizar Saldo de Vacaciones" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="690" width="210" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_calc_dias" value="Calcular Días del Movimiento" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="755" width="210" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf65" value="Registrar Permisos" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="768" width="250" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf66" value="Registrar Faltas y Ausencias" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="830" width="250" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_hist_inc" value="Consultar Historial de Incidencias&#xa;Laborales" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="892" width="260" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf108" value="Generar y Aprobar Nómina Mensual" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="960" width="260" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_devengado" value="Calcular Salario Devengado" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="845" width="220" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_deducciones" value="Calcular Deducciones (INSS 7%, IR)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="895" width="230" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_patronal" value="Calcular Provisiones e INSS Patronal" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="945" width="240" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_neto" value="Determinar Salario Neto a Pagar" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="995" width="220" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_acum_vac" value="Acumular Vacaciones" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="1045" width="200" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_asiento" value="Generar Asiento Contable Automático&#xa;de Nómina" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="1095" width="250" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_hist_nom" value="Consultar Historial y Detalle&#xa;de Nóminas" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="1040" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_colilla" value="Generar Colilla de Pago" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="1155" width="200" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_print_col" value="Imprimir Colilla de Pago Individual" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
+          <mxGeometry x="840" y="1155" width="220" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf110" value="Calcular y Registrar Liquidación&#xa;Laboral" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="1120" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_print_liq" value="Imprimir Finiquito de Liquidación" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
+          <mxGeometry x="580" y="1215" width="210" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf112" value="Gestionar Seguridad e Higiene&#xa;Ocupacional (Riesgos / EPP)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="1195" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rf118" value="Administrar Parámetros Laborales&#xa;y Calendario de Obligaciones" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="1268" width="260" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_inc_1" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_login" target="cu_auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_ext_1" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_print_cont" target="cu_rf99">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_inc_vac_saldo" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf64" target="cu_act_vac">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_inc_vac_dias" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf64" target="cu_calc_dias">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_inc_perm_dias" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf65" target="cu_calc_dias">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_inc_falt_dias" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf66" target="cu_calc_dias">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_nom_1" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf108" target="cu_devengado">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_nom_2" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf108" target="cu_deducciones">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_nom_3" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf108" target="cu_patronal">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_nom_4" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf108" target="cu_neto">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_nom_5" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf108" target="cu_acum_vac">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_nom_6" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf108" target="cu_asiento">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_col_inc" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_hist_nom" target="cu_colilla">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_col_ext" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_print_col" target="cu_colilla">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_liq_ext" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_print_liq" target="cu_rf110">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_0" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_login">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_1" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf58">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_2" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf60">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_3" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf61">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_4" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf63">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_5" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf98">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_6" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf96">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_7" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf99">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_8" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf103">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_9" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf104">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_10" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf64">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_11" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf65">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_12" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf66">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_13" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_hist_inc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_14" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf108">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_15" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_hist_nom">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_16" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf110">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_17" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf112">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_rrhh_18" style="endArrow=none;html=1;rounded=0;strokeColor=#2E7D32;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_rrhh" target="cu_rf118">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_0" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_login">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_1" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf61">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_2" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf99">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_3" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_hist_inc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_4" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf108">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_5" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_hist_nom">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_6" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf110">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_admin_7" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf118">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_contabilidad_asiento" style="endArrow=none;html=1;rounded=0;strokeColor=#6B21A8;strokeWidth=1.8;fontFamily=Helvetica;" edge="1" parent="1" source="cu_asiento" target="actor_contabilidad">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

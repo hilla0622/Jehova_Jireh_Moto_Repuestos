@@ -1,152 +1,157 @@
-<mxfile host="app.diagrams.net" modified="2026-10-14T04:30:00.000Z" agent="Antigravity" version="21.6.8" type="device">
-  <diagram id="CU_Estadistica_JJ" name="Casos de Uso - Módulo Estadística y Reportes">
-    <mxGraphModel dx="1600" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1300" math="0" shadow="0">
+<mxfile host="app.diagrams.net" modified="2026-10-14T04:55:00.000Z" agent="Antigravity" version="21.6.8" type="device">
+  <diagram id="CU_Estadistica_JJ_Final" name="Casos de Uso - Módulo Estadística y Reportes">
+    <mxGraphModel dx="1600" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="1180" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <!-- Límite del Sistema -->
-        <mxCell id="sys_boundary" value="&lt;b&gt;Aplicación Web Administrativa — Jehová Jireh Masatepe Moto Repuestos&lt;/b&gt;" style="shape=rect;html=1;whiteSpace=wrap;align=center;verticalAlign=bottom;spacingBottom=15;fontFamily=Helvetica;fontSize=13;fontColor=#1E3A8A;strokeColor=#1E3A8A;strokeWidth=2.5;fillColor=#F8FAFC;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="190" y="40" width="990" height="1180" as="geometry" />
+        <!-- Marco del Sistema -->
+        <mxCell id="sys_boundary" value="" style="shape=rect;html=1;whiteSpace=wrap;align=center;verticalAlign=bottom;strokeColor=#104E8B;strokeWidth=2.5;fillColor=#FFFFFF;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="190" y="35" width="960" height="1060" as="geometry" />
         </mxCell>
-        <!-- Encabezado del Módulo -->
-        <mxCell id="mod_header" value="&lt;b&gt;MÓDULO DE ESTADÍSTICA: REPORTES, ANÁLISIS COMERCIAL Y CONTROL FINANCIERO&lt;/b&gt;" style="shape=rect;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=13;fontStyle=1;fontColor=#FFFFFF;strokeColor=#1E40AF;fillColor=#1E40AF;rounded=1;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="220" y="60" width="930" height="35" as="geometry" />
+        <!-- Título Superior -->
+        <mxCell id="title_header" value="Módulo de Estadística: Reportes y Análisis" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=15;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
+          <mxGeometry x="215" y="45" width="400" height="30" as="geometry" />
         </mxCell>
-        <!-- Actores -->
-        <mxCell id="actor_operaciones" value="&lt;b&gt;GERENTE DE&lt;br&gt;OPERACIONES&lt;/b&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=11;fontColor=#1E293B;strokeColor=#EA580C;strokeWidth=2;fillColor=#FFEDD5;" vertex="1" parent="1">
-          <mxGeometry x="50" y="520" width="60" height="110" as="geometry" />
+        <!-- Pie de Página -->
+        <mxCell id="footer_text" value="Aplicación Web Administrativa para la Gestión de Ventas, Inventario y Procesos Operativos de Jehová Jireh Masatepe Moto Repuestos" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=11.5;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
+          <mxGeometry x="215" y="1060" width="850" height="25" as="geometry" />
         </mxCell>
-        <mxCell id="actor_admin" value="&lt;b&gt;GERENTE ADMINISTRATIVO&lt;br&gt;Y FINANCIERO&lt;/b&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=11;fontColor=#1E293B;strokeColor=#EA580C;strokeWidth=2;fillColor=#FFEDD5;" vertex="1" parent="1">
-          <mxGeometry x="1230" y="520" width="60" height="110" as="geometry" />
+        <!-- Actor: Gerente de Operaciones -->
+        <mxCell id="actor_operaciones" value="GERENTE DE OPERACIONES" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fontColor=#000000;strokeColor=#A0522D;strokeWidth=2;fillColor=#FF8C00;" vertex="1" parent="1">
+          <mxGeometry x="45" y="490" width="55" height="105" as="geometry" />
         </mxCell>
-        <mxCell id="cu_login" value="&lt;b&gt;Iniciar Sesión en el Sistema&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="320" y="120" width="200" height="50" as="geometry" />
+        <!-- Actor: Gerente Administrativo y Financiero -->
+        <mxCell id="actor_admin" value="GERENTE ADMINISTRATIVO&#xa;Y FINANCIERO" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fontColor=#000000;strokeColor=#A0522D;strokeWidth=2;fillColor=#FF8C00;" vertex="1" parent="1">
+          <mxGeometry x="1195" y="490" width="55" height="105" as="geometry" />
         </mxCell>
-        <mxCell id="cu_auth" value="&lt;b&gt;Autenticar Usuario con Rol Autorizado&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fillColor=#F3E8FF;strokeColor=#9333EA;strokeWidth=1.5;fontColor=#581C87;shadow=0;" vertex="1" parent="1">
-          <mxGeometry x="620" y="120" width="230" height="50" as="geometry" />
+        <mxCell id="cu_login" value="Iniciar Sesión" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="250" y="85" width="240" height="46" as="geometry" />
         </mxCell>
-        <mxCell id="cu_kpi" value="&lt;b&gt;Visualizar Indicadores Clave (KPIs)&lt;br&gt;(Ventas, Margen, Ticket Promedio)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="200" width="240" height="55" as="geometry" />
+        <mxCell id="cu_auth" value="Autenticar Usuario" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="570" y="85" width="200" height="46" as="geometry" />
         </mxCell>
-        <mxCell id="cu_filtro" value="&lt;b&gt;Filtrar por Período Temporal&lt;br&gt;(Hoy, 7D, Mes, Año, Histórico, Mes/Año)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fillColor=#F3E8FF;strokeColor=#9333EA;strokeWidth=1.5;fontColor=#581C87;shadow=0;" vertex="1" parent="1">
-          <mxGeometry x="620" y="190" width="230" height="55" as="geometry" />
+        <mxCell id="cu_kpi" value="Visualizar Indicadores Estadísticos&#xa;(KPIs)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="155" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_comparar" value="&lt;b&gt;Comparar Dos Períodos Estadísticos&lt;br&gt;(Ej. Oct 2025 vs Oct 2026)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fillColor=#FEF3C7;strokeColor=#D97706;strokeWidth=1.5;fontColor=#78350F;shadow=0;" vertex="1" parent="1">
-          <mxGeometry x="890" y="190" width="220" height="55" as="geometry" />
+        <mxCell id="cu_filtro" value="Filtrar Información por Período" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="560" y="155" width="220" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_tendencia" value="&lt;b&gt;Analizar Tendencia Cronológica de Ventas&lt;br&gt;(Diaria, Semanal, Mensual y Anual)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="290" width="250" height="55" as="geometry" />
+        <mxCell id="cu_comparar" value="Comparar Dos Períodos" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
+          <mxGeometry x="840" y="155" width="190" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_cat" value="&lt;b&gt;Analizar Ventas por Categoría y Repuestos&lt;br&gt;(Participación %, Unidades y Repuestos Estrella)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="380" width="260" height="55" as="geometry" />
+        <mxCell id="cu_rf60" value="Analizar Tendencia Cronológica&#xa;de Ventas" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="240" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_pagos" value="&lt;b&gt;Analizar Composición de Métodos de Pago&lt;br&gt;(Efectivo, Tarjetas y Transferencias)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="470" width="250" height="55" as="geometry" />
+        <mxCell id="cu_rf61" value="Analizar Distribución de Ventas&#xa;por Categoría" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="318" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_compras" value="&lt;b&gt;Analizar Compras y Relación con Proveedores&lt;br&gt;(Costos de Adquisición y Concentración)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="560" width="260" height="55" as="geometry" />
+        <mxCell id="cu_rf62" value="Analizar Métodos de Pago" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="396" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_rotacion" value="&lt;b&gt;Evaluar Rotación Financiera de Inventarios&lt;br&gt;(Costo de Ventas / Inventario Promedio)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="650" width="260" height="55" as="geometry" />
+        <mxCell id="cu_rf67" value="Analizar Rentabilidad por Categoría" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="474" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_abc" value="&lt;b&gt;Clasificar Inventario bajo Criterio ABC Dual&lt;br&gt;(Por Valor de Consumo / Por Inversión en Stock)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="740" width="270" height="60" as="geometry" />
+        <mxCell id="cu_rf63" value="Analizar Rotación y Clasificación&#xa;ABC de Inventario" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="552" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_estadisticas" value="&lt;b&gt;Analizar Medidas Estadísticas Descriptivas&lt;br&gt;(Media, Mediana, Moda, Desv. Est. y CV%)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="840" width="260" height="55" as="geometry" />
+        <mxCell id="cu_rf64" value="Monitorear Existencias Críticas y&#xa;Cobertura de Inventario" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="630" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_alertas" value="&lt;b&gt;Monitorear Alerta Temprana de Existencias&lt;br&gt;(Stock Mínimo y Repuestos Estancados)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="930" width="260" height="55" as="geometry" />
+        <mxCell id="cu_rf66" value="Clasificar Repuestos Más y&#xa;Menos Vendidos" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="708" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_informe" value="&lt;b&gt;Generar Informe Ejecutivo Estadístico&lt;br&gt;(Consolidado Multi-dimensional)&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontStyle=1;fontSize=11;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=1.8;fontColor=#1E3A8A;shadow=1;" vertex="1" parent="1">
-          <mxGeometry x="310" y="1030" width="240" height="55" as="geometry" />
+        <mxCell id="cu_rf68" value="Analizar Devoluciones de Ventas" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="786" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="cu_print" value="&lt;b&gt;Visualizar Vista Previa e Imprimir&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fillColor=#F3E8FF;strokeColor=#9333EA;strokeWidth=1.5;fontColor=#581C87;shadow=0;" vertex="1" parent="1">
-          <mxGeometry x="620" y="1010" width="210" height="50" as="geometry" />
+        <mxCell id="cu_rf65" value="Generar Informe Ejecutivo&#xa;Estadístico" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="240" y="880" width="260" height="54" as="geometry" />
         </mxCell>
-        <mxCell id="cu_export" value="&lt;b&gt;Exportar a Excel (.xlsx) y PDF&lt;/b&gt;" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fillColor=#FEF3C7;strokeColor=#D97706;strokeWidth=1.5;fontColor=#78350F;shadow=0;" vertex="1" parent="1">
-          <mxGeometry x="620" y="1090" width="210" height="50" as="geometry" />
+        <mxCell id="cu_prev" value="Visualizar Vista Previa del Informe" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="550" y="880" width="220" height="52" as="geometry" />
         </mxCell>
-        <mxCell id="rel_inc_1" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=10;fontColor=#9333EA;strokeColor=#9333EA;strokeWidth=1.5;" edge="1" parent="1" source="cu_login" target="cu_auth">
+        <mxCell id="cu_print" value="Imprimir Informe" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
+          <mxGeometry x="840" y="850" width="180" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_export" value="Exportar Informe en PDF o Excel" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
+          <mxGeometry x="840" y="915" width="200" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_inc_1" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_login" target="cu_auth">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_inc_2" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=10;fontColor=#9333EA;strokeColor=#9333EA;strokeWidth=1.5;" edge="1" parent="1" source="cu_kpi" target="cu_filtro">
+        <mxCell id="rel_inc_2" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_kpi" target="cu_filtro">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_ext_1" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=10;fontColor=#D97706;strokeColor=#D97706;strokeWidth=1.5;" edge="1" parent="1" source="cu_comparar" target="cu_filtro">
+        <mxCell id="rel_ext_1" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_comparar" target="cu_filtro">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_inc_3" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=10;fontColor=#9333EA;strokeColor=#9333EA;strokeWidth=1.5;" edge="1" parent="1" source="cu_informe" target="cu_print">
+        <mxCell id="rel_inc_3" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rf65" target="cu_prev">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_ext_2" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=10;fontColor=#D97706;strokeColor=#D97706;strokeWidth=1.5;" edge="1" parent="1" source="cu_export" target="cu_informe">
+        <mxCell id="rel_ext_2" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_print" target="cu_prev">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_0" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_login">
+        <mxCell id="rel_ext_3" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export" target="cu_prev">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_1" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_kpi">
+        <mxCell id="assoc_op_0" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_login">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_2" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_tendencia">
+        <mxCell id="assoc_op_1" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_kpi">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_3" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_cat">
+        <mxCell id="assoc_op_2" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rf60">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_4" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_compras">
+        <mxCell id="assoc_op_3" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rf61">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_5" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rotacion">
+        <mxCell id="assoc_op_4" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rf63">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_6" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_abc">
+        <mxCell id="assoc_op_5" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rf64">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_7" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_alertas">
+        <mxCell id="assoc_op_6" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rf66">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_op_8" style="endArrow=none;html=1;rounded=0;strokeColor=#B45309;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_informe">
+        <mxCell id="assoc_op_7" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rf68">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_0" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_login">
+        <mxCell id="assoc_op_8" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_operaciones" target="cu_rf65">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_1" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_kpi">
+        <mxCell id="assoc_ad_0" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_login">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_2" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_tendencia">
+        <mxCell id="assoc_ad_1" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_kpi">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_3" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_cat">
+        <mxCell id="assoc_ad_2" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf60">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_4" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_pagos">
+        <mxCell id="assoc_ad_3" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf61">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_5" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_compras">
+        <mxCell id="assoc_ad_4" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf62">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_6" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rotacion">
+        <mxCell id="assoc_ad_5" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf67">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_7" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_abc">
+        <mxCell id="assoc_ad_6" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf63">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_8" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_estadisticas">
+        <mxCell id="assoc_ad_7" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf64">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_ad_9" style="endArrow=none;html=1;rounded=0;strokeColor=#1E40AF;strokeWidth=1.4;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_informe">
+        <mxCell id="assoc_ad_8" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf66">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <!-- Notas técnicas / Leyenda -->
-        <mxCell id="nota_requerimientos" value="&lt;b&gt;Nuevas Mejoras Incorporadas (Corte V):&lt;/b&gt;&lt;br&gt;
-• &lt;b&gt;Filtro Temporal Dinámico:&lt;/b&gt; Selectores de Mes, Año y Comparación de Períodos (ej. Oct 2025 vs Oct 2026).&lt;br&gt;
-• &lt;b&gt;Rotación Monetaria:&lt;/b&gt; Costo de Ventas / Inventario Promedio al Costo (diferenciada de rotación física).&lt;br&gt;
-• &lt;b&gt;Clasificación ABC Dual:&lt;/b&gt; Criterio por Consumo vs Criterio por Inversión de Stock.&lt;br&gt;
-• &lt;b&gt;Estadística Descriptiva:&lt;/b&gt; Media, Mediana, Moda, Rango, Varianza, Desviación Estándar y CV%.&lt;br&gt;
-• &lt;b&gt;Informes y Exportación:&lt;/b&gt; Barra simplificada con Vista Previa Imprimible y Exportación a Excel (.xlsx) y PDF." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontFamily=Helvetica;fontSize=10;fontColor=#334155;fillColor=#F1F5F9;strokeColor=#94A3B8;strokeWidth=1.2;align=left;spacingLeft=10;spacingRight=10;" vertex="1" parent="1">
-          <mxGeometry x="620" y="320" width="490" height="110" as="geometry" />
+        <mxCell id="assoc_ad_9" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf68">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ad_10" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_rf65">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

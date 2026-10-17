@@ -2099,6 +2099,390 @@ INSERT INTO [usuarios] ([id], [rol_id], [username], [password_hash], [nombre_com
 SET IDENTITY_INSERT [usuarios] OFF;
 GO
 
+
+-- -----------------------------------------------------------------------------
+-- SECCIÓN: MÓDULO TRIBUTARIO Y FISCAL (RF129 - RF139: DECLARACIÓN ANUAL DEL IR)
+-- -----------------------------------------------------------------------------
+
+-- 1. Tabla: negocio_info_tributaria (RF129)
+IF OBJECT_ID('negocio_info_tributaria', 'U') IS NULL
+BEGIN
+CREATE TABLE [negocio_info_tributaria] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [ruc] varchar(30) NOT NULL,
+    [razon_social] varchar(200) NOT NULL,
+    [nombre_comercial] varchar(200) NOT NULL,
+    [actividad_economica] varchar(255) NOT NULL,
+    [domicilio_fiscal] varchar(300) NOT NULL,
+    [regimen_tributario] varchar(100) DEFAULT ('Régimen General') NOT NULL,
+    [fecha_inicio_vigencia] date NOT NULL,
+    [fecha_fin_vigencia] date NULL,
+    [activo] bit DEFAULT ((1)) NOT NULL,
+    [usuario_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    [updated_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_negocio_info_tributaria] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_negocio_info_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 2. Tabla: reglas_tributarias (RF130)
+IF OBJECT_ID('reglas_tributarias', 'U') IS NULL
+BEGIN
+CREATE TABLE [reglas_tributarias] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [codigo_regla] varchar(50) NOT NULL,
+    [nombre_regla] varchar(150) NOT NULL,
+    [regimen_tributario] varchar(100) DEFAULT ('Régimen General') NOT NULL,
+    [tipo_parametro] varchar(30) DEFAULT ('Porcentaje') NOT NULL,
+    [valor] decimal(18,4) NOT NULL,
+    [condiciones_aplicacion] nvarchar(max) NULL,
+    [referencia_normativa] varchar(255) NULL,
+    [fecha_inicio_vigencia] date NOT NULL,
+    [fecha_fin_vigencia] date NULL,
+    [activo] bit DEFAULT ((1)) NOT NULL,
+    [usuario_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_reglas_tributarias] PRIMARY KEY ([id]),
+    CONSTRAINT [uq_reglas_tributarias_codigo] UNIQUE ([codigo_regla]),
+    CONSTRAINT [fk_reglas_trib_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 3. Tabla: acreditamientos_tributarios (RF132)
+IF OBJECT_ID('acreditamientos_tributarios', 'U') IS NULL
+BEGIN
+CREATE TABLE [acreditamientos_tributarios] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [tipo] varchar(50) NOT NULL,
+    [concepto] varchar(255) NOT NULL,
+    [ejercicio_fiscal] int NOT NULL,
+    [periodo_mes] int NULL,
+    [fecha] date NOT NULL,
+    [numero_referencia] varchar(100) NOT NULL,
+    [agente_retenedor_ruc] varchar(30) NULL,
+    [agente_retenedor_nombre] varchar(200) NULL,
+    [monto_base] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [porcentaje_aplicado] decimal(6,2) DEFAULT ((0.00)) NULL,
+    [importe_total] decimal(18,2) NOT NULL,
+    [importe_aplicado] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [documento_respaldo_url] varchar(300) NULL,
+    [estado] varchar(30) DEFAULT ('Disponible') NULL,
+    [usuario_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_acreditamientos_tributarios] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_acreditamientos_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 4. Tabla: declaraciones_ir (RF133, RF135, RF137)
+IF OBJECT_ID('declaraciones_ir', 'U') IS NULL
+BEGIN
+CREATE TABLE [declaraciones_ir] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [ejercicio_fiscal] int NOT NULL,
+    [version] int DEFAULT ((1)) NOT NULL,
+    [es_sustitutiva] bit DEFAULT ((0)) NOT NULL,
+    [declaracion_anterior_id] int NULL,
+    [estado] varchar(30) DEFAULT ('Borrador') NOT NULL,
+    [regimen_tributario_aplicado] varchar(100) NOT NULL,
+    [datos_fiscales_snapshot] nvarchar(max) NULL,
+    [reglas_snapshot] nvarchar(max) NULL,
+    [total_ingresos_brutos] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [total_costos] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [total_gastos_deducibles] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [renta_neta_gravable] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [ir_calculado] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [pago_minimo_definitivo] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [ir_determinado] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [total_acreditamientos] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [saldo_a_pagar] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [saldo_a_favor] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [tiene_errores_bloqueantes] bit DEFAULT ((0)) NULL,
+    [observaciones] nvarchar(max) NULL,
+    [usuario_elaboro_id] int NULL,
+    [usuario_aprobo_id] int NULL,
+    [fecha_aprobacion] datetime NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    [updated_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_declaraciones_ir] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_decl_anterior] FOREIGN KEY ([declaracion_anterior_id]) REFERENCES [declaraciones_ir]([id]),
+    CONSTRAINT [fk_decl_usuario_elaboro] FOREIGN KEY ([usuario_elaboro_id]) REFERENCES [usuarios]([id]),
+    CONSTRAINT [fk_decl_usuario_aprobo] FOREIGN KEY ([usuario_aprobo_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 5. Tabla: declaracion_renglones_detalle (RF133)
+IF OBJECT_ID('declaracion_renglones_detalle', 'U') IS NULL
+BEGIN
+CREATE TABLE [declaracion_renglones_detalle] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [declaracion_id] int NOT NULL,
+    [seccion] varchar(50) NOT NULL,
+    [numero_renglon] int NOT NULL,
+    [descripcion_renglon] varchar(255) NOT NULL,
+    [tipo_renglon] varchar(30) NOT NULL,
+    [importe_base_contable] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [importe_ajustes] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [importe_declarado] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [origen_detalle] nvarchar(max) NULL,
+    [cuentas_asociadas] varchar(255) NULL,
+    CONSTRAINT [pk_declaracion_renglones_detalle] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_renglones_declaracion] FOREIGN KEY ([declaracion_id]) REFERENCES [declaraciones_ir]([id]) ON DELETE CASCADE
+);
+END
+GO
+
+-- 6. Tabla: declaracion_ajustes_fiscales (RF136)
+IF OBJECT_ID('declaracion_ajustes_fiscales', 'U') IS NULL
+BEGIN
+CREATE TABLE [declaracion_ajustes_fiscales] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [declaracion_id] int NOT NULL,
+    [ejercicio_fiscal] int NOT NULL,
+    [numero_renglon] int NOT NULL,
+    [concepto] varchar(255) NOT NULL,
+    [tipo_ajuste] varchar(50) NOT NULL,
+    [efecto] varchar(30) NOT NULL,
+    [importe] decimal(18,2) NOT NULL,
+    [justificacion] nvarchar(max) NOT NULL,
+    [referencia_normativa] varchar(255) NULL,
+    [documento_respaldo_url] varchar(300) NULL,
+    [usuario_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_declaracion_ajustes_fiscales] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_ajustes_declaracion] FOREIGN KEY ([declaracion_id]) REFERENCES [declaraciones_ir]([id]) ON DELETE CASCADE,
+    CONSTRAINT [fk_ajustes_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 7. Tabla: declaracion_validaciones (RF134)
+IF OBJECT_ID('declaracion_validaciones', 'U') IS NULL
+BEGIN
+CREATE TABLE [declaracion_validaciones] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [declaracion_id] int NOT NULL,
+    [tipo] varchar(30) NOT NULL,
+    [codigo_validacion] varchar(50) NOT NULL,
+    [renglon_afectado] int NULL,
+    [modulo_origen] varchar(50) NULL,
+    [motivo] nvarchar(max) NOT NULL,
+    [resuelto] bit DEFAULT ((0)) NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_declaracion_validaciones] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_validaciones_declaracion] FOREIGN KEY ([declaracion_id]) REFERENCES [declaraciones_ir]([id]) ON DELETE CASCADE
+);
+END
+GO
+
+-- 8. Tabla: declaracion_presentacion_pagos (RF138, RF139)
+IF OBJECT_ID('declaracion_presentacion_pagos', 'U') IS NULL
+BEGIN
+CREATE TABLE [declaracion_presentacion_pagos] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [declaracion_id] int NOT NULL,
+    [tipo_evento] varchar(30) NOT NULL,
+    [fecha_evento] date NOT NULL,
+    [numero_referencia_dgi] varchar(100) NOT NULL,
+    [importe_pagado] decimal(18,2) DEFAULT ((0.00)) NULL,
+    [banco_caja] varchar(100) NULL,
+    [medio_pago] varchar(50) NULL,
+    [archivo_constancia_url] varchar(300) NULL,
+    [observaciones] nvarchar(max) NULL,
+    [usuario_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_declaracion_presentacion_pagos] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_pagos_declaracion] FOREIGN KEY ([declaracion_id]) REFERENCES [declaraciones_ir]([id]),
+    CONSTRAINT [fk_pagos_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- Datos iniciales del módulo tributario
+IF NOT EXISTS (SELECT 1 FROM [negocio_info_tributaria] WHERE [ruc] = 'J0310000000001')
+BEGIN
+INSERT INTO [negocio_info_tributaria] ([ruc], [razon_social], [nombre_comercial], [actividad_economica], [domicilio_fiscal], [regimen_tributario], [fecha_inicio_vigencia], [activo], [usuario_id])
+VALUES ('J0310000000001', 'Jehová Jireh Moto Repuestos y Servicios', 'Jehová Jireh Moto Repuestos', 'Comercio al por menor de repuestos, lubricantes y mantenimiento de motocicletas', 'Del Hospital Amistad Japón-Nicaragua 2 cuadras al norte, Granada, Nicaragua', 'Régimen General', '2026-01-01', 1, 1);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM [reglas_tributarias] WHERE [codigo_regla] = 'IR_ANUAL_GENERAL')
+BEGIN
+INSERT INTO [reglas_tributarias] ([codigo_regla], [nombre_regla], [regimen_tributario], [tipo_parametro], [valor], [condiciones_aplicacion], [referencia_normativa], [fecha_inicio_vigencia], [activo], [usuario_id])
+VALUES 
+('IR_ANUAL_GENERAL', 'Tasa General IR Actividades Económicas', 'Régimen General', 'Porcentaje', 30.0000, 'Aplica sobre la renta neta gravable positiva al cierre fiscal.', 'Ley 822 Art. 52', '2026-01-01', 1, 1),
+('PMD_ANUAL_INGRESOS', 'Pago Mínimo Definitivo Anual', 'Régimen General', 'Porcentaje', 1.0000, '1% sobre la renta bruta gravable anual.', 'Ley 822 Art. 59', '2026-01-01', 1, 1),
+('RETENCION_IR_BIENES_2', 'Retención Definitiva IR en la Fuente (Bienes)', 'Régimen General', 'Porcentaje', 2.0000, 'Retención que aplican grandes contribuyentes en compra de repuestos.', 'Ley 822 Art. 65', '2026-01-01', 1, 1),
+('RETENCION_IR_SERVICIOS_10', 'Retención Definitiva IR (Servicios Técnicos)', 'Régimen General', 'Porcentaje', 10.0000, 'Retención por servicios profesionales o técnicos de taller.', 'Ley 822 Art. 65', '2026-01-01', 1, 1),
+('ANTICIPO_MENSUAL_1', 'Anticipo Mensual a Cuenta del IR', 'Régimen General', 'Porcentaje', 1.0000, 'Anticipo mensual liquidado en declaraciones mensuales.', 'Ley 822 Art. 61', '2026-01-01', 1, 1);
+END
+GO
+
+-- -----------------------------------------------------------------------------
+-- SECCIÓN: MÓDULO DE ESTADO DE FLUJO DE EFECTIVO (RF96 - RF102)
+-- -----------------------------------------------------------------------------
+
+-- 1. Actualización de columnas en cuentas_contables (RF96)
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='cuentas_contables' AND COLUMN_NAME='flujo_categoria')
+BEGIN
+    ALTER TABLE [cuentas_contables] ADD [flujo_categoria] varchar(30) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='cuentas_contables' AND COLUMN_NAME='es_efectivo_equivalente')
+BEGIN
+    ALTER TABLE [cuentas_contables] ADD [es_efectivo_equivalente] bit DEFAULT ((0)) NULL;
+END
+GO
+
+-- Etiquetas iniciales para cuentas contables
+UPDATE [cuentas_contables] SET [flujo_categoria] = 'Efectivo_Equivalente', [es_efectivo_equivalente] = 1 WHERE [codigo] IN ('1.1.01', '1.1.02');
+UPDATE [cuentas_contables] SET [flujo_categoria] = 'Inversion', [es_efectivo_equivalente] = 0 WHERE [codigo] IN ('1.2.01', '1.2.02', '1.2.03');
+UPDATE [cuentas_contables] SET [flujo_categoria] = 'Financiamiento', [es_efectivo_equivalente] = 0 WHERE [codigo] IN ('2.1.02', '3.1.01', '3.1.02');
+UPDATE [cuentas_contables] SET [flujo_categoria] = 'Operacion', [es_efectivo_equivalente] = 0 WHERE [flujo_categoria] IS NULL;
+GO
+
+-- 2. Tabla: conciliaciones_bancarias (RF98)
+IF OBJECT_ID('conciliaciones_bancarias', 'U') IS NULL
+BEGIN
+CREATE TABLE [conciliaciones_bancarias] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [cuenta_id] int NOT NULL,
+    [anio] int NOT NULL,
+    [mes] int NOT NULL,
+    [fecha_corte] date NOT NULL,
+    [saldo_segun_libros] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [saldo_segun_banco] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [diferencia] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [estado] varchar(30) DEFAULT ('Borrador') NULL,
+    [observaciones] nvarchar(max) NULL,
+    [usuario_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_conciliaciones_bancarias] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_conciliacion_cuenta] FOREIGN KEY ([cuenta_id]) REFERENCES [cuentas_contables]([id]),
+    CONSTRAINT [fk_conciliacion_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 3. Tabla: conciliacion_partidas_pendientes (RF98)
+IF OBJECT_ID('conciliacion_partidas_pendientes', 'U') IS NULL
+BEGIN
+CREATE TABLE [conciliacion_partidas_pendientes] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [conciliacion_id] int NOT NULL,
+    [tipo_partida] varchar(50) NOT NULL,
+    [fecha] date NOT NULL,
+    [numero_documento_referencia] varchar(100) NOT NULL,
+    [descripcion] varchar(255) NOT NULL,
+    [monto] decimal(18,2) NOT NULL,
+    [efecto_en_saldo] varchar(20) NOT NULL,
+    [esta_conciliada] bit DEFAULT ((0)) NULL,
+    [movimiento_contable_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_conciliacion_partidas_pendientes] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_partida_conciliacion] FOREIGN KEY ([conciliacion_id]) REFERENCES [conciliaciones_bancarias]([id]) ON DELETE CASCADE,
+    CONSTRAINT [fk_partida_movimiento] FOREIGN KEY ([movimiento_contable_id]) REFERENCES [movimientos_contables]([id])
+);
+END
+GO
+
+-- 4. Tabla: estados_flujo_efectivo (RF101, RF102)
+IF OBJECT_ID('estados_flujo_efectivo', 'U') IS NULL
+BEGIN
+CREATE TABLE [estados_flujo_efectivo] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [ejercicio_fiscal] int NOT NULL,
+    [periodo_tipo] varchar(20) DEFAULT ('Anual') NOT NULL,
+    [fecha_inicio] date NOT NULL,
+    [fecha_fin] date NOT NULL,
+    [metodo] varchar(20) DEFAULT ('Indirecto') NOT NULL,
+    [saldo_inicial_efectivo] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [flujo_neto_operacion] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [flujo_neto_inversion] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [flujo_neto_financiamiento] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [variacion_neta_efectivo] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [saldo_final_calculado] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [saldo_final_balance_general] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [diferencia_cuadratura] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [esta_cuadrado] bit DEFAULT ((0)) NOT NULL,
+    [estado] varchar(30) DEFAULT ('Borrador') NULL,
+    [observaciones] nvarchar(max) NULL,
+    [usuario_elaboro_id] int NULL,
+    [usuario_aprobo_id] int NULL,
+    [fecha_aprobacion] datetime NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_estados_flujo_efectivo] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_flujo_usuario_elaboro] FOREIGN KEY ([usuario_elaboro_id]) REFERENCES [usuarios]([id]),
+    CONSTRAINT [fk_flujo_usuario_aprobo] FOREIGN KEY ([usuario_aprobo_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 5. Tabla: estado_flujo_efectivo_detalle (RF101)
+IF OBJECT_ID('estado_flujo_efectivo_detalle', 'U') IS NULL
+BEGIN
+CREATE TABLE [estado_flujo_efectivo_detalle] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [flujo_id] int NOT NULL,
+    [actividad] varchar(30) NOT NULL,
+    [concepto] varchar(255) NOT NULL,
+    [tipo_movimiento] varchar(20) NOT NULL,
+    [importe] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [orden_presentacion] int DEFAULT ((1)) NOT NULL,
+    CONSTRAINT [pk_estado_flujo_efectivo_detalle] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_detalle_flujo] FOREIGN KEY ([flujo_id]) REFERENCES [estados_flujo_efectivo]([id]) ON DELETE CASCADE
+);
+END
+GO
+
+-- 6. Tabla: flujo_ajustes_no_monetarios (RF100)
+IF OBJECT_ID('flujo_ajustes_no_monetarios', 'U') IS NULL
+BEGIN
+CREATE TABLE [flujo_ajustes_no_monetarios] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [flujo_id] int NOT NULL,
+    [concepto] varchar(255) NOT NULL,
+    [cuenta_id] int NULL,
+    [efecto] varchar(20) NOT NULL,
+    [importe] decimal(18,2) DEFAULT ((0.00)) NOT NULL,
+    [justificacion] nvarchar(max) NOT NULL,
+    [usuario_id] int NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_flujo_ajustes_no_monetarios] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_ajustes_no_monetarios_flujo] FOREIGN KEY ([flujo_id]) REFERENCES [estados_flujo_efectivo]([id]) ON DELETE CASCADE,
+    CONSTRAINT [fk_ajustes_no_monetarios_cuenta] FOREIGN KEY ([cuenta_id]) REFERENCES [cuentas_contables]([id]),
+    CONSTRAINT [fk_ajustes_no_monetarios_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
+-- 7. Tabla: flujo_reclasificaciones_auditoria (RF97, RF99)
+IF OBJECT_ID('flujo_reclasificaciones_auditoria', 'U') IS NULL
+BEGIN
+CREATE TABLE [flujo_reclasificaciones_auditoria] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [asiento_id] int NULL,
+    [movimiento_id] int NULL,
+    [origen_modulo] varchar(50) NOT NULL,
+    [actividad_anterior] varchar(30) NULL,
+    [actividad_nueva] varchar(30) NOT NULL,
+    [motivo_reclasificacion] nvarchar(max) NOT NULL,
+    [usuario_id] int NOT NULL,
+    [created_at] datetime DEFAULT (getdate()) NULL,
+    CONSTRAINT [pk_flujo_reclasificaciones_auditoria] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_reclasif_asiento] FOREIGN KEY ([asiento_id]) REFERENCES [asientos_contables]([id]),
+    CONSTRAINT [fk_reclasif_movimiento] FOREIGN KEY ([movimiento_id]) REFERENCES [movimientos_contables]([id]),
+    CONSTRAINT [fk_reclasif_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+END
+GO
+
 EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';
 GO
 

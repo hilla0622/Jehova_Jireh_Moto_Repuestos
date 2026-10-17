@@ -21,11 +21,153 @@ if (typeof window.formatCantidad !== 'function') {
 }
 
 // =============================================================================
-// 1. REPORTE Y ESTADÍSTICAS - FILTROS DINÁMICOS Y COMPLEMENTOS (RF58, RF66, RF68)
+// 1. REPORTE Y ESTADÍSTICAS - CORTE V (RF58 - RF68)
 // =============================================================================
-let _filtroPresetActivo = 'mes';
-let _demandaViewActual = 'top'; // 'top' o 'bottom'
+window._filtroPresetActivo = window._filtroPresetActivo || 'mes';
+window._criterioABCActual = window._criterioABCActual || 'inversion';
+window._currentReportesTab = window._currentReportesTab || 'all';
+window._filtroABCActual = window._filtroABCActual || 'todos';
+window._demandaViewActual = window._demandaViewActual || 'top';
 
+var _filtroPresetActivo = window._filtroPresetActivo;
+var _criterioABCActual = window._criterioABCActual;
+var _currentReportesTab = window._currentReportesTab;
+var _demandaViewActual = window._demandaViewActual;
+
+// Instancias globales para gráficos de Chart.js
+if (typeof window.chartTendenciaInstance === 'undefined') window.chartTendenciaInstance = null;
+if (typeof window.chartCategoriaInstance === 'undefined') window.chartCategoriaInstance = null;
+if (typeof window.chartMetodosPagoInstance === 'undefined') window.chartMetodosPagoInstance = null;
+if (typeof window.chartRentabilidadInstance === 'undefined') window.chartRentabilidadInstance = null;
+if (typeof window._reporteDataCache === 'undefined') window._reporteDataCache = null;
+
+/**
+ * RF59: Pestañas internas de navegación del módulo de Reportes
+ * Soporta 'all' (Vista General con todos los paneles) o vista individual por sub-panel
+ */
+function switchReportesTab(targetId) {
+    if (targetId !== 'all' && _currentReportesTab === targetId) {
+        targetId = 'all';
+    }
+    _currentReportesTab = targetId;
+
+    // Actualizar botones de navegación
+    document.querySelectorAll('.reportes-tab-btn').forEach(btn => {
+        const btnTab = btn.getAttribute('data-rep-tab');
+        const isActive = (btnTab === targetId);
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    // Actualizar estilo del contenedor para separadores
+    const wrapper = document.querySelector('.reportes-tabs-wrapper');
+    if (wrapper) {
+        wrapper.classList.toggle('mode-all', targetId === 'all');
+    }
+
+    // Mostrar u ocultar paneles correspondientes
+    document.querySelectorAll('.rep-tab-panel').forEach(panel => {
+        if (targetId === 'all') {
+            panel.classList.add('active');
+        } else {
+            panel.classList.toggle('active', panel.id === targetId);
+        }
+    });
+
+    // Redimensionar gráficos si se hacen visibles
+    setTimeout(() => {
+        if (window.chartTendenciaInstance) window.chartTendenciaInstance.resize();
+        if (window.chartMetodosPagoInstance) window.chartMetodosPagoInstance.resize();
+        if (window.chartCategoriaInstance) window.chartCategoriaInstance.resize();
+        if (window.chartRentabilidadInstance) window.chartRentabilidadInstance.resize();
+    }, 150);
+}
+
+/**
+ * Desplegar / ocultar el menú de exportación
+ */
+function toggleMenuExportar(event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    const menu = document.getElementById('dropdown-menu-exportar');
+    if (!menu) return;
+    const isVisible = (menu.style.display === 'block');
+    menu.style.display = isVisible ? 'none' : 'block';
+}
+
+// Cerrar menú desplegable al hacer clic fuera
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('dropdown-menu-exportar');
+    const btn = document.getElementById('btn-exportar-reporte');
+    if (menu && menu.style.display === 'block') {
+        if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+            menu.style.display = 'none';
+        }
+    }
+});
+
+/**
+ * RF65: Generar Informe Ejecutivo Consolidado
+ */
+function generarInformeEjecutivo() {
+    if (!window._reporteDataCache) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Cargando datos', 'Espere a que terminen de cargar las estadísticas antes de generar el informe.', 'info');
+        } else {
+            alert('Espere a que terminen de cargar las estadísticas antes de generar el informe.');
+        }
+        return;
+    }
+    if (typeof compilarInformeEjecutivo === 'function') {
+        compilarInformeEjecutivo();
+    } else if (typeof openModal === 'function') {
+        openModal('modal-informe-ejecutivo');
+    }
+}
+
+/**
+ * RF65: Descarga directa del Informe Oficial en formato Excel (.xlsx)
+ */
+function exportarExcelReal() {
+    const menu = document.getElementById('dropdown-menu-exportar');
+    if (menu) menu.style.display = 'none';
+
+    let url = '/api/reportes/exportar/excel?';
+    const params = new URLSearchParams();
+
+    if (_filtroPresetActivo === 'personalizado') {
+        const d = document.getElementById('rep-fecha-inicio')?.value;
+        const h = document.getElementById('rep-fecha-fin')?.value;
+        if (!d || !h) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Atención', 'Selecciona ambas fechas (Desde y Hasta) para exportar el reporte.', 'warning');
+            } else {
+                alert('Selecciona ambas fechas (Desde y Hasta) para exportar.');
+            }
+            return;
+        }
+        params.append('fecha_inicio', d);
+        params.append('fecha_fin', h);
+    } else if (_filtroPresetActivo === 'mes_anio_directo') {
+        const m = document.getElementById('rep-select-mes')?.value;
+        const a = document.getElementById('rep-select-anio')?.value;
+        if (m) params.append('mes', m);
+        if (a) params.append('anio', a);
+    } else if (_filtroPresetActivo && _filtroPresetActivo !== 'historico') {
+        params.append('rango', _filtroPresetActivo);
+    } else {
+        params.append('rango', 'historico');
+    }
+
+    params.append('criterio_abc', _criterioABCActual || 'inversion');
+    window.location.href = url + params.toString();
+}
+
+/**
+ * RF58: Aplicar filtros temporales predeterminados (Hoy, 7 Días, Mes, Año, Histórico, Personalizado)
+ */
 function aplicarFiltroReportesPreset(preset) {
     _filtroPresetActivo = preset;
 
@@ -37,63 +179,250 @@ function aplicarFiltroReportesPreset(preset) {
     const fCustomContainer = document.getElementById('rep-filtro-fechas-custom');
     if (fCustomContainer) {
         fCustomContainer.style.display = (preset === 'personalizado') ? 'flex' : 'none';
-        if (preset === 'personalizado') return; // Espera a que el usuario presione el botón de filtrar
+        if (preset === 'personalizado') {
+            const hoy = new Date().toISOString().split('T')[0];
+            const dInput = document.getElementById('rep-fecha-inicio');
+            const hInput = document.getElementById('rep-fecha-fin');
+            if (hInput && !hInput.value) hInput.value = hoy;
+            if (dInput && !dInput.value) {
+                const primerDiaMes = new Date();
+                primerDiaMes.setDate(1);
+                dInput.value = primerDiaMes.toISOString().split('T')[0];
+            }
+            return; // Espera a que el usuario presione el botón de filtrar
+        }
     }
 
     ejecutarConsultaReportes();
 }
 
-async function ejecutarConsultaReportes() {
-    let url = '/api/reportes?';
-    if (_filtroPresetActivo === 'personalizado') {
-        const d = document.getElementById('rep-fecha-inicio')?.value;
-        const h = document.getElementById('rep-fecha-fin')?.value;
-        if (!d || !h) {
-            Swal.fire('Atención', 'Selecciona ambas fechas (Desde y Hasta) para el filtro personalizado.', 'warning');
-            return;
-        }
-        url += `fecha_inicio=${d}&fecha_fin=${h}`;
-    } else if (_filtroPresetActivo && _filtroPresetActivo !== 'historico') {
-        url += `rango=${_filtroPresetActivo}`;
-    } else {
-        url += `rango=historico`;
+/**
+ * Selección directa de Mes y Año en selectores desplegables
+ */
+function cambiarMesAnioDirecto() {
+    _filtroPresetActivo = 'mes_anio_directo';
+
+    // Desactivar botones de preset
+    document.querySelectorAll('.btn-preset-reporte').forEach(btn => btn.classList.remove('active'));
+
+    const fCustomContainer = document.getElementById('rep-filtro-fechas-custom');
+    if (fCustomContainer) fCustomContainer.style.display = 'none';
+
+    ejecutarConsultaReportes();
+}
+
+/**
+ * RF63: Selección del Criterio ABC (Inversión en Bodega vs Ventas / Consumo)
+ */
+function cambiarCriterioABC(criterio) {
+    _criterioABCActual = criterio;
+
+    const btnInv = document.getElementById('btn-abc-inversion');
+    const btnCons = document.getElementById('btn-abc-consumo');
+    if (btnInv) btnInv.classList.toggle('active', criterio === 'inversion');
+    if (btnCons) btnCons.classList.toggle('active', criterio === 'consumo');
+
+    const badge = document.getElementById('rep-criterio-badge');
+    if (badge) {
+        badge.textContent = criterio === 'inversion' ? 'ABC: Inversión en Bodega' : 'ABC: Ventas / Consumo';
     }
+
+    const desc = document.getElementById('txt-criterio-abc-desc');
+    if (desc) {
+        desc.textContent = criterio === 'inversion'
+            ? 'Criterio actual: Inversión en Inventario (Capital en Bodega = stock * costo).'
+            : 'Criterio actual: Ventas y Demanda del Período (Facturación e ingresos generados).';
+    }
+
+    ejecutarConsultaReportes();
+}
+
+/**
+ * Mostrar / Ocultar panel de Modo Comparación
+ */
+function toggleModoComparar() {
+    const panel = document.getElementById('rep-panel-comparacion');
+    const btn = document.getElementById('btn-toggle-comparar');
+    if (!panel) return;
+
+    const estaAbierto = (panel.style.display === 'block');
+    panel.style.display = estaAbierto ? 'none' : 'block';
+    if (btn) btn.classList.toggle('active', !estaAbierto);
+}
+
+/**
+ * Ejecutar comparación estadística entre dos períodos
+ */
+async function ejecutarComparacionPeriodos() {
+    const mesA = document.getElementById('comp-mes-a')?.value || '10';
+    const anioA = document.getElementById('comp-anio-a')?.value || '2025';
+    const mesB = document.getElementById('comp-mes-b')?.value || '10';
+    const anioB = document.getElementById('comp-anio-b')?.value || '2026';
+
+    const url = `/api/reportes?comparar=1&mes=${mesA}&anio=${anioA}&mes2=${mesB}&anio2=${anioB}&criterio_abc=${_criterioABCActual}`;
 
     try {
         const res = await fetch(url);
         const data = await res.json();
         if (data.error) {
-            Swal.fire('Error', data.error, 'error');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error en Comparación', data.error, 'error');
+            } else {
+                alert('Error: ' + data.error);
+            }
             return;
         }
 
-        _reporteDataCache = data;
+        renderComparacionPeriodos(data, mesA, anioA, mesB, anioB);
+    } catch (e) {
+        console.error('Error al ejecutar comparación de períodos:', e);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Error', 'No se pudo completar la comparación de períodos.', 'error');
+        }
+    }
+}
 
-        // Período activo
-        const pTexto = data.periodo?.texto || 'Histórico Completo';
-        const elPeriodo = document.getElementById('rep-periodo-activo-texto');
-        if (elPeriodo) elPeriodo.textContent = pTexto;
+function renderComparacionPeriodos(data, mesA, anioA, mesB, anioB) {
+    const banner = document.getElementById('rep-banner-variaciones');
+    const labelTitulos = document.getElementById('comp-label-titulos');
+    const grid = document.getElementById('comp-grid-variaciones');
 
-        // Renderizar KPIs
-        const k = data.kpis || {};
-        if (document.getElementById('rep-ingresos')) document.getElementById('rep-ingresos').textContent = formatMoneda(k.ventas_totales_monto || 0);
-        if (document.getElementById('rep-unidades-vendidas')) document.getElementById('rep-unidades-vendidas').textContent = `${k.unidades_vendidas_total || 0} unid. | ${k.ventas_totales_conteo || 0} ventas`;
-        if (document.getElementById('rep-costo-ventas')) document.getElementById('rep-costo-ventas').textContent = formatMoneda(k.costo_ventas_monto || 0);
-        if (document.getElementById('rep-egresos-compras')) document.getElementById('rep-egresos-compras').textContent = `Compras: ${formatMoneda(k.compras_totales_monto || 0)}`;
-        if (document.getElementById('rep-margen')) document.getElementById('rep-margen').textContent = formatMoneda(k.margen_bruto_monto || 0);
-        if (document.getElementById('rep-margen-pct')) document.getElementById('rep-margen-pct').textContent = `Margen: ${k.margen_bruto_porcentaje || 0}%`;
-        if (document.getElementById('rep-ticket-promedio')) document.getElementById('rep-ticket-promedio').textContent = formatMoneda(k.ticket_promedio || 0);
+    if (!banner || !grid) return;
 
-        // Gráficos y Tablas
-        if (typeof renderChartsEstadisticas === 'function') renderChartsEstadisticas(data);
-        if (typeof renderTablaRotacionABC === 'function') renderTablaRotacionABC(data.rotacion_abc);
-        if (typeof renderAlertasExistencias === 'function') renderAlertasExistencias(data.alertas);
-        if (typeof renderTablaCategorias === 'function') renderTablaCategorias(data.categorias_analisis);
+    const meses = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const titA = `${meses[parseInt(mesA)] || mesA} ${anioA}`;
+    const titB = `${meses[parseInt(mesB)] || mesB} ${anioB}`;
 
-        // RF66: Repuestos más y menos vendidos
-        renderRepuestosDemanda();
+    if (labelTitulos) labelTitulos.textContent = `${titA} vs ${titB}`;
 
-        // RF68: Devoluciones
+    const v = data.variaciones || {};
+    const metrics = [
+        { label: 'Ventas Totales', diff: v.ventas?.diff || 0, pct: v.ventas?.pct || 0, isMoney: true },
+        { label: 'Utilidad Bruta', diff: v.utilidad?.diff || 0, pct: v.utilidad?.pct || 0, isMoney: true },
+        { label: 'Margen Bruto', diff: v.margen_pct || 0, isPoints: true },
+        { label: 'Unidades Vendidas', diff: v.unidades?.diff || 0, pct: v.unidades?.pct || 0 },
+        { label: 'Comprobantes Emitidos', diff: v.transacciones?.diff || 0, pct: v.transacciones?.pct || 0 },
+        { label: 'Ticket Promedio', diff: v.ticket?.diff || 0, pct: v.ticket?.pct || 0, isMoney: true }
+    ];
+
+    grid.innerHTML = metrics.map(m => {
+        const esPositivo = m.diff >= 0;
+        const color = esPositivo ? '#10b981' : '#ef4444';
+        const icono = esPositivo ? '↑' : '↓';
+        const formattedDiff = m.isPoints
+            ? `${esPositivo ? '+' : ''}${m.diff}% pts`
+            : (m.isMoney ? (esPositivo ? '+' : '') + formatMoneda(m.diff) : `${esPositivo ? '+' : ''}${m.diff}`);
+        const formattedPct = m.pct !== undefined ? `(${esPositivo ? '+' : ''}${m.pct}%)` : '';
+
+        return `
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.6rem 0.8rem;">
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">${m.label}</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: ${color}; margin: 2px 0;">
+                    ${icono} ${formattedDiff}
+                </div>
+                <div style="font-size: 0.72rem; color: ${color}; font-weight: 600;">${formattedPct}</div>
+            </div>
+        `;
+    }).join('');
+
+    banner.style.display = 'block';
+
+    // Renderizar datos del período B (el más reciente) en el resto de los componentes
+    if (data.periodo_b) {
+        window._reporteDataCache = data.periodo_b;
+        renderReportesCompleto(data.periodo_b);
+    }
+}
+
+function cerrarModoComparativo() {
+    const banner = document.getElementById('rep-banner-variaciones');
+    if (banner) banner.style.display = 'none';
+
+    const panel = document.getElementById('rep-panel-comparacion');
+    if (panel) panel.style.display = 'none';
+
+    const btn = document.getElementById('btn-toggle-comparar');
+    if (btn) btn.classList.remove('active');
+
+    _filtroPresetActivo = 'mes';
+    aplicarFiltroReportesPreset('mes');
+}
+
+/**
+ * Consulta unificada al backend y distribución a todos los componentes
+ */
+async function ejecutarConsultaReportes() {
+    let url = '/api/reportes?';
+    const params = new URLSearchParams();
+
+    if (_filtroPresetActivo === 'personalizado') {
+        const d = document.getElementById('rep-fecha-inicio')?.value;
+        const h = document.getElementById('rep-fecha-fin')?.value;
+        if (!d || !h) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Atención', 'Selecciona ambas fechas (Desde y Hasta) para el filtro personalizado.', 'warning');
+            } else {
+                alert('Selecciona ambas fechas (Desde y Hasta) para el filtro personalizado.');
+            }
+            return;
+        }
+        params.append('fecha_inicio', d);
+        params.append('fecha_fin', h);
+    } else if (_filtroPresetActivo === 'mes_anio_directo') {
+        const m = document.getElementById('rep-select-mes')?.value;
+        const a = document.getElementById('rep-select-anio')?.value;
+        if (m) params.append('mes', m);
+        if (a) params.append('anio', a);
+    } else if (_filtroPresetActivo && _filtroPresetActivo !== 'historico') {
+        params.append('rango', _filtroPresetActivo);
+    } else {
+        params.append('rango', 'historico');
+    }
+
+    params.append('criterio_abc', _criterioABCActual || 'inversion');
+
+    try {
+        const res = await fetch(url + params.toString());
+        const data = await res.json();
+        if (data.error) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', data.error, 'error');
+            } else {
+                alert('Error: ' + data.error);
+            }
+            return;
+        }
+
+        // Sintetizar compatibilidad de alertas para modal si hace falta
+        if (!data.alertas) {
+            data.alertas = {
+                desabastecimiento: (data.alertas_stock_minimo || []).map(a => ({
+                    codigo: a.codigo,
+                    nombre: a.nombre,
+                    categoria: a.categoria,
+                    stock_actual: a.stock,
+                    stock_minimo: a.min_stock,
+                    severidad: a.nivel,
+                    clase_abc: a.clase_abc
+                })),
+                sobrestock: (data.rotacion_abc?.productos || [])
+                    .filter(p => (p.unidades_vendidas || 0) === 0 && p.stock > 0)
+                    .slice(0, 15)
+                    .map(p => ({
+                        codigo: p.codigo,
+                        nombre: p.nombre,
+                        categoria: p.categoria,
+                        stock_actual: p.stock,
+                        costo: p.costo,
+                        valor_inmovilizado: p.valor_inmovilizado
+                    }))
+            };
+        }
+
+        window._reporteDataCache = data;
+        renderReportesCompleto(data);
+
+        // Devoluciones
         cargarEstadisticasDevoluciones();
 
     } catch (e) {
@@ -101,6 +430,557 @@ async function ejecutarConsultaReportes() {
     }
 }
 
+/**
+ * Renderizado de indicadores, tablas, gráficos y medidas descriptivas
+ */
+function renderReportesCompleto(data) {
+    if (!data) return;
+
+    // 1. Periodo y Badges superiores
+    const pTexto = data.periodo?.texto || 'Histórico Completo';
+    const elPeriodo = document.getElementById('rep-periodo-activo-texto');
+    if (elPeriodo) elPeriodo.textContent = pTexto;
+
+    const badgeABC = document.getElementById('rep-criterio-badge');
+    if (badgeABC) {
+        badgeABC.textContent = (_criterioABCActual === 'inversion') ? 'ABC: Inversión en Bodega' : 'ABC: Ventas / Consumo';
+    }
+
+    const k = data.kpis || {};
+    const rotVal = Number(k.rotacion_monetaria_costo ?? k.rotacion_inventario ?? 0);
+    const diasVal = Number(k.dias_inventario ?? 0);
+
+    const bRot = document.getElementById('rep-badge-rotacion');
+    if (bRot) bRot.textContent = `${rotVal.toFixed(2)}x`;
+
+    const bDias = document.getElementById('rep-badge-dias');
+    if (bDias) bDias.textContent = `${diasVal} días`;
+
+    // 2. KPIs del Resumen General
+    const elIngresos = document.getElementById('rep-ingresos');
+    if (elIngresos) elIngresos.textContent = formatMoneda(k.ventas_totales_monto || 0);
+
+    const elUnidades = document.getElementById('rep-unidades-vendidas');
+    if (elUnidades) {
+        const u = k.unidades_vendidas_total || 0;
+        const v = k.ventas_totales_conteo || 0;
+        elUnidades.textContent = `${formatCantidad(u)} unidades | ${formatCantidad(v)} ventas`;
+    }
+
+    const elCosto = document.getElementById('rep-costo-ventas');
+    if (elCosto) elCosto.textContent = formatMoneda(k.costo_ventas_monto || 0);
+
+    const elCogsSub = document.getElementById('rep-cogs-subtext');
+    if (elCogsSub) {
+        if (k.compras_totales_monto) {
+            elCogsSub.textContent = `Compras período: ${formatMoneda(k.compras_totales_monto)}`;
+        } else {
+            elCogsSub.textContent = 'Costo histórico de productos vendidos';
+        }
+    }
+
+    const elMargen = document.getElementById('rep-margen');
+    if (elMargen) elMargen.textContent = formatMoneda(k.utilidad_bruta ?? k.margen_bruto_monto ?? 0);
+
+    const elMargenPct = document.getElementById('rep-margen-pct');
+    if (elMargenPct) elMargenPct.textContent = `Margen: ${(k.margen_bruto_porcentaje || 0).toFixed(2)}%`;
+
+    const elTicket = document.getElementById('rep-ticket-promedio');
+    if (elTicket) elTicket.textContent = formatMoneda(k.ticket_promedio || 0);
+
+    const elTicketCnt = document.getElementById('rep-ticket-conteo');
+    if (elTicketCnt) elTicketCnt.textContent = `Ticket medio (${formatCantidad(k.ventas_totales_conteo || 0)} comprobantes)`;
+
+    const elRotacion = document.getElementById('rep-rotacion');
+    if (elRotacion) elRotacion.textContent = `${rotVal.toFixed(4)}x`;
+
+    const elRotSub = document.getElementById('rep-rotacion-subtext');
+    if (elRotSub) elRotSub.textContent = 'Costo Ventas / Inv. al Costo';
+
+    const elDias = document.getElementById('rep-dias-inventario');
+    if (elDias) elDias.textContent = `${diasVal} días`;
+
+    const elInvCosto = document.getElementById('rep-kpi-inv-costo');
+    if (elInvCosto) elInvCosto.textContent = formatMoneda(k.valor_inventario_costo || 0);
+
+    const elStockFisico = document.getElementById('rep-kpi-stock-fisico');
+    if (elStockFisico) elStockFisico.textContent = `${formatCantidad(k.stock_total_actual || 0)} unidades en bodega`;
+
+    const alertas = data.alertas_stock_minimo || [];
+    const elAlertasTot = document.getElementById('rep-alertas-total');
+    if (elAlertasTot) elAlertasTot.textContent = formatCantidad(alertas.length);
+
+    const elAlertasSub = document.getElementById('rep-alertas-sub');
+    if (elAlertasSub) {
+        const totalProds = data.rotacion_abc?.total_productos || 235;
+        elAlertasSub.textContent = `Auditoría sobre ${totalProds} repuestos`;
+    }
+
+    // 3. Gráficos Chart.js
+    renderChartsReportes(data);
+
+    // 4. Tabla Desglose Mensual del Año
+    renderDesgloseMeses(data.desglose_mensual_anio);
+
+    // 5. Tabla Rendimiento por Categoría
+    renderTablaCategoriasReportes(data.categorias_analisis);
+
+    // 6. Matriz de Rotación ABC
+    renderTablaRotacionABCReportes(data.rotacion_abc);
+
+    // 7. Ranking por Unidades Vendidas
+    renderRankingUnidades(data.ranking_unidades);
+
+    // 8. Repuestos Sin Movimiento
+    renderRepuestosSinMovimiento(data.rotacion_abc);
+
+    // 9. Alerta Universal de Stock Mínimo
+    renderAlertaUniversalStock(data.alertas_stock_minimo);
+
+    // 10. Medidas Estadísticas Descriptivas
+    renderMedidasEstadisticas(data.medidas_estadisticas);
+
+    // Compatibilidad adicional
+    renderRepuestosDemanda();
+}
+
+/**
+ * Gráficos con Chart.js
+ */
+function renderChartsReportes(data) {
+    if (typeof Chart === 'undefined') return;
+
+    // 1. Gráfico de Tendencia
+    const ctxTendencia = document.getElementById('chart-ventas-tendencia');
+    const emptyTendencia = document.getElementById('empty-state-tendencia');
+    if (ctxTendencia) {
+        if (window.chartTendenciaInstance) {
+            window.chartTendenciaInstance.destroy();
+            window.chartTendenciaInstance = null;
+        }
+
+        const lista = data.tendencia_lista || [];
+        const tieneDatos = lista.length > 0 && lista.some(x => x.monto > 0);
+
+        if (emptyTendencia) emptyTendencia.style.display = tieneDatos ? 'none' : 'flex';
+        ctxTendencia.style.display = tieneDatos ? 'block' : 'none';
+
+        if (tieneDatos) {
+            const labels = lista.map(i => i.fecha);
+            const montos = lista.map(i => i.monto);
+
+            window.chartTendenciaInstance = new Chart(ctxTendencia, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ventas (C$)',
+                        data: montos,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#f59e0b',
+                        pointRadius: 3.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+                        y: {
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 10 },
+                                callback: (val) => formatMoneda(val)
+                            },
+                            grid: { color: 'rgba(148, 163, 184, 0.08)' }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // 2. Gráfico de Métodos de Pago
+    const ctxMetodos = document.getElementById('chart-metodos-pago');
+    const emptyMetodos = document.getElementById('empty-state-metodos');
+    if (ctxMetodos) {
+        if (window.chartMetodosPagoInstance) {
+            window.chartMetodosPagoInstance.destroy();
+            window.chartMetodosPagoInstance = null;
+        }
+
+        const metodos = data.metodos_pago || [];
+        const tieneDatos = metodos.length > 0 && metodos.some(m => m.total > 0);
+
+        if (emptyMetodos) emptyMetodos.style.display = tieneDatos ? 'none' : 'flex';
+        ctxMetodos.style.display = tieneDatos ? 'block' : 'none';
+
+        if (tieneDatos) {
+            window.chartMetodosPagoInstance = new Chart(ctxMetodos, {
+                type: 'doughnut',
+                data: {
+                    labels: metodos.map(m => m.metodo),
+                    datasets: [{
+                        data: metodos.map(m => m.total),
+                        backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899'],
+                        borderWidth: 2,
+                        borderColor: '#0f172a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 } }
+                    }
+                }
+            });
+        }
+    }
+
+    // 3. Gráfico de Rentabilidad por Categoría (Bar)
+    const ctxRent = document.getElementById('chart-rentabilidad-categoria');
+    const emptyRent = document.getElementById('empty-state-rentabilidad');
+    if (ctxRent) {
+        if (window.chartRentabilidadInstance) {
+            window.chartRentabilidadInstance.destroy();
+            window.chartRentabilidadInstance = null;
+        }
+
+        const cats = data.categorias_analisis || [];
+        const tieneDatos = cats.length > 0 && cats.some(c => c.total_ventas > 0);
+
+        if (emptyRent) emptyRent.style.display = tieneDatos ? 'none' : 'flex';
+        ctxRent.style.display = tieneDatos ? 'block' : 'none';
+
+        if (tieneDatos) {
+            window.chartRentabilidadInstance = new Chart(ctxRent, {
+                type: 'bar',
+                data: {
+                    labels: cats.map(c => c.categoria),
+                    datasets: [{
+                        label: 'Utilidad Bruta (C$)',
+                        data: cats.map(c => c.margen),
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    }, {
+                        label: 'Ventas Totales (C$)',
+                        data: cats.map(c => c.total_ventas),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 10 } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { size: 9.5 } }, grid: { display: false } },
+                        y: {
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 9.5 },
+                                callback: (v) => formatMoneda(v)
+                            },
+                            grid: { color: 'rgba(148, 163, 184, 0.08)' }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // 4. Gráfico Cuota de Categorías (Doughnut)
+    const ctxCat = document.getElementById('chart-ventas-categoria');
+    const emptyCat = document.getElementById('empty-state-categoria');
+    if (ctxCat) {
+        if (window.chartCategoriaInstance) {
+            window.chartCategoriaInstance.destroy();
+            window.chartCategoriaInstance = null;
+        }
+
+        const cats = data.categorias_analisis || [];
+        const tieneDatos = cats.length > 0 && cats.some(c => c.total_ventas > 0);
+
+        if (emptyCat) emptyCat.style.display = tieneDatos ? 'none' : 'flex';
+        ctxCat.style.display = tieneDatos ? 'block' : 'none';
+
+        if (tieneDatos) {
+            window.chartCategoriaInstance = new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: cats.map(c => c.categoria),
+                    datasets: [{
+                        data: cats.map(c => c.total_ventas),
+                        backgroundColor: ['#38bdf8', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#6366f1', '#14b8a6'],
+                        borderWidth: 2,
+                        borderColor: '#0f172a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 10 } }
+                    }
+                }
+            });
+        }
+    }
+}
+
+/**
+ * Tabla: Desglose Anual por Meses
+ */
+function renderDesgloseMeses(desglose) {
+    const tbody = document.getElementById('tbody-desglose-meses');
+    if (!tbody) return;
+    if (!desglose || desglose.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding: 1.5rem;">Sin registros de ventas mensuales en el período.</td></tr>';
+        return;
+    }
+    const mesesNombres = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    tbody.innerHTML = desglose.map(m => `
+        <tr>
+            <td><strong>${m.nombre_mes || mesesNombres[m.mes] || ('Mes ' + m.mes)}</strong></td>
+            <td style="text-align: center;">${formatCantidad(m.transacciones)}</td>
+            <td style="text-align: center;">${formatCantidad(m.unidades)}</td>
+            <td style="text-align: right; font-weight: 700; color: var(--text-main);">${formatMoneda(m.ventas)}</td>
+            <td style="text-align: right; color: var(--text-muted);">${formatMoneda(m.costo)}</td>
+            <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(m.utilidad)}</td>
+            <td style="text-align: right; font-weight: 700; color: ${(m.margen_porcentaje >= 20 ? 'var(--accent-green)' : 'var(--warning)')};">${(m.margen_porcentaje || 0).toFixed(2)}%</td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Tabla: Rendimiento y Márgenes por Categoría (7 columnas)
+ */
+function renderTablaCategoriasReportes(categorias) {
+    const tbody = document.getElementById('tbody-rendimiento-categorias');
+    if (!tbody) return;
+    if (!categorias || categorias.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding: 1.5rem;">Sin ventas registradas por categoría en este período.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = categorias.map(c => `
+        <tr>
+            <td><strong>${c.categoria}</strong></td>
+            <td style="text-align: center; font-weight: 600;">${formatCantidad(c.unidades)}</td>
+            <td style="text-align: right; font-weight: 700; color: var(--text-main);">${formatMoneda(c.total_ventas)}</td>
+            <td style="text-align: right; color: var(--text-muted);">${formatMoneda(c.costo_ventas)}</td>
+            <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(c.margen)}</td>
+            <td style="text-align: right; font-weight: 700; color: ${(c.margen_porcentaje >= 20 ? 'var(--accent-green)' : 'var(--warning)')};">${(c.margen_porcentaje || 0).toFixed(2)}%</td>
+            <td style="text-align: right; color: var(--text-muted); font-weight: 600;">${(c.participacion_porcentaje || 0).toFixed(2)}%</td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Tabla: Clasificación y Rotación ABC (9 columnas)
+ */
+function renderTablaRotacionABCReportes(rotacionData) {
+    if (!rotacionData) return;
+
+    const elTotal = document.getElementById('count-abc-todos');
+    const elA = document.getElementById('count-abc-a');
+    const elB = document.getElementById('count-abc-b');
+    const elC = document.getElementById('count-abc-c');
+
+    if (elTotal) elTotal.textContent = formatCantidad(rotacionData.total_productos || 0);
+    if (elA) elA.textContent = formatCantidad(rotacionData.conteo_clase_a || 0);
+    if (elB) elB.textContent = formatCantidad(rotacionData.conteo_clase_b || 0);
+    if (elC) elC.textContent = formatCantidad(rotacionData.conteo_clase_c || 0);
+
+    aplicarFiltroLocalTablaABC();
+}
+
+function filtrarTablaABC(clase) {
+    _filtroABCActual = clase;
+    ['todos', 'a', 'b', 'c'].forEach(b => {
+        const btn = document.getElementById(`btn-filtro-abc-${b}`);
+        if (btn) btn.classList.toggle('active', (b === clase.toLowerCase() || (b === 'todos' && clase === 'todos')));
+    });
+    aplicarFiltroLocalTablaABC();
+}
+
+function filtrarTablaABCPorTexto(texto) {
+    aplicarFiltroLocalTablaABC();
+}
+
+function aplicarFiltroLocalTablaABC() {
+    const tbody = document.getElementById('tbody-rotacion-abc');
+    if (!tbody || !window._reporteDataCache || !window._reporteDataCache.rotacion_abc) return;
+
+    let prods = window._reporteDataCache.rotacion_abc.productos || [];
+
+    if (_filtroABCActual && _filtroABCActual !== 'todos') {
+        prods = prods.filter(p => p.clase_abc === _filtroABCActual);
+    }
+
+    const q = document.getElementById('busqueda-tabla-abc')?.value.trim().toLowerCase();
+    if (q) {
+        prods = prods.filter(p =>
+            (p.nombre && p.nombre.toLowerCase().includes(q)) ||
+            (p.codigo && p.codigo.toLowerCase().includes(q)) ||
+            (p.categoria && p.categoria.toLowerCase().includes(q))
+        );
+    }
+
+    if (prods.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted" style="padding: 1.5rem;">No se encontraron repuestos con los filtros seleccionados.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = prods.map(p => {
+        let badgeClase = '';
+        if (p.clase_abc === 'A') {
+            badgeClase = `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-green); font-weight: 800; border: 1px solid rgba(16, 185, 129, 0.4);">Clase A</span>`;
+        } else if (p.clase_abc === 'B') {
+            badgeClase = `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: var(--warning); font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.4);">Clase B</span>`;
+        } else {
+            badgeClase = `<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: var(--accent-red); font-weight: 800; border: 1px solid rgba(239, 68, 68, 0.4);">Clase C</span>`;
+        }
+
+        const bajoStock = p.stock <= p.min_stock;
+        const stockIcon = bajoStock ? ' <i class="ph-bold ph-warning" style="color: var(--accent-red);" title="Stock bajo o agotado"></i>' : '';
+
+        return `
+            <tr>
+                <td>${badgeClase}</td>
+                <td><code style="font-size: 0.8rem;">${p.codigo || '—'}</code></td>
+                <td><strong>${p.nombre}</strong></td>
+                <td><span style="font-size: 0.82rem; color: var(--text-muted);">${p.categoria || '—'}</span></td>
+                <td style="text-align: center; font-weight: 700; ${bajoStock ? 'color: var(--accent-red);' : ''}">${formatCantidad(p.stock)}${stockIcon}</td>
+                <td style="text-align: right;">${formatMoneda(p.costo)}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--warning);">${formatMoneda(p.valor_inmovilizado)}</td>
+                <td style="text-align: center; font-weight: 700;">${formatCantidad(p.unidades_vendidas)}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(p.ingreso_generado)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Tabla: Ranking por Unidades Físicas Vendidas
+ */
+function renderRankingUnidades(ranking) {
+    const tbody = document.getElementById('tbody-ranking-unidades');
+    if (!tbody) return;
+    if (!ranking || ranking.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding: 1.5rem;">Sin registros de ventas en el período.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = ranking.map((p, idx) => `
+        <tr>
+            <td style="font-weight: 800; color: var(--primary); text-align: center; width: 35px;">#${idx + 1}</td>
+            <td><strong>${p.nombre}</strong><br><small class="text-muted">SKU: ${p.codigo || '—'} | ${p.categoria || '—'}</small></td>
+            <td style="text-align: center; font-weight: 700;">${formatCantidad(p.unidades_vendidas || p.cantidad_vendida || 0)} uds.</td>
+            <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(p.ingreso_generado || p.monto_total || 0)}</td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Tabla: Repuestos Sin Movimiento en el Período
+ */
+function renderRepuestosSinMovimiento(rotacionData) {
+    const tbody = document.getElementById('tbody-repuestos-sin-movimiento');
+    const badge = document.getElementById('badge-conteo-sin-movimiento');
+    if (!tbody) return;
+
+    const prods = (rotacionData?.productos || []).filter(p => (p.unidades_vendidas || 0) === 0);
+    if (badge) badge.textContent = `${formatCantidad(prods.length)} repuestos`;
+
+    if (prods.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-accent-green" style="padding: 1.5rem;">¡Excelente! Todos los repuestos registraron ventas en el período.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = prods.slice(0, 50).map(p => `
+        <tr>
+            <td><strong>${p.nombre}</strong><br><small class="text-muted">SKU: ${p.codigo || '—'} | ${p.categoria || '—'}</small></td>
+            <td style="text-align: center; font-weight: 700;">${formatCantidad(p.stock)}</td>
+            <td style="text-align: right;">${formatMoneda(p.costo)}</td>
+            <td style="text-align: right; font-weight: 700; color: var(--warning);">${formatMoneda(p.valor_inmovilizado)}</td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Tabla: Alerta Universal de Stock Mínimo (Auditoría Integral de los 235 repuestos)
+ */
+function renderAlertaUniversalStock(alertas) {
+    const tbody = document.getElementById('tbody-alertas-stock-universal');
+    const badge = document.getElementById('badge-alerta-universal-count');
+    if (!tbody) return;
+
+    const list = alertas || [];
+    if (badge) badge.textContent = `${formatCantidad(list.length)} repuestos`;
+
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-accent-green" style="padding: 1.5rem;">¡Excelente! No hay repuestos en o bajo su nivel de stock mínimo.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = list.map(a => {
+        let badgeNivel = '';
+        if (a.nivel === 'Agotado') {
+            badgeNivel = `<span class="badge" style="background: #dc2626; color: #fff; font-weight: 700;">Agotado (0)</span>`;
+        } else if (a.nivel === 'Crítico') {
+            badgeNivel = `<span class="badge" style="background: #ea580c; color: #fff; font-weight: 700;">Crítico (&le;50%)</span>`;
+        } else {
+            badgeNivel = `<span class="badge" style="background: #f59e0b; color: #1e293b; font-weight: 700;">Bajo Mínimo</span>`;
+        }
+
+        return `
+            <tr>
+                <td>${badgeNivel}</td>
+                <td><code style="font-size: 0.8rem;">${a.codigo || '—'}</code></td>
+                <td><strong>${a.nombre}</strong></td>
+                <td><span style="font-size: 0.82rem; color: var(--text-muted);">${a.categoria || '—'}</span></td>
+                <td style="text-align: center; font-weight: 800; color: var(--accent-red);">${formatCantidad(a.stock)}</td>
+                <td style="text-align: center; color: var(--text-muted);">${formatCantidad(a.min_stock)}</td>
+                <td style="text-align: center; font-weight: 700; color: var(--accent-red);">${formatCantidad(Math.max(0, a.min_stock - a.stock))}</td>
+                <td style="text-align: right; font-weight: 700;">${formatMoneda(Math.max(0, a.min_stock - a.stock) * a.costo)}</td>
+                <td style="text-align: center;"><span class="badge" style="background: rgba(148,163,184,0.15); color: var(--text-main); font-weight: 700;">${a.clase_abc || 'A'}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Indicadores: Medidas Estadísticas Descriptivas de las Ventas
+ */
+function renderMedidasEstadisticas(m) {
+    if (!m) return;
+
+    if (document.getElementById('stat-n')) document.getElementById('stat-n').textContent = m.n || 0;
+    if (document.getElementById('stat-media')) document.getElementById('stat-media').textContent = formatMoneda(m.media || 0);
+    if (document.getElementById('stat-mediana')) document.getElementById('stat-mediana').textContent = formatMoneda(m.mediana || 0);
+    if (document.getElementById('stat-max')) document.getElementById('stat-max').textContent = formatMoneda(m.maximo || 0);
+    if (document.getElementById('stat-min')) document.getElementById('stat-min').textContent = formatMoneda(m.minimo || 0);
+    if (document.getElementById('stat-rango')) document.getElementById('stat-rango').textContent = formatMoneda(m.rango || 0);
+    if (document.getElementById('stat-varianza')) {
+        document.getElementById('stat-varianza').textContent = (m.varianza || 0).toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (document.getElementById('stat-desv')) document.getElementById('stat-desv').textContent = formatMoneda(m.desviacion_estandar || 0);
+    if (document.getElementById('stat-cv')) document.getElementById('stat-cv').textContent = `${(m.coeficiente_variacion || 0).toFixed(2)}%`;
+    if (document.getElementById('stat-interpretacion')) {
+        document.getElementById('stat-interpretacion').textContent = m.interpretacion || 'Sin datos suficientes para interpretación estadística.';
+    }
+}
+
+/**
+ * RF66: Repuestos más y menos vendidos (vistas alternativas)
+ */
 function toggleDemandaView(tipo) {
     _demandaViewActual = tipo;
     document.getElementById('btn-demanda-top')?.classList.toggle('active', tipo === 'top');
@@ -109,7 +989,7 @@ function toggleDemandaView(tipo) {
 }
 
 function renderRepuestosDemanda() {
-    if (!_reporteDataCache) return;
+    if (!window._reporteDataCache) return;
     const tbody = document.getElementById('tbody-repuestos-demanda');
     const titleEl = document.getElementById('title-repuestos-demanda');
     if (!tbody) return;
@@ -118,7 +998,7 @@ function renderRepuestosDemanda() {
 
     if (_demandaViewActual === 'top') {
         if (titleEl) titleEl.innerHTML = '<i class="ph-bold ph-star" style="color: var(--warning);"></i> Top Repuestos Más Vendidos';
-        const prods = (_reporteDataCache.top_productos || []).slice(0, limite);
+        const prods = (window._reporteDataCache.top_productos || []).slice(0, limite);
         if (prods.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:1.5rem;">Sin registros de ventas en el período.</td></tr>';
             return;
@@ -127,14 +1007,14 @@ function renderRepuestosDemanda() {
             <tr>
                 <td style="font-weight: 700; width: 40px; text-align: center; color: var(--primary);">#${idx + 1}</td>
                 <td><strong>${p.nombre}</strong><br><small class="text-muted">SKU: ${p.codigo || '—'} | ${p.categoria || '—'}</small></td>
-                <td style="text-align: center; font-weight: 700;">${p.cantidad_vendida || 0} uds.</td>
-                <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(p.monto_total || 0)}</td>
+                <td style="text-align: center; font-weight: 700;">${p.unidades_vendidas || p.cantidad_vendida || 0} uds.</td>
+                <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(p.ingreso_generado || p.monto_total || 0)}</td>
                 <td style="text-align: center;"><span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e;">Clase ${p.clase_abc || 'A'}</span></td>
             </tr>
         `).join('');
     } else {
         if (titleEl) titleEl.innerHTML = '<i class="ph-bold ph-trend-down" style="color: var(--accent-red);"></i> Repuestos con Menor Demanda / Sin Movimiento';
-        const prods = (_reporteDataCache.bottom_productos || []).slice(0, limite);
+        const prods = (window._reporteDataCache.bottom_productos || []).slice(0, limite);
         if (prods.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:1.5rem;">No se encontraron repuestos con baja demanda.</td></tr>';
             return;
@@ -143,15 +1023,17 @@ function renderRepuestosDemanda() {
             <tr>
                 <td style="font-weight: 700; width: 40px; text-align: center; color: var(--text-muted);">#${idx + 1}</td>
                 <td><strong>${p.nombre}</strong><br><small class="text-muted">SKU: ${p.codigo || '—'} | Stock: ${p.stock || 0} uds.</small></td>
-                <td style="text-align: center; font-weight: 700; color: var(--accent-red);">${p.cantidad_vendida || 0} uds.</td>
-                <td style="text-align: right; font-weight: 700; color: var(--warning);">${formatMoneda(p.costo_inmovilizado || 0)} <small class="text-muted"><br>inmovilizado</small></td>
+                <td style="text-align: center; font-weight: 700; color: var(--accent-red);">${p.unidades_vendidas || p.cantidad_vendida || 0} uds.</td>
+                <td style="text-align: right; font-weight: 700; color: var(--warning);">${formatMoneda(p.valor_inmovilizado || p.costo_inmovilizado || 0)} <small class="text-muted"><br>inmovilizado</small></td>
                 <td style="text-align: center;"><span class="badge" style="background: rgba(239,68,68,0.15); color: #ef4444;">Clase C</span></td>
             </tr>
         `).join('');
     }
 }
 
-// RF68: Devoluciones de ventas
+/**
+ * RF68: Devoluciones y garantías de ventas
+ */
 async function cargarEstadisticasDevoluciones() {
     try {
         const res = await fetch('/api/reportes/devoluciones');
@@ -165,7 +1047,7 @@ async function cargarEstadisticasDevoluciones() {
         if (tbody) {
             const list = data.detalle || [];
             if (list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:1.5rem;">No se registran devoluciones de repuestos.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:1.5rem;">No se registran devoluciones de repuestos en el sistema.</td></tr>';
                 return;
             }
             tbody.innerHTML = list.map(d => `
@@ -1221,32 +2103,37 @@ window.abrirModalHorasExtras = abrirModalHorasExtras;
 window.guardarHorasExtras = guardarHorasExtras;
 window.cargarLiquidacionesLaborales = cargarLiquidacionesLaborales;
 window.abrirModalNuevaLiquidacion = abrirModalNuevaLiquidacion;
-window.autocompletarDatosLiquidacion = autocompletarDatosLiquidacion;
-window.guardarLiquidacionLaboral = guardarLiquidacionLaboral;
 window.cargarPagosNomina = cargarPagosNomina;
-window.abrirModalNuevoPagoNomina = abrirModalNuevoPagoNomina;
-window.autocompletarDatosPagoNomina = autocompletarDatosPagoNomina;
-window.guardarPagoNomina = guardarPagoNomina;
 window.cargarRiesgosHigiene = cargarRiesgosHigiene;
-window.abrirModalNuevoRiesgo = abrirModalNuevoRiesgo;
-window.guardarRiesgoHigiene = guardarRiesgoHigiene;
 window.cargarIncidentesHigiene = cargarIncidentesHigiene;
-window.abrirModalNuevoIncidente = abrirModalNuevoIncidente;
-window.guardarIncidenteHigiene = guardarIncidenteHigiene;
 window.cargarEppHigiene = cargarEppHigiene;
-window.abrirModalEntregaEpp = abrirModalEntregaEpp;
-window.guardarEntregaEpp = guardarEntregaEpp;
 window.cargarCapacitacionesHigiene = cargarCapacitacionesHigiene;
-window.abrirModalNuevaCapacitacion = abrirModalNuevaCapacitacion;
-window.guardarCapacitacionHigiene = guardarCapacitacionHigiene;
 window.cargarInspeccionesHigiene = cargarInspeccionesHigiene;
 window.abrirModalInspeccion6Puntos = abrirModalInspeccion6Puntos;
 window.guardarInspeccion6Puntos = guardarInspeccion6Puntos;
 window.cargarMarcoLegal = cargarMarcoLegal;
 window.cargarParametrosLaborales = cargarParametrosLaborales;
 window.editarParametroModal = editarParametroModal;
+
+// Reportes y Estadísticas (RF58 - RF68)
+window.switchReportesTab = switchReportesTab;
+window.toggleMenuExportar = toggleMenuExportar;
+window.exportarExcelReal = exportarExcelReal;
+window.generarInformeEjecutivo = generarInformeEjecutivo;
+if (typeof imprimirInformeEjecutivo === 'function') {
+    window.imprimirInformeEjecutivo = imprimirInformeEjecutivo;
+}
 window.aplicarFiltroReportesPreset = aplicarFiltroReportesPreset;
+window.cambiarMesAnioDirecto = cambiarMesAnioDirecto;
+window.cambiarCriterioABC = cambiarCriterioABC;
+window.toggleModoComparar = toggleModoComparar;
+window.ejecutarComparacionPeriodos = ejecutarComparacionPeriodos;
+window.cerrarModoComparativo = cerrarModoComparativo;
+window.filtrarTablaABC = filtrarTablaABC;
+window.filtrarTablaABCPorTexto = filtrarTablaABCPorTexto;
+window.aplicarFiltroLocalTablaABC = aplicarFiltroLocalTablaABC;
 window.ejecutarConsultaReportes = ejecutarConsultaReportes;
+window.renderReportesCompleto = renderReportesCompleto;
 window.cargarEstadisticasDevoluciones = cargarEstadisticasDevoluciones;
 window.toggleDemandaView = toggleDemandaView;
 
@@ -1267,9 +2154,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Disparar carga inicial por si se carga directamente en tab-rrhh
+    // Disparar carga inicial por si se carga directamente en tab-rrhh o tab-reportes
     const tabRrhh = document.getElementById('tab-rrhh');
     if (tabRrhh && tabRrhh.classList.contains('active')) {
         setTimeout(() => { initRrhhCorteVTab('all'); }, 300);
+    }
+    const tabReportes = document.getElementById('tab-reportes');
+    if (tabReportes && tabReportes.classList.contains('active')) {
+        setTimeout(ejecutarConsultaReportes, 300);
     }
 });

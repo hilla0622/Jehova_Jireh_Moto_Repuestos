@@ -165,13 +165,13 @@ let ventasCache = [];
 let cartPOS = []; // [{"producto_id": 1, "nombre": "...", "precio": 15.50, "cantidad": 1, "stock_max": 18}]
 
 // Instancias de Chart.js
-let chartTendenciaInstance = null;
-let chartTopProdsInstance = null;
-let chartCategoriaInstance = null;
-let chartMetodosPagoInstance = null;
-let _reporteDataCache = null;
-let _filtroABCActual = 'todos';
-let ventaSeleccionadaActual = null;
+var chartTendenciaInstance = window.chartTendenciaInstance || null;
+var chartTopProdsInstance = window.chartTopProdsInstance || null;
+var chartCategoriaInstance = window.chartCategoriaInstance || null;
+var chartMetodosPagoInstance = window.chartMetodosPagoInstance || null;
+var _reporteDataCache = window._reporteDataCache || null;
+var _filtroABCActual = window._filtroABCActual || 'todos';
+var ventaSeleccionadaActual = window.ventaSeleccionadaActual || null;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('⚡ Inicializando Sistema Jehová Jireh Moto Repuestos...');
@@ -243,7 +243,13 @@ function switchTab(tabId) {
             verificarEstadoCaja();
         }
         if (tabId === 'tab-compras') loadComprasYProveedores();
-        if (tabId === 'tab-reportes') loadReportesContabilidad();
+        if (tabId === 'tab-reportes') {
+            if (typeof ejecutarConsultaReportes === 'function') {
+                ejecutarConsultaReportes();
+            } else if (typeof loadReportesContabilidad === 'function') {
+                loadReportesContabilidad();
+            }
+        }
         if (tabId === 'tab-usuarios') loadUsuarios();
         if (tabId === 'tab-panel') loadDashboardStats();
         if (tabId === 'tab-finanzas') cargarDatosFinanzas();
@@ -1794,6 +1800,17 @@ function aplicarFiltroReportes() {
 }
 
 async function loadReportesContabilidad(mes = null, anio = null) {
+    if (typeof ejecutarConsultaReportes === 'function') {
+        if (mes && mes !== 'todos') {
+            const mSel = document.getElementById('rep-select-mes');
+            if (mSel) mSel.value = mes;
+        }
+        if (anio && anio !== 'todos') {
+            const aSel = document.getElementById('rep-select-anio');
+            if (aSel) aSel.value = anio;
+        }
+        return ejecutarConsultaReportes();
+    }
     try {
         const mesSelect = document.getElementById('rep-filtro-mes');
         const anioSelect = document.getElementById('rep-filtro-anio');
@@ -2716,16 +2733,25 @@ function switchFinanzasTab(subtab, btn) {
         view.style.display = 'block';
         view.classList.add('active');
     }
+
+    if (subtab === 'fin-flujo' && typeof loadFlujoEfectivo === 'function') {
+        loadFlujoEfectivo();
+    } else if (subtab === 'fin-conciliacion' && typeof cargarDatosConciliacion === 'function') {
+        cargarDatosConciliacion();
+    }
 }
 
 async function cargarDatosFinanzas() {
     try {
-        await Promise.all([
+        const tareas = [
             loadCatalogoCuentas(),
             loadAsientosContables(),
             loadEstadoResultados(),
             loadBalanceGeneral()
-        ]);
+        ];
+        if (typeof loadFlujoEfectivo === 'function') tareas.push(loadFlujoEfectivo());
+        if (typeof cargarDatosConciliacion === 'function') tareas.push(cargarDatosConciliacion());
+        await Promise.all(tareas);
     } catch (e) {
         console.error("Error al cargar datos financieros:", e);
     }

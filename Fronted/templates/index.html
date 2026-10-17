@@ -1401,6 +1401,12 @@
                         <button class="btn btn-outline" onclick="switchFinanzasTab('fin-balance', this)">
                             <i class="ph-bold ph-scales"></i> Balance General
                         </button>
+                        <button class="btn btn-outline" onclick="switchFinanzasTab('fin-flujo', this)">
+                            <i class="ph-bold ph-arrows-left-right"></i> Flujo de Efectivo
+                        </button>
+                        <button class="btn btn-outline" onclick="switchFinanzasTab('fin-conciliacion', this)">
+                            <i class="ph-bold ph-bank"></i> Conciliación Bancaria
+                        </button>
                     </div>
 
                     <!-- CONTENIDO: CATÁLOGO DE CUENTAS -->
@@ -1524,6 +1530,211 @@
                             <div class="card-body" style="padding: 2rem;">
                                 <div id="reporte-balance-general" class="reporte-financiero">
                                     <!-- Carga dinámica -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENIDO: ESTADO DE FLUJO DE EFECTIVO (NIC 7 / NIIF PARA PYMES) -->
+                    <div id="fin-flujo" class="fin-tab-content" style="display: none;">
+                        <div class="card" style="border: 1px solid rgba(16, 185, 129, 0.2);">
+                            <div class="card-header" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: white;">
+                                        <i class="ph-bold ph-arrows-left-right"></i> Estado de Flujos de Efectivo
+                                    </h3>
+                                    <span style="font-size: 0.85rem; font-weight: 400; opacity: 0.9;">
+                                        Marco Técnico: NIIF para PYMES (Sección 7) / NIC 7 — Medición de Liquidez Real (RF101, RF102)
+                                    </span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                    <div style="background: rgba(255,255,255,0.15); padding: 4px; border-radius: 6px; display: flex; gap: 4px;">
+                                        <button id="btn-flujo-directo" class="btn btn-sm btn-primary" onclick="cambiarMetodoFlujo('Directo')" style="border-radius: 4px;">
+                                            Método Directo
+                                        </button>
+                                        <button id="btn-flujo-indirecto" class="btn btn-sm btn-outline" onclick="cambiarMetodoFlujo('Indirecto')" style="border-radius: 4px; color: white; border-color: rgba(255,255,255,0.3);">
+                                            Método Indirecto
+                                        </button>
+                                    </div>
+                                    <button class="btn btn-secondary btn-sm" onclick="imprimirFlujoEfectivo()" title="Imprimir o Exportar en PDF">
+                                        <i class="ph-bold ph-printer"></i> Imprimir
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" onclick="guardarCorteFlujoOficial()" style="background: #10b981; border-color: #059669;" title="Oficializar y registrar en BD">
+                                        <i class="ph-bold ph-floppy-disk"></i> Guardar Corte Oficial
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 2rem;">
+                                <div id="reporte-flujo-efectivo" class="reporte-financiero">
+                                    <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                                        <i class="ph-bold ph-spinner ph-spin" style="font-size: 2.5rem; color: #10b981;"></i>
+                                        <p style="margin-top: 0.75rem;">Calculando flujos de efectivo...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTENIDO: CONCILIACIÓN BANCARIA Y RECLASIFICACIONES (RF97 - RF99) -->
+                    <div id="fin-conciliacion" class="fin-tab-content" style="display: none;">
+                        <div class="card">
+                            <div class="card-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: white;">
+                                        <i class="ph-bold ph-bank"></i> Conciliación Bancaria Mensual (RF98)
+                                    </h3>
+                                    <span style="font-size: 0.85rem; font-weight: 400; opacity: 0.9;">
+                                        Contraste de Saldo en Libros vs. Estado de Cuenta Bancario y Gestión de Partidas en Tránsito
+                                    </span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                    <select id="conc-cuenta-banco" class="form-control" style="max-width: 220px; padding: 0.35rem 0.6rem; height: auto;" onchange="cargarDatosConciliacion()">
+                                        <option value="2">1.1.02 - Bancos</option>
+                                    </select>
+                                    <select id="conc-mes" class="form-control" style="max-width: 140px; padding: 0.35rem 0.6rem; height: auto;" onchange="cargarDatosConciliacion()">
+                                        <option value="1">Enero</option>
+                                        <option value="2">Febrero</option>
+                                        <option value="3">Marzo</option>
+                                        <option value="4">Abril</option>
+                                        <option value="5">Mayo</option>
+                                        <option value="6">Junio</option>
+                                        <option value="7">Julio</option>
+                                        <option value="8" selected>Agosto</option>
+                                        <option value="9">Septiembre</option>
+                                        <option value="10">Octubre</option>
+                                        <option value="11">Noviembre</option>
+                                        <option value="12">Diciembre</option>
+                                    </select>
+                                    <input type="number" id="conc-anio" class="form-control" value="2026" style="width: 90px; padding: 0.35rem 0.6rem; height: auto;" onchange="cargarDatosConciliacion()">
+                                    <button class="btn btn-primary btn-sm" onclick="cargarDatosConciliacion()">
+                                        <i class="ph-bold ph-arrows-clockwise"></i> Cargar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <!-- PANELES DE CONCILIACIÓN: LIBROS VS BANCO -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <!-- COLUMNA LIBROS -->
+                                    <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                                            <h4 style="margin: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                                <i class="ph-bold ph-book-open"></i> 1. Saldo Según Libros (Sistema)
+                                            </h4>
+                                            <span id="conc-lbl-saldo-libros" style="font-size: 1.25rem; font-weight: bold; color: var(--text-color);">C$ 0.00</span>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                                            Movimientos contables registrados en la cuenta bancaria durante el período seleccionado:
+                                        </p>
+                                        <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">
+                                            <table class="table" style="width: 100%; font-size: 0.85rem;">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Fecha</th>
+                                                        <th>Concepto</th>
+                                                        <th class="text-right">Debe (+)</th>
+                                                        <th class="text-right">Haber (-)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="conc-tbody-movimientos-libros">
+                                                    <tr><td colspan="4" class="text-center text-muted">Sin movimientos</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- COLUMNA BANCO -->
+                                    <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                                            <h4 style="margin: 0; color: #059669; display: flex; align-items: center; gap: 0.5rem;">
+                                                <i class="ph-bold ph-bank"></i> 2. Saldo Según Estado de Cuenta Bancario
+                                            </h4>
+                                        </div>
+                                        <div style="margin-bottom: 1rem; display: flex; gap: 0.75rem; align-items: center;">
+                                            <label style="font-size: 0.85rem; font-weight: bold; margin: 0; white-space: nowrap;">Saldo al Corte del Banco:</label>
+                                            <div style="position: relative; flex: 1;">
+                                                <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-weight: bold; color: var(--text-muted);">C$</span>
+                                                <input type="number" step="0.01" id="conc-input-saldo-banco" class="form-control" style="padding-left: 2.2rem; font-size: 1.1rem; font-weight: bold;" value="0.00" oninput="recalcularConciliacionEnVivo()">
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <span style="font-weight: bold; font-size: 0.85rem;">Partidas Pendientes en Tránsito:</span>
+                                            <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalPartidaTransito()" style="font-size: 0.78rem; padding: 0.25rem 0.6rem;">
+                                                <i class="ph-bold ph-plus"></i> Agregar Partida
+                                            </button>
+                                        </div>
+                                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                                            <table class="table" style="width: 100%; font-size: 0.82rem;">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Tipo</th>
+                                                        <th>Doc / Ref</th>
+                                                        <th class="text-right">Monto</th>
+                                                        <th>Efecto</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="conc-tbody-partidas-transito">
+                                                    <tr><td colspan="5" class="text-center text-muted">No hay partidas en tránsito registradas</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- BARRA DE CUADRATURA Y ESTADO DE CONCILIACIÓN -->
+                                <div id="conc-resumen-cuadratura" style="background: rgba(30, 41, 59, 0.05); border: 2px dashed var(--border-color); border-radius: 8px; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                                    <div>
+                                        <div style="font-size: 0.85rem; color: var(--text-muted);">Saldos Ajustados y Comparación:</div>
+                                        <div style="font-size: 1.2rem; font-weight: bold; display: flex; gap: 1.5rem; margin-top: 0.25rem;">
+                                            <span>Libros Ajustado: <strong id="conc-saldo-libros-ajustado">C$ 0.00</strong></span>
+                                            <span>Banco Ajustado: <strong id="conc-saldo-banco-ajustado">C$ 0.00</strong></span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div id="conc-badge-cuadratura" style="padding: 0.5rem 1.2rem; border-radius: 20px; font-weight: bold; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                            <!-- Badge dinámico de cuadratura -->
+                                        </div>
+                                        <div style="margin-top: 0.6rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                            <button type="button" class="btn btn-primary" onclick="guardarConciliacionBancaria()" style="background: #059669; border-color: #047857;">
+                                                <i class="ph-bold ph-check-circle"></i> Guardar Conciliación del Mes
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SECCIÓN: RECLASIFICACIONES Y AUDITORÍA DE FLUJO (RF97, RF99) -->
+                                <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                                        <div>
+                                            <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                                <i class="ph-bold ph-shield-check" style="color: #059669;"></i> Bitácora de Reclasificaciones y Auditoría Contable (RF97, RF99)
+                                            </h4>
+                                            <span style="font-size: 0.8rem; color: var(--text-muted);">
+                                                Historial de reclasificaciones operativas de compras, ventas y asientos manuales efectuadas por el Contador
+                                            </span>
+                                        </div>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalReclasificacion()">
+                                            <i class="ph-bold ph-arrows-clockwise"></i> Nueva Reclasificación
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="data-table" style="font-size: 0.85rem;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha Registro</th>
+                                                    <th>Asiento / Ref</th>
+                                                    <th>Módulo Origen</th>
+                                                    <th>Act. Anterior</th>
+                                                    <th>Act. Nueva</th>
+                                                    <th>Motivo / Justificación Técnica</th>
+                                                    <th>Auditor / Usuario</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="conc-tbody-reclasificaciones">
+                                                <tr><td colspan="7" class="text-center text-muted">Cargando bitácora de auditoría...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2893,12 +3104,119 @@
         </div>
     </div>
 
+    <!-- MODAL: AGREGAR PARTIDA PENDIENTE EN TRÁNSITO (RF98) -->
+    <div class="modal" id="modal-partida-transito">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: white;">
+                    <i class="ph-bold ph-plus-circle"></i> Agregar Partida en Tránsito
+                </h3>
+                <button type="button" class="modal-close" onclick="cerrarModalPartidaTransito()" style="color: white;">&times;</button>
+            </div>
+            <form id="form-partida-transito" onsubmit="agregarPartidaTransito(event)">
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="font-weight: bold; font-size: 0.85rem;">Tipo de Partida Conciliatoria:</label>
+                        <select id="partida-tipo" class="form-control" required>
+                            <option value="Cheque en Transito">Cheque Girado en Tránsito (Resta al Banco)</option>
+                            <option value="Deposito en Transito">Depósito no Acreditado / en Tránsito (Suma al Banco)</option>
+                            <option value="Nota de Debito">Nota de Débito Bancaria no registrada (Resta a Libros)</option>
+                            <option value="Nota de Credito">Nota de Crédito Bancaria no registrada (Suma a Libros)</option>
+                            <option value="Error en Libros">Ajuste por Error de Registro</option>
+                        </select>
+                    </div>
+                    <div class="grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="font-weight: bold; font-size: 0.85rem;">Fecha del Documento:</label>
+                            <input type="date" id="partida-fecha" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: bold; font-size: 0.85rem;">No. Referencia / Cheque:</label>
+                            <input type="text" id="partida-doc" class="form-control" placeholder="Ej: CHQ-5041 / DEP-882" required>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="font-weight: bold; font-size: 0.85rem;">Monto (C$):</label>
+                        <input type="number" step="0.01" min="0.01" id="partida-monto" class="form-control" placeholder="0.00" required style="font-weight: bold; font-size: 1.05rem;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: bold; font-size: 0.85rem;">Descripción / Justificación:</label>
+                        <input type="text" id="partida-desc" class="form-control" placeholder="Ej: Cheque entregado a distribuidora no cobrado aún" required>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalPartidaTransito()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="background: #059669; border-color: #047857;">
+                        <i class="ph-bold ph-plus"></i> Añadir a la Conciliación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR RECLASIFICACIÓN CONTABLE (RF97, RF99) -->
+    <div class="modal" id="modal-reclasificacion">
+        <div class="modal-content" style="max-width: 550px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: white;">
+                    <i class="ph-bold ph-arrows-clockwise"></i> Reclasificar Operación de Flujo
+                </h3>
+                <button type="button" class="modal-close" onclick="cerrarModalReclasificacion()" style="color: white;">&times;</button>
+            </div>
+            <form id="form-reclasificacion" onsubmit="guardarReclasificacion(event)">
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <div class="grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="font-weight: bold; font-size: 0.85rem;">ID Asiento Contable:</label>
+                            <input type="number" id="reclass-asiento-id" class="form-control" placeholder="Ej: 4">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: bold; font-size: 0.85rem;">Módulo de Origen:</label>
+                            <select id="reclass-origen" class="form-control">
+                                <option value="COMPRA">Compras de Repuestos</option>
+                                <option value="VENTA">Ventas Comerciales</option>
+                                <option value="ASIENTO_MANUAL">Asiento Contable Manual</option>
+                                <option value="ACTIVO_FIJO">Activo Fijo / Taller</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="font-weight: bold; font-size: 0.85rem;">Actividad Anterior:</label>
+                            <select id="reclass-act-anterior" class="form-control">
+                                <option value="Operacion">Actividad de Operación</option>
+                                <option value="Inversion">Actividad de Inversión</option>
+                                <option value="Financiamiento">Actividad de Financiamiento</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: bold; font-size: 0.85rem; color: #059669;">Nueva Actividad:</label>
+                            <select id="reclass-act-nueva" class="form-control" style="border-color: #059669; font-weight: bold;">
+                                <option value="Inversion">Actividad de Inversión</option>
+                                <option value="Financiamiento">Actividad de Financiamiento</option>
+                                <option value="Operacion">Actividad de Operación</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: bold; font-size: 0.85rem;">Motivo Técnico / Criterio del Contador:</label>
+                        <textarea id="reclass-motivo" class="form-control" rows="3" placeholder="Detalle la justificación contable bajo NIIF para PYMES (ej. Operación atípica reclasificada a Inversión por venta de mobiliario usado)" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalReclasificacion()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="background: #2563eb; border-color: #1d4ed8;">
+                        <i class="ph-bold ph-shield-check"></i> Registrar en Auditoría
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- User Role Context -->
     <script>
         window.CURRENT_USER_ROLE = "{{ usuario.rol }}";
     </script>
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=2.1"></script>
 
     <!-- ========================================================
     MÓDULO RRHH — Modales y JavaScript
@@ -3941,6 +4259,47 @@
                 initRrhhCorteVTab(targetId);
             }
         }
+
+        var _currentReportesTab = window._currentReportesTab || 'all';
+        function switchReportesTab(targetId) {
+            if (targetId !== 'all' && _currentReportesTab === targetId) {
+                targetId = 'all';
+            }
+            _currentReportesTab = targetId;
+            window._currentReportesTab = targetId;
+
+            // Actualizar botones de navegación
+            document.querySelectorAll('.reportes-tab-btn').forEach(btn => {
+                const btnTab = btn.getAttribute('data-rep-tab');
+                const isActive = (btnTab === targetId);
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            // Actualizar estilo del contenedor para separadores
+            const wrapper = document.querySelector('.reportes-tabs-wrapper');
+            if (wrapper) {
+                wrapper.classList.toggle('mode-all', targetId === 'all');
+            }
+
+            // Mostrar u ocultar paneles correspondientes
+            document.querySelectorAll('.rep-tab-panel').forEach(panel => {
+                if (targetId === 'all') {
+                    panel.classList.add('active');
+                } else {
+                    panel.classList.toggle('active', panel.id === targetId);
+                }
+            });
+
+            // Redimensionar gráficos si están instanciados
+            setTimeout(() => {
+                if (window.chartTendenciaInstance && typeof window.chartTendenciaInstance.resize === 'function') window.chartTendenciaInstance.resize();
+                if (window.chartMetodosPagoInstance && typeof window.chartMetodosPagoInstance.resize === 'function') window.chartMetodosPagoInstance.resize();
+                if (window.chartCategoriaInstance && typeof window.chartCategoriaInstance.resize === 'function') window.chartCategoriaInstance.resize();
+                if (window.chartRentabilidadInstance && typeof window.chartRentabilidadInstance.resize === 'function') window.chartRentabilidadInstance.resize();
+            }, 100);
+        }
+        window.switchReportesTab = switchReportesTab;
 
         function inicializarRRHH() {
             switchRrhhTab('all');
@@ -5127,8 +5486,10 @@
     </div>
 
     <!-- Script Principal SPA del Sistema -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=5.3"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
-    <script src="{{ url_for('static', filename='js/corte_v.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.3"></script>
+    <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
+    <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=1.0"></script>
 </body>
 </html>

@@ -3286,5 +3286,11 @@ def ver_colilla(id_detalle):
 from routes_corte_v import register_corte_v_routes
 register_corte_v_routes(app)
 
+# ==============================================================================
+# RUTAS DE ESTADOS FINANCIEROS: FLUJO DE EFECTIVO Y CONCILIACIÓN (RF96 - RF102)
+# ==============================================================================
+from routes_flujo_efectivo import register_flujo_efectivo_routes
+register_flujo_efectivo_routes(app)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

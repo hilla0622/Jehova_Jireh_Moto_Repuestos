@@ -5,6 +5,7 @@ from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from calculos_rrhh import calcular_nomina_empleado
+from rrhh_service import ROLES_RRHH, limites_periodo, dias_en_periodo, fecha, parametros_calculo
 from reportes_service import (
     construir_filtro_periodo,
     procesar_reporte_completo,
@@ -2268,7 +2269,7 @@ def api_balance_general():
 # RECURSOS HUMANOS Y NÓMINA
 # Roles permitidos: Administrador, Responsable de Recursos Humanos
 # ==============================================================================
-ROLES_RRHH = ['Administrador', 'Responsable de Recursos Humanos']
+# ROLES_RRHH se comparte con las rutas complementarias.
 
 
 # --- GESTIÓN DE CARGOS (RF63) ---
@@ -2356,6 +2357,8 @@ def api_cargo_editar(cargo_id):
 @login_required
 def api_empleados():
     """GET: Lista empleados activos. POST: Registrar nuevo empleado."""
+    if session['user']['rol'] not in ROLES_RRHH:
+        return jsonify({"error": "No tienes permisos para consultar empleados."}), 403
     if request.method == 'GET':
         query = """
             SELECT id, nombre_completo, identificacion, num_inss, cargo,
@@ -2672,6 +2675,18 @@ def api_movimiento_laboral_detalle(mov_id):
 
 
 # --- GENERACIÓN DE NÓMINA ---
+@app.route('/api/nomina/previsualizar', methods=['GET'])
+@login_required
+@role_required(*ROLES_RRHH)
+def api_nomina_previsualizar():
+    try:
+        salario = float(request.args.get('salario', 0))
+        parametros = parametros_calculo(execute_query('SELECT * FROM parametros_laborales', fetchall=True))
+        return jsonify(calcular_nomina_empleado(salario, parametros=parametros))
+    except (ValueError, TypeError) as exc:
+        return jsonify({'error': str(exc)}), 400
+
+
 @app.route('/api/nomina/generar', methods=['POST'])
 @login_required
 def api_nomina_generar():
@@ -2680,8 +2695,12 @@ def api_nomina_generar():
         return jsonify({"error": "No tienes permisos para generar nóminas."}), 403
 
     data = request.json or {}
-    mes               = int(data.get('mes', 1))
-    anio              = int(data.get('anio', 2026))
+    try:
+        mes = int(data.get('mes', 0))
+        anio = int(data.get('anio', 0))
+        inicio_periodo, fin_periodo = limites_periodo(mes, anio)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Mes o año inválido."}), 400
     # 'all' para toda la planilla, o un int para un empleado específico
     empleado_id_param = data.get('empleado_id', 'all')
 
@@ -2690,7 +2709,7 @@ def api_nomina_generar():
         cursor = conn.cursor()
 
         # Validar duplicado o recuperar cabecera
-        cursor.execute("SELECT id FROM nomina WHERE periodo_mes = ? AND periodo_anio = ?", (mes, anio))
+        cursor.execute("SELECT id FROM nomina WITH (UPDLOCK, HOLDLOCK) WHERE periodo_mes = ? AND periodo_anio = ?", (mes, anio))
         row = cursor.fetchone()
         if row:
             nomina_id = int(row[0])
@@ -2740,6 +2759,10 @@ def api_nomina_generar():
         t_vac         = 0.0
         t_agui        = 0.0
 
+        cursor.execute("SELECT * FROM parametros_laborales")
+        columnas = [c[0] for c in cursor.description]
+        parametros = parametros_calculo(dict(zip(columnas, r)) for r in cursor.fetchall())
+        procesados = 0
         from datetime import datetime as dt_mod
 
         for emp in empleados:
@@ -2773,12 +2796,11 @@ def api_nomina_generar():
 
             # Consultar ausencias y permisos del mes en movimientos_laborales
             cursor.execute("""
-                SELECT tipo, ISNULL(dias_tomados, 0), ISNULL(afecta_septimo_dia, 0)
+                SELECT tipo, ISNULL(dias_tomados, 0), ISNULL(afecta_septimo_dia, 0), fecha_inicio, fecha_fin
                 FROM movimientos_laborales
                 WHERE empleado_id = ?
-                  AND ((YEAR(fecha_inicio) = ? AND MONTH(fecha_inicio) = ?)
-                    OR (YEAR(fecha_fin) = ? AND MONTH(fecha_fin) = ?))
-            """, (e_id, anio, mes, anio, mes))
+                  AND fecha_inicio <= ? AND fecha_fin >= ?
+            """, (e_id, fin_periodo, inicio_periodo))
             movs_rows = cursor.fetchall()
 
             dias_falta = 0.0
@@ -2787,11 +2809,11 @@ def api_nomina_generar():
 
             for r in movs_rows:
                 t_mov = r[0]
-                d_mov = float(r[1])
+                d_mov = dias_en_periodo(r[3], r[4], r[1], inicio_periodo, fin_periodo)
                 af_sep = bool(r[2])
                 if t_mov == 'FALTA':
                     dias_falta += d_mov
-                    if af_sep:
+                    if af_sep and inicio_periodo <= fecha(r[4]) <= fin_periodo:
                         # Si afecta séptimo día según Art. 64 Ley 185 (por jornada semanal incompleta)
                         dias_septimo_dia += 1.0
                 elif t_mov == 'PERMISO_SIN_GOCE':
@@ -2817,13 +2839,18 @@ def api_nomina_generar():
             # Art. 79 Ley 185: faltas injustificadas NO son causa protegida → reducen días computables.
             # IMPORTANTE: siempre usar días efectivamente trabajados, nunca forzar 2.5 si hubo ausencias.
             if dias_trabajados_mes >= 30.0:
-                vac_ganadas = 2.5
+                vac_ganadas = parametros.get('VACACIONES_MES', 2.5)
             else:
-                vac_ganadas = round(dias_trabajados_mes * (2.5 / 30.0), 4)
+                vac_ganadas = round(dias_trabajados_mes * (parametros.get('VACACIONES_MES', 2.5) / 30.0), 4)
                 vac_ganadas = round(vac_ganadas, 2)  # redondear a 2 decimales para mostrar
 
             # Cálculos de nómina (Ley 822 y Ley 185) sobre salario devengado real
-            calc = calcular_nomina_empleado(salario_devengado)
+            cursor.execute("""SELECT ISNULL(SUM(monto_total), 0) FROM horas_extras
+                WHERE empleado_id=? AND fecha >= ? AND fecha <= ? AND estado='Aprobada'""",
+                (e_id, inicio_periodo, fin_periodo))
+            ingresos_extra = float(cursor.fetchone()[0])
+            calc = calcular_nomina_empleado(salario_devengado, ingresos_extra, parametros)
+            procesados += 1
 
             cursor.execute(
                 """INSERT INTO detalle_nomina
@@ -2872,6 +2899,11 @@ def api_nomina_generar():
             t_vac         += calc['provision_vacaciones']
             t_agui        += calc['provision_aguinaldo']
 
+        if not procesados:
+            conn.rollback()
+            conn.close()
+            return jsonify({"error": "No hay empleados con ingreso anterior al fin del período."}), 400
+
         # Actualizar totales en cabecera
         cursor.execute(
             """UPDATE nomina
@@ -2884,19 +2916,31 @@ def api_nomina_generar():
         )
 
         # --- ASIENTO CONTABLE AUTOMÁTICO DE NÓMINA ---
-        def get_cta(codigo):
-            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = ?", (codigo,))
+        def get_cta(codigo, nombre, clasificacion, naturaleza):
+            cursor.execute("SELECT id, activo, nombre FROM cuentas_contables WITH (UPDLOCK, HOLDLOCK) WHERE codigo = ?", (codigo,))
             row = cursor.fetchone()
-            return row[0] if row else None
+            if row:
+                if not row[1]:
+                    raise ValueError(f'La cuenta {codigo} está inactiva; revise el catálogo contable.')
+                if codigo == '2.1.10' and 'INATEC' not in row[2].upper():
+                    raise ValueError('La cuenta 2.1.10 pertenece a otro concepto; configure INATEC por pagar antes de generar.')
+                return row[0]
+            cursor.execute("""INSERT INTO cuentas_contables
+                (codigo, nombre, clasificacion, naturaleza, descripcion, activo)
+                VALUES (?, ?, ?, ?, 'Cuenta para contabilización de nómina', 1)""",
+                (codigo, nombre, clasificacion, naturaleza))
+            cursor.execute('SELECT @@IDENTITY AS id')
+            return cursor.fetchone()[0]
             
-        cta_sueldos_gasto = get_cta('6.1.01')
-        cta_cargas_patronales = get_cta('6.1.11')
-        cta_prestaciones_gasto = get_cta('6.1.12')
+        cta_sueldos_gasto = get_cta('6.1.01', 'Sueldos y salarios', 'Gasto', 'Deudora')
+        cta_cargas_patronales = get_cta('6.1.11', 'Cargas patronales de nómina', 'Gasto', 'Deudora')
+        cta_prestaciones_gasto = get_cta('6.1.12', 'Provisiones de prestaciones laborales', 'Gasto', 'Deudora')
         
-        cta_retenciones_inss = get_cta('2.1.06')
-        cta_retenciones_ir = get_cta('2.1.07')
-        cta_provisiones = get_cta('2.1.08')
-        cta_sueldos_pagar = get_cta('2.1.04')
+        cta_retenciones_inss = get_cta('2.1.06', 'INSS laboral y patronal por pagar', 'Pasivo corriente', 'Acreedora')
+        cta_retenciones_ir = get_cta('2.1.07', 'IR laboral por pagar', 'Pasivo corriente', 'Acreedora')
+        cta_provisiones = get_cta('2.1.08', 'Prestaciones laborales por pagar', 'Pasivo corriente', 'Acreedora')
+        cta_sueldos_pagar = get_cta('2.1.04', 'Sueldos y salarios por pagar', 'Pasivo corriente', 'Acreedora')
+        cta_inatec = get_cta('2.1.10', 'INATEC por pagar', 'Pasivo corriente', 'Acreedora')
         
         concepto_asiento = f"Registro de nómina mes {mes:02d}/{anio}"
         if es_complemento:
@@ -2929,11 +2973,17 @@ def api_nomina_generar():
         if t_neto > 0 and cta_sueldos_pagar:
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_sueldos_pagar, round(t_neto, 2)))
 
+        if t_inatec > 0:
+            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_inatec, round(t_inatec, 2)))
+        cursor.execute("SELECT ISNULL(SUM(debe),0)-ISNULL(SUM(haber),0) FROM movimientos_contables WHERE asiento_id=?", (asiento_id,))
+        if abs(float(cursor.fetchone()[0])) >= 0.01:
+            raise ValueError('El asiento de nómina no está balanceado; se canceló la operación.')
+
         conn.commit()
         conn.close()
         return jsonify({
             "success"   : True,
-            "mensaje"   : f"Nómina {mes:02d}/{anio} generada con éxito para {len(empleados)} empleados.",
+            "mensaje"   : f"Nómina {mes:02d}/{anio} generada con éxito para {procesados} empleados.",
             "nomina_id" : nomina_id,
             "resumen"   : {
                 "total_bruto"      : round(t_bruto, 2),
@@ -3134,10 +3184,16 @@ def api_nomina_delete(nomina_id):
         cursor = conn.cursor()
 
         # Verificar que existe
-        cursor.execute("SELECT id FROM nomina WHERE id=?", (nomina_id,))
+        cursor.execute("SELECT id FROM nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?", (nomina_id,))
         if not cursor.fetchone():
             conn.close()
             return jsonify({"error": "Nómina no encontrada."}), 404
+
+        cursor.execute("SELECT id FROM pagos_nomina WHERE nomina_id=? AND estado='Confirmado'", (nomina_id,))
+        if cursor.fetchone():
+            conn.rollback()
+            conn.close()
+            return jsonify({"error": "No se puede anular una nómina con pagos confirmados."}), 409
 
         # Revertir vacaciones (restar exactamente los días proporcionales que se sumaron a cada empleado en esta nómina)
         cursor.execute("SELECT empleado_id, ISNULL(vac_mes, 2.5) FROM detalle_nomina WHERE nomina_id=?", (nomina_id,))
@@ -3146,16 +3202,40 @@ def api_nomina_delete(nomina_id):
             emp_id = emp[0]
             vac_a_revertir = float(emp[1])
             cursor.execute(
-                "UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles - ? WHERE id = ?",
-                (vac_a_revertir, emp_id)
+                """UPDATE empleados SET dias_vacaciones_disponibles = dias_vacaciones_disponibles - ?
+                   WHERE id = ? AND dias_vacaciones_disponibles >= ?""",
+                (vac_a_revertir, emp_id, vac_a_revertir)
             )
+            if cursor.rowcount != 1:
+                raise ValueError('Las vacaciones acumuladas ya fueron utilizadas. No se puede anular la nómina.')
 
-        # Eliminar la nómina (ON DELETE CASCADE debe borrar detalle_nomina)
+        # Conservar el asiento original y registrar su contrapartida para auditoría.
+        cursor.execute("""SELECT id FROM asientos_contables
+            WHERE modulo_origen='RRHH' AND referencia_id=?""", (nomina_id,))
+        originales = cursor.fetchall()
+        for original in originales:
+            cursor.execute("""INSERT INTO asientos_contables
+                (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                VALUES (GETDATE(), ?, 'RRHH_ANULACION', ?, ?)""",
+                (f'Anulación nómina #{nomina_id}, asiento #{original[0]}', nomina_id, session['user']['id']))
+            cursor.execute("SELECT @@IDENTITY AS id")
+            reverso_id = cursor.fetchone()[0]
+            cursor.execute("""INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber)
+                SELECT ?, cuenta_id, haber, debe FROM movimientos_contables WHERE asiento_id=?""",
+                (reverso_id, original[0]))
+
+        # Ambas versiones de la base funcionan, con o sin cascada.
+        cursor.execute("DELETE FROM colilla_pago WHERE detalle_nomina_id IN (SELECT id FROM detalle_nomina WHERE nomina_id=?)", (nomina_id,))
+        cursor.execute("DELETE FROM pagos_nomina WHERE nomina_id=?", (nomina_id,))
+        cursor.execute("DELETE FROM detalle_nomina WHERE nomina_id=?", (nomina_id,))
         cursor.execute("DELETE FROM nomina WHERE id=?", (nomina_id,))
         conn.commit()
         conn.close()
         return jsonify({"success": True})
     except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+            conn.close()
         return jsonify({"error": str(e)}), 500
 
 
@@ -3164,7 +3244,7 @@ def api_nomina_delete(nomina_id):
 # ==============================================================================
 @app.route('/rrhh/colilla/<int:id_detalle>')
 @login_required
-@role_required('Administrador', 'Responsable de Recursos Humanos')
+@role_required(*ROLES_RRHH)
 def ver_colilla(id_detalle):
     query = """
         SELECT

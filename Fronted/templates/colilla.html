@@ -238,7 +238,7 @@
                 </div>
                 <table class="table-section">
                     <tr>
-                        <td>INSS Laboral (7% Régimen Integral)</td>
+                        <td>INSS Laboral</td>
                         <td class="text-right text-danger">C$ {{ "%.2f"|format(c.inss_laboral) }}</td>
                     </tr>
                     <tr>
@@ -272,10 +272,10 @@
                 <td colspan="2" style="padding-bottom:3px; padding-left:12px;">Provisiones Laborales</td>
             </tr>
             <tr>
-                <td width="25%">INSS Patronal (21.5%): <strong>C$ {{ "%.2f"|format(c.inss_patronal) }}</strong></td>
-                <td width="25%" style="border-right:1px dashed #e2e8f0;">INATEC (2%): <strong>C$ {{ "%.2f"|format(c.inatec_patronal) }}</strong></td>
-                <td width="25%" style="padding-left:12px;">Vacaciones (1/12): <strong>C$ {{ "%.2f"|format(c.provision_vacaciones) }}</strong></td>
-                <td width="25%">Aguinaldo (1/12): <strong>C$ {{ "%.2f"|format(c.provision_aguinaldo) }}</strong></td>
+                <td width="25%">INSS Patronal: <strong>C$ {{ "%.2f"|format(c.inss_patronal) }}</strong></td>
+                <td width="25%" style="border-right:1px dashed #e2e8f0;">INATEC: <strong>C$ {{ "%.2f"|format(c.inatec_patronal) }}</strong></td>
+                <td width="25%" style="padding-left:12px;">Provisión de vacaciones: <strong>C$ {{ "%.2f"|format(c.provision_vacaciones) }}</strong></td>
+                <td width="25%">Provisión de aguinaldo: <strong>C$ {{ "%.2f"|format(c.provision_aguinaldo) }}</strong></td>
             </tr>
             <tr style="border-top:1px solid #e2e8f0;">
                 <td colspan="2" style="padding-top:5px; color:#64748b;">Total cargas: <strong>C$ {{ "%.2f"|format(c.inss_patronal + c.inatec_patronal) }}</strong></td>

@@ -93,7 +93,7 @@ def calcular_provisiones(salario_bruto: float) -> tuple:
     return provision_vacaciones, provision_aguinaldo
 
 
-def calcular_nomina_empleado(salario_base: float, ingresos_extra: float = 0.0) -> dict:
+def calcular_nomina_empleado(salario_base: float, ingresos_extra: float = 0.0, parametros=None) -> dict:
     """
     Función principal que calcula todos los componentes de nómina para un empleado.
 
@@ -104,18 +104,23 @@ def calcular_nomina_empleado(salario_base: float, ingresos_extra: float = 0.0) -
     Returns:
         dict con todos los campos de nómina calculados
     """
-    salario_bruto = salario_base + ingresos_extra
+    from math import isfinite
+    parametros = parametros or {}
+    if any(not isfinite(v) or v < 0 for v in (salario_base, ingresos_extra)):
+        raise ValueError('Los ingresos deben ser números finitos no negativos.')
+    salario_bruto = round(salario_base + ingresos_extra, 2)
 
     # Deducciones del trabajador
-    inss_laboral = calcular_inss_laboral(salario_bruto)
+    inss_laboral = round(salario_bruto * parametros.get('INSS_LABORAL', 7) / 100, 2)
     ir_retencion = calcular_ir_nicaragua(salario_bruto, inss_laboral)
     total_deducciones = round(inss_laboral + ir_retencion, 2)
     salario_neto = round(salario_bruto - total_deducciones, 2)
 
     # Cargas patronales (no se descuentan del empleado)
-    inss_patronal = calcular_inss_patronal(salario_bruto)
-    inatec_patronal = calcular_inatec_patronal(salario_bruto)
-    provision_vacaciones, provision_aguinaldo = calcular_provisiones(salario_bruto)
+    inss_patronal = round(salario_bruto * parametros.get('INSS_PATRONAL', 21.5) / 100, 2)
+    inatec_patronal = round(salario_bruto * parametros.get('INATEC_PATRONAL', 2) / 100, 2)
+    provision_vacaciones = round(salario_bruto * parametros.get('VACACIONES_MES', 2.5) / 30, 2)
+    provision_aguinaldo = round(salario_bruto * parametros.get('AGUINALDO_PROV', 100 / 12) / 100, 2)
 
     return {
         'salario_ordinario': round(salario_base, 2),

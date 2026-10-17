@@ -482,6 +482,7 @@ body {
 /* Main Area */
 .main-content {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     background-color: var(--bg-dark);
@@ -1760,6 +1761,8 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* ─── BARRA DE NAVEGACIÓN DE PESTAÑAS ─── */
@@ -1776,6 +1779,39 @@ body {
 
 .rrhh-tabs-nav::-webkit-scrollbar,
 .reportes-tabs-nav::-webkit-scrollbar { display: none; }
+
+.rrhh-tabs-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible;
+}
+
+.rrhh-tabs-nav .rrhh-tab-btn {
+    min-width: 0;
+    white-space: normal;
+    text-align: left;
+    padding: 0.55rem 0.65rem;
+    line-height: 1.35;
+}
+
+.rrhh-tabs-nav .rrhh-tab-btn i { flex-shrink: 0; }
+
+#tab-rrhh { min-width: 0; max-width: 100%; }
+#tab-rrhh .rrhh-module-header { padding: 1rem 1.25rem; margin-bottom: 1rem; }
+#tab-rrhh .rrhh-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+#tab-rrhh .rrhh-stat-card { padding: 1rem; min-width: 0; }
+#tab-rrhh .stat-data { min-width: 0; overflow-wrap: anywhere; }
+#tab-rrhh .rrhh-tab-panel { padding: 1rem; min-width: 0; }
+#tab-rrhh .data-table { table-layout: fixed; }
+#tab-rrhh .data-table th,
+#tab-rrhh .data-table td { padding: 0.65rem 0.5rem; white-space: normal; overflow-wrap: anywhere; }
+#tab-rrhh .data-table th { font-size: 0.74rem; }
+#tab-rrhh .data-table td { font-size: 0.82rem; }
+#tab-rrhh .data-table td .btn { max-width: 100%; white-space: normal; }
+#tab-rrhh .data-table td > div { flex-wrap: wrap; }
+#tab-rrhh .rrhh-panel-actions { min-width: 0; }
+#tab-rrhh .rrhh-panel-actions .form-control { max-width: 100%; width: auto; }
+.rrhh-safety-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1rem; margin-bottom: 1rem; }
 
 .rrhh-tab-btn,
 .reportes-tab-btn {
@@ -1946,14 +1982,25 @@ body {
         justify-content: flex-start;
     }
 
-    .rrhh-tab-btn span {
-        display: none;
-    }
+    .rrhh-tabs-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0.5rem; }
+    .rrhh-tabs-nav .rrhh-tab-btn { font-size: 0.78rem; }
+    #tab-rrhh .rrhh-title-block { min-width: 0; gap: 0.6rem; }
+    #tab-rrhh .rrhh-title-block h2 { font-size: 1.15rem; }
+    #tab-rrhh .rrhh-stats { grid-template-columns: 1fr; }
+    #tab-rrhh .rrhh-ley-buttons .btn-ley { min-width: 0; white-space: normal; }
+    #tab-rrhh .rrhh-panel-actions > * { max-width: 100%; }
+    #tab-rrhh .rrhh-panel-actions .form-control { min-width: 0; }
+    #tab-rrhh .rrhh-action-btn { white-space: normal; }
 
-    .rrhh-tab-btn {
-        padding: 0.6rem 0.9rem;
-        font-size: 1rem;
-    }
+    /* Las filas se leen como fichas en pantallas pequeñas, sin deslizar de lado. */
+    #tab-rrhh .data-table,
+    #tab-rrhh .data-table tbody { display: block; width: 100%; }
+    #tab-rrhh .data-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    #tab-rrhh .data-table tbody tr { display: block; margin-bottom: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem; }
+    #tab-rrhh .data-table tbody td { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 0.6rem; text-align: left !important; align-items: center; }
+    #tab-rrhh .data-table tbody td::before { content: attr(data-label); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
+    #tab-rrhh .data-table tbody td[colspan] { display: block; text-align: center !important; }
+    #tab-rrhh .data-table tbody td[colspan]::before { content: none; }
 }
 
 /* ==============================================================================

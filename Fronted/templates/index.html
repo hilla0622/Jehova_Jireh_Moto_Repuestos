@@ -1825,13 +1825,13 @@
                     </div>
 
                     <!-- SISTEMA DE PESTAÑAS INTERNO RRHH -->
-                    <div class="rrhh-tabs-wrapper mode-all">
+                    <div class="rrhh-tabs-wrapper">
                         <nav class="rrhh-tabs-nav" role="tablist" aria-label="Secciones de Recursos Humanos">
-                            <button class="rrhh-tab-btn active" data-rrhh-tab="all" role="tab" aria-selected="true" id="rrhh-tab-btn-all" onclick="switchRrhhTab('all')">
+                            <button class="rrhh-tab-btn" data-rrhh-tab="all" role="tab" aria-selected="false" id="rrhh-tab-btn-all" onclick="switchRrhhTab('all')">
                                 <i class="ph-bold ph-squares-four"></i>
                                 <span>Vista General</span>
                             </button>
-                            <button class="rrhh-tab-btn" data-rrhh-tab="rrhh-directorio" role="tab" aria-selected="false" id="rrhh-tab-btn-directorio" onclick="switchRrhhTab('rrhh-directorio')">
+                            <button class="rrhh-tab-btn active" data-rrhh-tab="rrhh-directorio" role="tab" aria-selected="true" id="rrhh-tab-btn-directorio" onclick="switchRrhhTab('rrhh-directorio')">
                                 <i class="ph-bold ph-address-book"></i>
                                 <span>Directorio</span>
                             </button>
@@ -1911,7 +1911,7 @@
                         </div>
 
                         <!-- ═══ PANEL 2: HISTORIAL DE PLANILLAS ═══ -->
-                        <div class="rrhh-tab-panel active" id="rrhh-historial" role="tabpanel" aria-labelledby="rrhh-tab-btn-historial">
+                        <div class="rrhh-tab-panel" id="rrhh-historial" role="tabpanel" aria-labelledby="rrhh-tab-btn-historial">
                             <div class="rrhh-panel-toolbar">
                                 <div class="rrhh-panel-title">
                                     <i class="ph-bold ph-clipboard-text"></i>
@@ -2012,7 +2012,7 @@
                         </div>
 
                         <!-- ═══ PANEL 3: CONTROL DE AUSENCIAS ═══ -->
-                        <div class="rrhh-tab-panel active" id="rrhh-ausencias" role="tabpanel" aria-labelledby="rrhh-tab-btn-ausencias">
+                        <div class="rrhh-tab-panel" id="rrhh-ausencias" role="tabpanel" aria-labelledby="rrhh-tab-btn-ausencias">
                             <div class="rrhh-panel-toolbar">
                                 <div class="rrhh-panel-title">
                                     <i class="ph-bold ph-calendar-x"></i>
@@ -2057,7 +2057,7 @@
                         </div>
 
                         <!-- ═══ PANEL 4: RECLUTAMIENTO Y CONTRATOS LABORALES (RF95, RF96, RF98, RF99) ═══ -->
-                        <div class="rrhh-tab-panel active" id="rrhh-reclutamiento" role="tabpanel">
+                        <div class="rrhh-tab-panel" id="rrhh-reclutamiento" role="tabpanel">
                             <!-- Sección Solicitudes de Empleo -->
                             <div class="rrhh-panel-toolbar">
                                 <div class="rrhh-panel-title">
@@ -2128,7 +2128,7 @@
                         </div>
 
                         <!-- ═══ PANEL 5: ASISTENCIA Y HORAS EXTRAS (RF102, RF103, RF104) ═══ -->
-                        <div class="rrhh-tab-panel active" id="rrhh-asistencia" role="tabpanel">
+                        <div class="rrhh-tab-panel" id="rrhh-asistencia" role="tabpanel">
                             <!-- Asistencia Diaria -->
                             <div class="rrhh-panel-toolbar">
                                 <div class="rrhh-panel-title">
@@ -2200,7 +2200,7 @@
                         </div>
 
                         <!-- ═══ PANEL 6: HIGIENE Y SEGURIDAD OCUPACIONAL (LEY 618) (RF110 - RF114) ═══ -->
-                        <div class="rrhh-tab-panel active" id="rrhh-seguridad" role="tabpanel">
+                        <div class="rrhh-tab-panel" id="rrhh-seguridad" role="tabpanel">
                             <!-- Inspección Periódica 6 Puntos Preventivos -->
                             <div class="rrhh-panel-toolbar">
                                 <div class="rrhh-panel-title">
@@ -2224,17 +2224,18 @@
                                                 <th>Resultado</th>
                                                 <th>Observaciones</th>
                                                 <th>Medidas Correctivas</th>
+                                                <th style="text-align:center;">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tbody-higiene-inspecciones">
-                                            <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando inspecciones...</td></tr>
+                                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando inspecciones...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
 
                             <!-- Matriz de Riesgos y Control de EPP -->
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="rrhh-safety-grid">
                                 <!-- Riesgos Laborales -->
                                 <div class="card rrhh-panel-card">
                                     <div class="card-header">
@@ -2271,7 +2272,7 @@
                             </div>
 
                             <!-- Incidentes y Capacitaciones -->
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem;">
+                            <div class="rrhh-safety-grid">
                                 <div class="card rrhh-panel-card">
                                     <div class="card-header">
                                         <h3><i class="ph-bold ph-first-aid"></i> Registro de Accidentes e Incidentes</h3>
@@ -2299,7 +2300,7 @@
                         </div>
 
                         <!-- ═══ PANEL 7: MARCO LEGAL Y PARÁMETROS DEL SISTEMA (RF115, RF116) ═══ -->
-                        <div class="rrhh-tab-panel active" id="rrhh-legal" role="tabpanel">
+                        <div class="rrhh-tab-panel" id="rrhh-legal" role="tabpanel">
                             <!-- Marco Legal -->
                             <div class="rrhh-panel-toolbar">
                                 <div class="rrhh-panel-title">
@@ -3317,7 +3318,7 @@
                     <div id="emp-preview-calculo" style="display:none; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:1rem; margin-top:0.5rem;">
                         <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;"><i class="ph-bold ph-calculator"></i> Vista previa del cálculo de nómina:</p>
                         <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; font-size:0.83rem;">
-                            <div><strong>INSS Laboral (7%):</strong><br><span id="prev-inss-lab">C$0.00</span></div>
+                            <div><strong>INSS Laboral:</strong><br><span id="prev-inss-lab">C$0.00</span></div>
                             <div><strong>IR Mensual:</strong><br><span id="prev-ir">C$0.00</span></div>
                             <div><strong>Neto a Recibir:</strong><br><span id="prev-neto" style="color:#22c55e;">C$0.00</span></div>
                         </div>
@@ -3574,7 +3575,7 @@
             </div>
             <form id="form-generar-nomina" onsubmit="procesarNomina(event)">
                 <div class="modal-body">
-                    <p style="color:var(--text-muted); margin-bottom:1rem;">Se calculará automáticamente el INSS Laboral (7%), IR (Ley 822) y provisiones de vacaciones y aguinaldo (Ley 185) para todos los empleados activos.</p>
+                    <p style="color:var(--text-muted); margin-bottom:1rem;">Se calculará automáticamente el INSS Laboral, IR (Ley 822) y provisiones de vacaciones y aguinaldo (Ley 185) para todos los empleados activos.</p>
                     <div class="form-group" style="margin-bottom:1rem;">
                         <label>Empleado: *</label>
                         <select id="nomina-empleado" class="form-control" required>
@@ -3626,8 +3627,8 @@
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Total Bruto</div><div style="font-size:1.1rem; font-weight:700;" id="dndet-bruto">C$0.00</div></div>
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Deducciones</div><div style="font-size:1.1rem; font-weight:700; color:#ef4444;" id="dndet-deducciones">C$0.00</div></div>
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Total Neto</div><div style="font-size:1.1rem; font-weight:700; color:#22c55e;" id="dndet-neto">C$0.00</div></div>
-                    <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">INSS Patronal (21.5%)</div><div style="font-size:1.1rem; font-weight:700; color:#f59e0b;" id="dndet-patronal">C$0.00</div></div>
-                    <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">INATEC Patronal (2%)</div><div style="font-size:1.1rem; font-weight:700; color:#06b6d4;" id="dndet-inatec">C$0.00</div></div>
+                    <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">INSS Patronal</div><div style="font-size:1.1rem; font-weight:700; color:#f59e0b;" id="dndet-patronal">C$0.00</div></div>
+                    <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">INATEC Patronal</div><div style="font-size:1.1rem; font-weight:700; color:#06b6d4;" id="dndet-inatec">C$0.00</div></div>
                     <div style="text-align:center;"><div style="font-size:0.75rem; color:var(--text-muted);">Provisiones (Vac+Agui)</div><div style="font-size:1.1rem; font-weight:700; color:#a855f7;" id="dndet-provisiones">C$0.00</div></div>
                 </div>
                 <div style="overflow-x: auto;">
@@ -3635,7 +3636,7 @@
                         <thead>
                             <tr>
                                 <th>Empleado</th><th>Cargo</th><th>Salario Base</th><th>Ajustes / Faltas</th>
-                                <th>Devengado</th><th>INSS Lab. (7%)</th><th>IR (Ley 822)</th>
+                                <th>Devengado</th><th>INSS Lab.</th><th>IR (Ley 822)</th>
                                 <th>Neto a Recibir</th><th>Colilla</th>
                             </tr>
                         </thead>
@@ -3732,7 +3733,7 @@
                                     <tr><td style="padding:2px 0;">Salario Base Contractual</td><td id="col-base-contrato-tbl" style="text-align:right;"></td></tr>
                                     <tr id="col-descuento-ajuste-row" style="display:none;"><td style="padding:2px 0; color:#b91c1c;">(-) Ajuste tiempo no laborado</td><td id="col-descuento-ajuste-val" style="text-align:right; color:#b91c1c;"></td></tr>
                                     <tr style="border-top:1px solid #e2e8f0; font-weight:600;"><td style="padding:2px 0;">Salario Devengado Ordinario</td><td id="col-salario-devengado" style="text-align:right;"></td></tr>
-                                    <tr id="col-extras-row"><td style="padding:2px 0; color:#64748b;">Otros Ingresos / KPI</td><td id="col-ingresos-extra" style="text-align:right; color:#64748b;"></td></tr>
+                                    <tr id="col-extras-row"><td style="padding:2px 0; color:#64748b;">Ingresos extra</td><td id="col-ingresos-extra" style="text-align:right; color:#64748b;"></td></tr>
                                     <tr style="border-top:1px solid #cbd5e1; font-weight:700;"><td style="padding:3px 0;">Total Percepciones (Base Cotizable)</td><td id="col-bruto" style="text-align:right;"></td></tr>
                                     <tr style="background:#f0fdf4; font-size:0.95rem; font-weight:800; color:#15803d;"><td style="padding:6px 4px; border-top:1px solid #bbf7d0;">NETO A RECIBIR</td><td id="col-neto" style="text-align:right; padding:6px 4px; border-top:1px solid #bbf7d0;"></td></tr>
                                 </table>
@@ -3742,7 +3743,7 @@
                                     DEDUCCIONES DE LEY
                                 </div>
                                 <table style="width:100%;">
-                                    <tr><td style="padding:2px 0;">INSS Laboral (7% Régimen Integral)</td><td id="col-inss-lab" style="text-align:right; color:#ef4444; font-weight:600;"></td></tr>
+                                    <tr><td style="padding:2px 0;">INSS Laboral</td><td id="col-inss-lab" style="text-align:right; color:#ef4444; font-weight:600;"></td></tr>
                                     <tr><td style="padding:2px 0;">IR Rentas del Trabajo (DGI Ley 822)</td><td id="col-ir" style="text-align:right; color:#ef4444; font-weight:600;"></td></tr>
                                     <tr id="col-adelanto-row"><td style="padding:2px 0;">Adelanto Salarial</td><td id="col-adelanto" style="text-align:right; color:#ef4444;">C$0.00</td></tr>
                                     <tr style="border-top:1px solid #cbd5e1; font-weight:700; color:#b91c1c;"><td style="padding:4px 0;">Total Deducciones de Ley</td><td id="col-deducciones" style="text-align:right;"></td></tr>
@@ -3763,10 +3764,10 @@
                                 <td colspan="2" style="padding-bottom:2px; padding-left:12px;">Provisiones Laborales</td>
                             </tr>
                             <tr>
-                                <td style="width:25%;">INSS Patronal (21.5%): <strong id="col-inss-pat">C$0.00</strong></td>
-                                <td style="width:25%; border-right:1px dashed #e2e8f0;">INATEC (2%): <strong id="col-inatec-pat">C$0.00</strong></td>
-                                <td style="width:25%; padding-left:12px;">Vacaciones (1/12): <strong id="col-prov-vac">C$0.00</strong></td>
-                                <td style="width:25%;">Aguinaldo (1/12): <strong id="col-prov-agui">C$0.00</strong></td>
+                                <td style="width:25%;">INSS Patronal: <strong id="col-inss-pat">C$0.00</strong></td>
+                                <td style="width:25%; border-right:1px dashed #e2e8f0;">INATEC: <strong id="col-inatec-pat">C$0.00</strong></td>
+                                <td style="width:25%; padding-left:12px;">Provisión de vacaciones: <strong id="col-prov-vac">C$0.00</strong></td>
+                                <td style="width:25%;">Provisión de aguinaldo: <strong id="col-prov-agui">C$0.00</strong></td>
                             </tr>
                             <tr style="border-top:1px solid #e2e8f0;">
                                 <td colspan="2" style="padding-top:4px; color:#64748b;">Total cargas: <strong id="col-tot-cargas-pat">C$0.00</strong></td>
@@ -4165,14 +4166,25 @@
     <div class="modal" id="modal-inspeccion-higiene">
         <div class="modal-content modal-md">
             <div class="modal-header">
-                <h3><i class="ph-bold ph-shield-check"></i> Inspección Preventiva de 6 Puntos (Ley 618)</h3>
+                <h3 id="modal-inspeccion-higiene-title"><i class="ph-bold ph-shield-check"></i> Inspección Preventiva de 6 Puntos (Ley 618)</h3>
                 <button class="modal-close" onclick="closeModal('modal-inspeccion-higiene')">&times;</button>
             </div>
             <form onsubmit="guardarInspeccion6Puntos(event)">
+                <input type="hidden" id="insp-id" value="">
                 <div class="modal-body">
                     <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
                         Verifique las condiciones físicas en las áreas de ventas, mostrador y almacén de repuestos:
                     </p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="font-size:0.8rem; font-weight:600;">Fecha Inspección:</label>
+                            <input type="date" id="insp-fecha" class="form-control" style="font-size:0.85rem;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="font-size:0.8rem; font-weight:600;">Inspector Responsable:</label>
+                            <input type="text" id="insp-inspector" class="form-control" style="font-size:0.85rem;" placeholder="Nombre del inspector">
+                        </div>
+                    </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
                         <label style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-card); padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); cursor:pointer;">
                             <input type="checkbox" id="chk-estanterias" checked>
@@ -4210,7 +4222,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modal-inspeccion-higiene')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Registrar Dictamen de Inspección</button>
+                    <button type="submit" id="btn-submit-inspeccion" class="btn btn-primary"><i class="ph-bold ph-check"></i> <span id="btn-submit-inspeccion-text">Registrar Dictamen de Inspección</span></button>
                 </div>
             </form>
         </div>
@@ -4223,7 +4235,7 @@
         let _cargosCache = [];
         let _movimientosCache = [];
         let _nominaDetalleId = null;
-        let _currentRrhhTab = 'all';
+        let _currentRrhhTab = 'rrhh-directorio';
         const MESES_ES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
             'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -4240,16 +4252,13 @@
 
         /**
          * Activa la pestaña del módulo RRHH indicada.
-         * - 'all': Muestra los 3 paneles juntos (Vista General sin filtros).
+         * - 'all': Muestra todos los paneles solo cuando se elige Vista General.
          * - 'rrhh-directorio': Muestra ÚNICAMENTE el Directorio de Empleados.
          * - 'rrhh-historial': Muestra ÚNICAMENTE el Historial de Planillas/Nóminas.
          * - 'rrhh-ausencias': Muestra ÚNICAMENTE el Control de Ausencias/Vacaciones.
-         * - Si se pulsa de nuevo la pestaña ya activa, vuelve a 'all' (Vista General).
+         * - La sección seleccionada permanece activa al volver al módulo.
          */
         function switchRrhhTab(targetId) {
-            if (targetId !== 'all' && _currentRrhhTab === targetId) {
-                targetId = 'all';
-            }
             _currentRrhhTab = targetId;
 
             // Actualizar botones de navegación
@@ -4322,14 +4331,12 @@
         window.switchReportesTab = switchReportesTab;
 
         function inicializarRRHH() {
-            switchRrhhTab('all');
+            switchRrhhTab(_currentRrhhTab);
             cargarCargosRRHH();
             cargarEmpleadosRRHH();
             cargarHistorialNominas();
             cargarMovimientosLaborales();
-            if (typeof initRrhhCorteVTab === 'function') {
-                initRrhhCorteVTab('all');
-            }
+
         }
 
         // =========================================================================
@@ -4690,22 +4697,25 @@
             } catch (e) { mostrarNotificacionRRHH('Error de conexión.', 'error'); }
         }
 
-        function previsualizarCalculo() {
+        let _previewSolicitud = 0;
+        async function previsualizarCalculo() {
+            const solicitud = ++_previewSolicitud;
             const salario = parseFloat(document.getElementById('emp-salario')?.value) || 0;
-            if (salario <= 0) { document.getElementById('emp-preview-calculo').style.display = 'none'; return; }
-            const inss = salario * 0.07;
-            const baseAnual = (salario - inss) * 12;
-            let irAnual = 0;
-            if (baseAnual > 500000) irAnual = 82500 + (baseAnual - 500000) * 0.30;
-            else if (baseAnual > 350000) irAnual = 45000 + (baseAnual - 350000) * 0.25;
-            else if (baseAnual > 200000) irAnual = 15000 + (baseAnual - 200000) * 0.20;
-            else if (baseAnual > 100000) irAnual = (baseAnual - 100000) * 0.15;
-            const irMes = irAnual / 12;
-            const neto = salario - inss - irMes;
-            document.getElementById('prev-inss-lab').textContent = cs(inss);
-            document.getElementById('prev-ir').textContent = cs(irMes);
-            document.getElementById('prev-neto').textContent = cs(neto);
-            document.getElementById('emp-preview-calculo').style.display = 'block';
+            const panel = document.getElementById('emp-preview-calculo');
+            panel.style.display = 'none';
+            if (salario <= 0) return;
+            try {
+                const res = await fetch(`/api/nomina/previsualizar?salario=${encodeURIComponent(salario)}`);
+                const calculo = await res.json();
+                if (!res.ok) throw new Error(calculo.error || 'No se pudo calcular la vista previa.');
+                if (solicitud !== _previewSolicitud) return;
+                document.getElementById('prev-inss-lab').textContent = cs(calculo.inss_laboral);
+                document.getElementById('prev-ir').textContent = cs(calculo.ir_retencion);
+                document.getElementById('prev-neto').textContent = cs(calculo.salario_neto);
+                panel.style.display = 'block';
+            } catch (e) {
+                if (solicitud === _previewSolicitud) mostrarNotificacionRRHH(e.message, 'error');
+            }
         }
 
         // =========================================================================
@@ -5026,7 +5036,7 @@
         async function eliminarNomina(id) {
             const confirmado = await confirmarAccion({
                 titulo: '¿Eliminar esta nómina?',
-                texto: 'Se revertirán los días de vacaciones acumulados para los empleados. Esta acción es irreversible.',
+                texto: 'Se revertirán las vacaciones acumuladas y se registrará la reversión contable. No se permite si hay pagos confirmados o vacaciones ya consumidas.',
                 icono: 'warning',
                 textoConfirmar: 'Sí, eliminar nómina',
                 textoCancelar: 'Cancelar',
@@ -5094,7 +5104,7 @@
                         <td><strong>${d.empleado}</strong></td><td>${d.cargo || '—'}</td>
                         <td>${cs(salContrato)}</td>
                         <td>${badgeAjustes}</td>
-                        <td style="font-weight:600;">${cs(d.salario_base)}</td>
+                        <td style="font-weight:600;">${cs(d.salario_base + (d.ingresos_extra || 0))}${d.ingresos_extra ? `<br><small>Incluye extras: ${cs(d.ingresos_extra)}</small>` : ''}</td>
                         <td style="color:#ef4444;">${cs(d.inss_laboral)}</td>
                         <td style="color:#ef4444;">${cs(d.ir)}</td>
                         <td style="color:#22c55e;font-weight:700;">${cs(d.neto_pagar)}</td>
@@ -5508,7 +5518,7 @@
     <!-- Script Principal SPA del Sistema -->
     <script src="{{ url_for('static', filename='js/main.js') }}?v=5.3"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
-    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.3"></script>
+    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.4"></script>
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
     <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=2.0"></script>
     <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>

@@ -1750,7 +1750,9 @@ async function cargarLiquidacionesLaborales() {
                 <td><code>${l.codigo}</code></td>
                 <td><strong>${l.empleado}</strong><br><small class="text-muted">${l.cargo || '—'}</small></td>
                 <td>${l.motivo_salida}</td>
-                <td>${l.antiguedad_anios}a ${l.antiguedad_meses}m ${l.antiguedad_dias}d</td>
+                <td>${[l.antiguedad_anios, l.antiguedad_meses, l.antiguedad_dias].every(v => v !== null && v !== undefined)
+                    ? `${l.antiguedad_anios} años, ${l.antiguedad_meses} meses, ${l.antiguedad_dias} días`
+                    : 'No registrada'}</td>
                 <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${cs(l.neto_a_pagar)}</td>
                 <td><span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e;">${l.estado}</span></td>
                 <td>
@@ -1933,30 +1935,166 @@ async function cargarCapacitacionesHigiene() {
     } catch (e) {}
 }
 
+let _inspeccionesCache = [];
+
 async function cargarInspeccionesHigiene() {
     try {
         const res = await fetch('/api/rrhh/higiene/inspecciones');
         const data = await res.json();
+        _inspeccionesCache = Array.isArray(data) ? data : [];
         const tbody = document.getElementById('tbody-higiene-inspecciones');
         if (!tbody) return;
-        tbody.innerHTML = data.map(i => `
+
+        if (_inspeccionesCache.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No hay inspecciones registradas.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = _inspeccionesCache.map(i => {
+            const estado = i.estado || i.resultado || 'Aprobada';
+            const isOk = (estado === 'Aprobada' || estado === 'Conforme');
+            const bgBadge = isOk ? 'rgba(34,197,94,0.15)' : (estado === 'Observada' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)');
+            const colorBadge = isOk ? '#22c55e' : (estado === 'Observada' ? '#f59e0b' : '#ef4444');
+            const obs = i.observaciones || i.observaciones_detectadas || 'Instalaciones en orden';
+            const med = i.acciones_correctivas || i.medidas_correctivas || 'Ninguna requerida';
+
+            return `
             <tr>
-                <td>${i.fecha_inspeccion}</td>
-                <td><strong>${i.inspector}</strong></td>
-                <td><span class="badge" style="background:${i.resultado === 'Aprobada' ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)'}; color:${i.resultado === 'Aprobada' ? '#22c55e' : '#f59e0b'}; font-weight:700;">${i.resultado}</span></td>
-                <td>${i.observaciones_detectadas || 'Instalaciones en orden'}</td>
-                <td>${i.medidas_correctivas || 'Ninguna requerida'}</td>
+                <td>${i.fecha_inspeccion || ''}</td>
+                <td><strong>${i.inspector || ''}</strong></td>
+                <td><span class="badge" style="background:${bgBadge}; color:${colorBadge}; font-weight:700;">${estado}</span></td>
+                <td>${obs}</td>
+                <td>${med}</td>
+                <td style="text-align:center;">
+                    <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
+                        <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="editarInspeccionHigiene(${i.id})" title="Editar"><i class="ph-bold ph-pencil"></i> Editar</button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="eliminarInspeccionHigiene(${i.id})" title="Borrar"><i class="ph-bold ph-trash"></i> Borrar</button>
+                    </div>
+                </td>
             </tr>
-        `).join('');
-    } catch (e) {}
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Error cargando inspecciones:', e);
+    }
 }
 
 function abrirModalInspeccion6Puntos() {
+    const idEl = document.getElementById('insp-id');
+    if (idEl) idEl.value = '';
+
+    const titleEl = document.getElementById('modal-inspeccion-higiene-title');
+    if (titleEl) titleEl.innerHTML = '<i class="ph-bold ph-shield-check"></i> Inspección Preventiva de 6 Puntos (Ley 618)';
+    const btnText = document.getElementById('btn-submit-inspeccion-text');
+    if (btnText) btnText.textContent = 'Registrar Dictamen de Inspección';
+
+    const fechaEl = document.getElementById('insp-fecha');
+    if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
+
+    const inspectorEl = document.getElementById('insp-inspector');
+    if (inspectorEl) inspectorEl.value = '';
+
+    ['chk-estanterias', 'chk-pasillos', 'chk-extintores', 'chk-senalizacion', 'chk-orden', 'chk-salidas'].forEach(chkId => {
+        const el = document.getElementById(chkId);
+        if (el) el.checked = true;
+    });
+
+    const obsEl = document.getElementById('insp-observaciones');
+    if (obsEl) obsEl.value = '';
+    const medEl = document.getElementById('insp-medidas');
+    if (medEl) medEl.value = '';
+
     openModal('modal-inspeccion-higiene');
+}
+
+async function editarInspeccionHigiene(id) {
+    let item = _inspeccionesCache.find(x => x.id === id);
+    if (!item) {
+        try {
+            const res = await fetch(`/api/rrhh/higiene/inspecciones/${id}`);
+            if (res.ok) item = await res.json();
+        } catch (e) {}
+    }
+    if (!item) {
+        Swal.fire('Error', 'No se encontró la inspección para editar.', 'error');
+        return;
+    }
+
+    const idEl = document.getElementById('insp-id');
+    if (idEl) idEl.value = item.id;
+
+    const titleEl = document.getElementById('modal-inspeccion-higiene-title');
+    if (titleEl) titleEl.innerHTML = `<i class="ph-bold ph-pencil-simple"></i> Editar Inspección #${item.id}`;
+    const btnText = document.getElementById('btn-submit-inspeccion-text');
+    if (btnText) btnText.textContent = 'Guardar Cambios';
+
+    const fechaEl = document.getElementById('insp-fecha');
+    if (fechaEl) fechaEl.value = item.fecha_inspeccion || '';
+
+    const inspectorEl = document.getElementById('insp-inspector');
+    if (inspectorEl) inspectorEl.value = item.inspector || '';
+
+    // Set checkboxes based on safety points
+    if (document.getElementById('chk-estanterias')) {
+        document.getElementById('chk-estanterias').checked = item.estanterias_seguras !== false && item.estanterias_seguras !== 0;
+    }
+    if (document.getElementById('chk-pasillos')) {
+        document.getElementById('chk-pasillos').checked = item.pasillos_despejados !== false && item.pasillos_despejados !== 0;
+    }
+    if (document.getElementById('chk-extintores')) {
+        document.getElementById('chk-extintores').checked = item.extintores_adecuados !== false && item.extintores_adecuados !== 0;
+    }
+    if (document.getElementById('chk-senalizacion')) {
+        document.getElementById('chk-senalizacion').checked = item.area_caja_segura !== false && item.area_caja_segura !== 0;
+    }
+    if (document.getElementById('chk-orden')) {
+        document.getElementById('chk-orden').checked = item.repuestos_ordenados !== false && item.repuestos_ordenados !== 0;
+    }
+    if (document.getElementById('chk-salidas')) {
+        document.getElementById('chk-salidas').checked = item.salidas_emergencia_libres !== false && item.salidas_emergencia_libres !== 0;
+    }
+
+    const obsEl = document.getElementById('insp-observaciones');
+    if (obsEl) obsEl.value = item.observaciones || item.observaciones_detectadas || '';
+    const medEl = document.getElementById('insp-medidas');
+    if (medEl) medEl.value = item.acciones_correctivas || item.medidas_correctivas || '';
+
+    openModal('modal-inspeccion-higiene');
+}
+
+async function eliminarInspeccionHigiene(id) {
+    const confirm = await Swal.fire({
+        title: '¿Eliminar Inspección?',
+        text: '¿Está seguro de que desea eliminar este registro de inspección de seguridad?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await fetch(`/api/rrhh/higiene/inspecciones/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            Swal.fire('Eliminada', data.mensaje || 'La inspección ha sido eliminada exitosamente.', 'success');
+            cargarInspeccionesHigiene();
+        } else {
+            Swal.fire('Error', data.error || 'No se pudo eliminar la inspección.', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error', 'No se pudo procesar la solicitud de eliminación.', 'error');
+    }
 }
 
 async function guardarInspeccion6Puntos(e) {
     if (e) e.preventDefault();
+    const id = document.getElementById('insp-id') ? document.getElementById('insp-id').value : '';
     const est = document.getElementById('chk-estanterias').checked;
     const pas = document.getElementById('chk-pasillos').checked;
     const ext = document.getElementById('chk-extintores').checked;
@@ -1965,27 +2103,43 @@ async function guardarInspeccion6Puntos(e) {
     const sal = document.getElementById('chk-salidas').checked;
 
     const conformes = [est, pas, ext, sen, ord, sal].filter(Boolean).length;
-    const resultado = conformes >= 5 ? 'Aprobada' : 'Observada';
+    const resultado = conformes >= 5 ? 'Aprobada' : (conformes >= 4 ? 'Observada' : 'Crítica');
 
+    const fecha = document.getElementById('insp-fecha') ? document.getElementById('insp-fecha').value : '';
+    const inspector = document.getElementById('insp-inspector') ? document.getElementById('insp-inspector').value.trim() : '';
     const obs = document.getElementById('insp-observaciones').value.trim();
     const med = document.getElementById('insp-medidas').value.trim();
 
+    const payload = {
+        fecha_inspeccion: fecha || undefined,
+        inspector: inspector || undefined,
+        pasillos_despejados: pas,
+        estanterias_seguras: est,
+        repuestos_ordenados: ord,
+        extintores_adecuados: ext,
+        salidas_emergencia_libres: sal,
+        area_caja_segura: sen,
+        estado: resultado,
+        observaciones: obs || `Puntos aprobados: ${conformes}/6.`,
+        acciones_correctivas: med || (conformes < 6 ? 'Subsanar puntos observados en un plazo de 72 horas.' : 'Mantener condiciones preventivas actuales.')
+    };
+
+    const url = id ? `/api/rrhh/higiene/inspecciones/${id}` : '/api/rrhh/higiene/inspecciones';
+    const method = id ? 'PUT' : 'POST';
+
     try {
-        const res = await fetch('/api/rrhh/higiene/inspecciones', {
-            method: 'POST',
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                area: 'Tienda y Bodega de Repuestos',
-                tipo_inspeccion: 'Inspección Periódica Integral de 6 Puntos',
-                resultado: resultado,
-                observaciones: `Puntos aprobados: ${conformes}/6. ${obs}`,
-                medidas_correctivas: med || (conformes < 6 ? 'Subsanar puntos observados en un plazo de 72 horas.' : 'Mantener condiciones preventivas actuales.')
-            })
+            body: JSON.stringify(payload)
         });
-        if (res.ok) {
-            Swal.fire('Inspección Registrada', `Resultado: ${resultado} (${conformes}/6 puntos aprobados)`, 'success');
+        const data = await res.json();
+        if (res.ok && data.success) {
+            Swal.fire(id ? 'Inspección Actualizada' : 'Inspección Registrada', data.mensaje || `Resultado: ${resultado} (${conformes}/6 puntos aprobados)`, 'success');
             closeModal('modal-inspeccion-higiene');
             cargarInspeccionesHigiene();
+        } else {
+            Swal.fire('Error', data.error || 'No se pudo guardar la inspección.', 'error');
         }
     } catch (e) {
         Swal.fire('Error', 'No se pudo guardar la inspección.', 'error');
@@ -2028,6 +2182,7 @@ async function cargarParametrosLaborales() {
     try {
         const res = await fetch('/api/rrhh/parametros');
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudieron cargar los parámetros.');
         const tbody = document.getElementById('tbody-parametros-laborales');
         if (!tbody) return;
 
@@ -2045,7 +2200,9 @@ async function cargarParametrosLaborales() {
                 </td>
             </tr>
         `).join('');
-    } catch (e) {}
+    } catch (e) {
+        Swal.fire('Error', e.message || 'No se pudieron cargar los parámetros.', 'error');
+    }
 }
 
 async function editarParametroModal(codigo, nombre, valorActual, unidad) {
@@ -2066,12 +2223,14 @@ async function editarParametroModal(codigo, nombre, valorActual, unidad) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ valor: parseFloat(nuevoValor) })
             });
+            const resultado = await res.json();
+            if (!res.ok) throw new Error(resultado.error || 'No se pudo actualizar el parámetro.');
             if (res.ok) {
                 Swal.fire('Parámetro Actualizado', `El valor ahora es ${nuevoValor} ${unidad}`, 'success');
                 cargarParametrosLaborales();
             }
         } catch (e) {
-            Swal.fire('Error', 'No se pudo actualizar el parámetro.', 'error');
+            Swal.fire('Error', e.message || 'No se pudo actualizar el parámetro.', 'error');
         }
     }
 }
@@ -2110,6 +2269,8 @@ window.cargarEppHigiene = cargarEppHigiene;
 window.cargarCapacitacionesHigiene = cargarCapacitacionesHigiene;
 window.cargarInspeccionesHigiene = cargarInspeccionesHigiene;
 window.abrirModalInspeccion6Puntos = abrirModalInspeccion6Puntos;
+window.editarInspeccionHigiene = editarInspeccionHigiene;
+window.eliminarInspeccionHigiene = eliminarInspeccionHigiene;
 window.guardarInspeccion6Puntos = guardarInspeccion6Puntos;
 window.cargarMarcoLegal = cargarMarcoLegal;
 window.cargarParametrosLaborales = cargarParametrosLaborales;
@@ -2139,12 +2300,20 @@ window.toggleDemandaView = toggleDemandaView;
 
 // Escuchar cambios de pestaña general de la barra lateral
 document.addEventListener('DOMContentLoaded', () => {
-    // Si RRHH ya está activo o al hacer clic en él
-    document.querySelectorAll('[data-tab="tab-rrhh"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            setTimeout(() => { initRrhhCorteVTab('all'); }, 200);
+    // Etiquetas para leer las tablas como fichas en móvil, también tras cada carga.
+    const rrhh = document.getElementById('tab-rrhh');
+    if (rrhh) {
+        const etiquetarTablas = () => rrhh.querySelectorAll('.data-table').forEach(table => {
+            const labels = Array.from(table.querySelectorAll('thead th'), th => th.textContent.trim());
+            table.querySelectorAll('tbody tr').forEach(row => {
+                Array.from(row.cells).forEach((cell, index) => {
+                    if (cell.colSpan === 1) cell.dataset.label = labels[index] || '';
+                });
+            });
         });
-    });
+        etiquetarTablas();
+        new MutationObserver(etiquetarTablas).observe(rrhh, { childList: true, subtree: true });
+    }
 
     // Si Reportes ya está activo o al hacer clic en él
     document.querySelectorAll('[data-tab="tab-reportes"]').forEach(btn => {
@@ -2157,7 +2326,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Disparar carga inicial por si se carga directamente en tab-rrhh o tab-reportes
     const tabRrhh = document.getElementById('tab-rrhh');
     if (tabRrhh && tabRrhh.classList.contains('active')) {
-        setTimeout(() => { initRrhhCorteVTab('all'); }, 300);
+        setTimeout(() => { initRrhhCorteVTab('rrhh-directorio'); }, 300);
     }
     const tabReportes = document.getElementById('tab-reportes');
     if (tabReportes && tabReportes.classList.contains('active')) {

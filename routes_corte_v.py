@@ -2,12 +2,21 @@ import os
 from datetime import datetime, date
 from flask import request, jsonify, render_template, session
 from functools import wraps
+from rrhh_service import ROLES_RRHH, normalizar_parametro, parametros_calculo, validar_parametro
 
-ROLES_RRHH = ['Administrador', 'Responsable de Recursos Humanos', 'Gerente Administrativo y Financiero']
 ROLES_ADMIN_GERENCIA = ['Administrador', 'Contador', 'Gerente Administrativo y Financiero', 'Gerente de Operaciones']
 
 def register_corte_v_routes(app):
     from app import execute_query, get_db_connection, login_required, role_required
+
+    @app.before_request
+    def proteger_datos_rrhh():
+        if request.path.startswith(('/api/rrhh/', '/rrhh/')):
+            user = session.get('user')
+            if not user:
+                return jsonify({'error': 'Inicia sesión para acceder a Recursos Humanos.'}), 401
+            if user.get('rol') not in ROLES_RRHH:
+                return jsonify({'error': 'No tienes permisos para acceder a Recursos Humanos.'}), 403
 
     # =========================================================================
     # 1. RECLUTAMIENTO: SOLICITUDES DE EMPLEO (RF95, RF96)
@@ -425,7 +434,13 @@ def register_corte_v_routes(app):
             data = request.json or {}
             emp_id = int(data.get('empleado_id', 0))
             f_he = data.get('fecha', str(date.today()))
-            cant_horas = float(data.get('cantidad_horas', 0))
+            try:
+                from math import isfinite
+                cant_horas = float(data.get('cantidad_horas', 0))
+                if not isfinite(cant_horas) or cant_horas <= 0:
+                    raise ValueError()
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Las horas deben ser un número positivo.'}), 400
             motivo = data.get('motivo', 'Atención por alta demanda / descarga de mercadería').strip()
 
             emp = execute_query("SELECT salario_base FROM empleados WHERE id = ?", (emp_id,), fetchone=True)
@@ -435,18 +450,20 @@ def register_corte_v_routes(app):
             salario = float(emp['salario_base'])
             valor_hora = round(salario / 240.0, 2)  # 30 días * 8 horas = 240 horas mensuales
             # Ley 185 Art. 62: Las horas extras se remuneran con un 100% de recargo (doble del valor ordinario)
-            monto_total = round(cant_horas * valor_hora * 2.0, 2)
+            parametros = parametros_calculo(execute_query('SELECT * FROM parametros_laborales', fetchall=True))
+            recargo = parametros.get('HORAS_EXTRAS_RECARGO', 100)
+            monto_total = round(cant_horas * valor_hora * (1 + recargo / 100), 2)
             autorizado = session.get('user', {}).get('username', 'admin')
 
             execute_query("""
                 INSERT INTO horas_extras 
                 (empleado_id, fecha, cantidad_horas, motivo, valor_hora_ordinaria, recargo_porcentaje, monto_total, estado, autorizado_por)
-                VALUES (?, ?, ?, ?, ?, 100.0, ?, 'Aprobada', ?)
-            """, (emp_id, f_he, cant_horas, motivo, valor_hora, monto_total, autorizado), commit=True)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'Aprobada', ?)
+            """, (emp_id, f_he, cant_horas, motivo, valor_hora, recargo, monto_total, autorizado), commit=True)
 
             return jsonify({
                 "success": True, 
-                "mensaje": f"{cant_horas} horas extras registradas y aprobadas (C$ {monto_total:,.2f} al 100% de recargo legal)."
+                "mensaje": f"{cant_horas} horas extras registradas y aprobadas (C$ {monto_total:,.2f}, recargo {recargo:g}%)."
             }), 201
 
     # =========================================================================
@@ -457,8 +474,9 @@ def register_corte_v_routes(app):
     def api_liquidaciones_laborales():
         if request.method == 'GET':
             query = """
-                SELECT l.id, l.codigo, l.empleado_id, e.nombre_completo AS empleado,
+                SELECT l.id, l.codigo, l.empleado_id, e.nombre_completo AS empleado, e.cargo,
                        l.fecha_ingreso, l.fecha_salida, l.motivo_salida, l.salario_base,
+                       l.antiguedad_anios, l.antiguedad_meses, l.antiguedad_dias,
                        l.total_percepciones, l.deducciones_totales, l.neto_a_pagar,
                        l.estado, l.fecha_elaboracion
                 FROM liquidaciones_laborales l
@@ -674,7 +692,11 @@ def register_corte_v_routes(app):
             rows = execute_query("SELECT * FROM higiene_inspecciones ORDER BY id DESC", fetchall=True)
             for r in rows:
                 r['fecha_inspeccion'] = str(r['fecha_inspeccion'])[:10]
-                r['porcentaje_cumplimiento'] = float(r['porcentaje_cumplimiento'])
+                if r.get('porcentaje_cumplimiento') is not None:
+                    r['porcentaje_cumplimiento'] = float(r['porcentaje_cumplimiento'])
+                r['resultado'] = r.get('estado') or 'Aprobada'
+                r['observaciones_detectadas'] = r.get('observaciones') or ''
+                r['medidas_correctivas'] = r.get('acciones_correctivas') or ''
             return jsonify(rows)
 
         if request.method == 'POST':
@@ -682,8 +704,8 @@ def register_corte_v_routes(app):
                 return jsonify({"error": "No tienes permisos."}), 403
 
             data = request.json or {}
-            f_insp = data.get('fecha_inspeccion', str(date.today()))
-            inspector = data.get('inspector', session.get('user', {}).get('nombre', 'Inspector'))
+            f_insp = data.get('fecha_inspeccion') or str(date.today())
+            inspector = data.get('inspector') or session.get('user', {}).get('nombre', 'Inspector')
             p1 = 1 if data.get('pasillos_despejados') else 0
             p2 = 1 if data.get('estanterias_seguras') else 0
             p3 = 1 if data.get('repuestos_ordenados') else 0
@@ -691,11 +713,11 @@ def register_corte_v_routes(app):
             p5 = 1 if data.get('salidas_emergencia_libres') else 0
             p6 = 1 if data.get('area_caja_segura') else 0
             obs = data.get('observaciones', '')
-            acciones = data.get('acciones_correctivas', '')
+            acciones = data.get('acciones_correctivas') or data.get('medidas_correctivas', '')
 
             puntos_aprobados = p1 + p2 + p3 + p4 + p5 + p6
             porcentaje = round((puntos_aprobados / 6.0) * 100, 1)
-            estado = 'Aprobada' if puntos_aprobados == 6 else ('Observada' if puntos_aprobados >= 4 else 'Crítica')
+            estado = data.get('estado') or ('Aprobada' if puntos_aprobados == 6 else ('Observada' if puntos_aprobados >= 4 else 'Crítica'))
 
             execute_query("""
                 INSERT INTO higiene_inspecciones
@@ -709,6 +731,67 @@ def register_corte_v_routes(app):
                 "success": True, 
                 "mensaje": f"Inspección de 6 puntos guardada: {puntos_aprobados}/6 verificados ({porcentaje}% - Estado: {estado})."
             }), 201
+
+    @app.route('/api/rrhh/higiene/inspecciones/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+    @login_required
+    def api_higiene_inspeccion_detalle(id):
+        if request.method == 'GET':
+            row = execute_query("SELECT * FROM higiene_inspecciones WHERE id = ?", (id,), fetchone=True)
+            if not row:
+                return jsonify({"error": "Inspección no encontrada"}), 404
+            row['fecha_inspeccion'] = str(row['fecha_inspeccion'])[:10]
+            if row.get('porcentaje_cumplimiento') is not None:
+                row['porcentaje_cumplimiento'] = float(row['porcentaje_cumplimiento'])
+            row['resultado'] = row.get('estado') or 'Aprobada'
+            row['observaciones_detectadas'] = row.get('observaciones') or ''
+            row['medidas_correctivas'] = row.get('acciones_correctivas') or ''
+            return jsonify(row)
+
+        if session['user']['rol'] not in ROLES_RRHH:
+            return jsonify({"error": "No tienes permisos."}), 403
+
+        if request.method == 'DELETE':
+            row = execute_query("SELECT id FROM higiene_inspecciones WHERE id = ?", (id,), fetchone=True)
+            if not row:
+                return jsonify({"error": "Inspección no encontrada"}), 404
+            execute_query("DELETE FROM higiene_inspecciones WHERE id = ?", (id,), commit=True)
+            return jsonify({"success": True, "mensaje": "Inspección eliminada exitosamente."})
+
+        if request.method == 'PUT':
+            row = execute_query("SELECT * FROM higiene_inspecciones WHERE id = ?", (id,), fetchone=True)
+            if not row:
+                return jsonify({"error": "Inspección no encontrada"}), 404
+
+            data = request.json or {}
+            f_insp = data.get('fecha_inspeccion') or str(row['fecha_inspeccion'])[:10]
+            inspector = data.get('inspector') or row.get('inspector') or session.get('user', {}).get('nombre', 'Inspector')
+
+            p1 = 1 if data.get('pasillos_despejados') else 0
+            p2 = 1 if data.get('estanterias_seguras') else 0
+            p3 = 1 if data.get('repuestos_ordenados') else 0
+            p4 = 1 if data.get('extintores_adecuados') else 0
+            p5 = 1 if data.get('salidas_emergencia_libres') else 0
+            p6 = 1 if data.get('area_caja_segura') else 0
+            obs = data.get('observaciones', row.get('observaciones') or '')
+            acciones = data.get('acciones_correctivas') or data.get('medidas_correctivas') or row.get('acciones_correctivas') or ''
+
+            puntos_aprobados = p1 + p2 + p3 + p4 + p5 + p6
+            porcentaje = round((puntos_aprobados / 6.0) * 100, 1)
+            estado = data.get('estado') or ('Aprobada' if puntos_aprobados == 6 else ('Observada' if puntos_aprobados >= 4 else 'Crítica'))
+
+            execute_query("""
+                UPDATE higiene_inspecciones
+                SET fecha_inspeccion = ?, inspector = ?, pasillos_despejados = ?, estanterias_seguras = ?,
+                    repuestos_ordenados = ?, extintores_adecuados = ?, salidas_emergencia_libres = ?,
+                    area_caja_segura = ?, puntos_aprobados = ?, total_puntos = 6,
+                    porcentaje_cumplimiento = ?, observaciones = ?, acciones_correctivas = ?, estado = ?
+                WHERE id = ?
+            """, (f_insp, inspector, p1, p2, p3, p4, p5, p6, puntos_aprobados, porcentaje, obs, acciones, estado, id), commit=True)
+
+            return jsonify({
+                "success": True, 
+                "mensaje": f"Inspección #{id} actualizada correctamente: {puntos_aprobados}/6 verificados ({porcentaje}% - Estado: {estado})."
+            })
 
     @app.route('/api/rrhh/higiene/incidentes', methods=['GET', 'POST'])
     @login_required
@@ -877,29 +960,44 @@ def register_corte_v_routes(app):
         return jsonify(articulos)
 
     @app.route('/api/rrhh/parametros', methods=['GET', 'PUT'])
+    @app.route('/api/rrhh/parametros/<string:codigo>', methods=['PUT'])
     @login_required
-    def api_parametros_laborales():
+    def api_parametros_laborales(codigo=None):
         if request.method == 'GET':
             rows = execute_query("SELECT * FROM parametros_laborales ORDER BY id ASC", fetchall=True)
-            for r in rows:
-                r['valor'] = float(r['valor'])
-                r['fecha_vigencia'] = str(r['fecha_vigencia'])[:10]
-            return jsonify(rows)
+            return jsonify([normalizar_parametro(r) for r in rows])
 
         if request.method == 'PUT':
             if session['user']['rol'] not in ROLES_RRHH:
                 return jsonify({"error": "No tienes permisos para modificar parámetros legales."}), 403
 
             data = request.json or {}
-            clave = data.get('clave')
-            nuevo_valor = float(data.get('valor', 0))
+            codigo = codigo or data.get('codigo') or data.get('clave')
+            if not codigo:
+                return jsonify({'error': 'Indique el código del parámetro.'}), 400
+            rows = execute_query('SELECT * FROM parametros_laborales', fetchall=True)
+            row = next((r for r in rows if codigo in (r.get('codigo'), r.get('clave'), normalizar_parametro(r)['codigo'])), None)
+            if not row:
+                return jsonify({'error': 'Parámetro no encontrado.'}), 404
+            try:
+                nuevo_valor = validar_parametro(normalizar_parametro(row)['codigo'], data.get('valor'))
+            except (TypeError, ValueError) as exc:
+                return jsonify({'error': str(exc)}), 400
             usuario = session.get('user', {}).get('username', 'admin')
-
-            execute_query("""
+            clave_col = 'codigo' if 'codigo' in row else 'clave'
+            usuario_col = 'usuario_modificacion' if 'codigo' in row else 'usuario_modifico'
+            clave = row[clave_col]
+            valor_guardado = nuevo_valor
+            if clave_col == 'clave':
+                if clave in ('INSS_LABORAL', 'INSS_PATRONAL', 'INATEC_PATRONAL', 'AGUINALDO_PROV'):
+                    valor_guardado /= 100
+                elif clave == 'RECARGO_HORA_EXTRA':
+                    valor_guardado = 1 + nuevo_valor / 100
+            execute_query(f"""
                 UPDATE parametros_laborales
-                SET valor = ?, usuario_modifico = ?, fecha_vigencia = GETDATE()
-                WHERE clave = ?
-            """, (nuevo_valor, usuario, clave), commit=True)
+                SET valor = ?, {usuario_col} = ?, fecha_vigencia = GETDATE()
+                WHERE {clave_col} = ?
+            """, (valor_guardado, usuario, clave), commit=True)
             return jsonify({"success": True, "mensaje": f"Parámetro {clave} actualizado a {nuevo_valor}."})
 
     @app.route('/api/rrhh/calendario-obligaciones', methods=['GET', 'PATCH'])

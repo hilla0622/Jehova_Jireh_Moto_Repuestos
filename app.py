@@ -1,5 +1,6 @@
 import os
 import pyodbc
+from datetime import datetime, timezone, timedelta
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -10,6 +11,9 @@ from reportes_service import (
     comparar_dos_periodos,
     generar_excel_informe_workbook
 )
+
+def obtener_fecha_hoy_nicaragua():
+    return datetime.now(timezone(timedelta(hours=-6))).date().isoformat()
 
 app = Flask(__name__, template_folder='Fronted/templates', static_folder='Fronted/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_super_secure')
@@ -2096,20 +2100,14 @@ def api_estado_resultados():
     if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     try:
-        start_date = request.args.get('start')
-        end_date = request.args.get('end')
+        hoy = obtener_fecha_hoy_nicaragua()
+        end_date = request.args.get('end') or hoy
+        start_date = request.args.get('start') or f"{end_date[:7]}-01"
+        if start_date > end_date:
+            start_date = min(start_date, end_date)
         
-        where_clause = ""
-        params = []
-        if start_date and end_date:
-            where_clause = "AND CAST(a.fecha AS DATE) >= ? AND CAST(a.fecha AS DATE) <= ?"
-            params.extend([start_date, end_date])
-        elif start_date:
-            where_clause = "AND CAST(a.fecha AS DATE) >= ?"
-            params.append(start_date)
-        elif end_date:
-            where_clause = "AND CAST(a.fecha AS DATE) <= ?"
-            params.append(end_date)
+        where_clause = "AND CAST(a.fecha AS DATE) >= ? AND CAST(a.fecha AS DATE) <= ?"
+        params = [start_date, end_date]
 
         query = f"""
             SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
@@ -2149,6 +2147,10 @@ def api_estado_resultados():
         utilidad_neta = utilidad_bruta - total_gastos
 
         return jsonify({
+            "periodo": {
+                "start": start_date,
+                "end": end_date
+            },
             "ingresos": ingresos,
             "total_ingresos": total_ingresos,
             "costos": costos,
@@ -2167,15 +2169,13 @@ def api_balance_general():
     if session['user']['rol'] not in ['Administrador', 'Contador', 'Gerente Administrativo y Financiero']:
         return jsonify({"error": "Acceso reservado a Administrador y Contador."}), 403
     try:
-        end_date = request.args.get('end')
+        hoy = obtener_fecha_hoy_nicaragua()
+        end_date = request.args.get('end') or hoy
         
-        where_clause_a = ""
-        params_a = []
-        if end_date:
-            where_clause_a = "AND CAST(a.fecha AS DATE) <= ?"
-            params_a.append(end_date)
+        where_clause_a = "AND CAST(a.fecha AS DATE) <= ?"
+        params_a = [end_date]
 
-        # Calcular Utilidad Neta primero (para agregarla al Patrimonio)
+        # Calcular Utilidad Neta acumulada hasta la fecha de corte (para integrarla en Patrimonio)
         query_er = f"""
             SELECT c.clasificacion, c.naturaleza, SUM(m.debe) AS d, SUM(m.haber) AS h
             FROM cuentas_contables c
@@ -2212,7 +2212,7 @@ def api_balance_general():
         
         total_activos = 0
         total_pasivos = 0
-        total_patrimonio = utilidad_neta # Inicializamos con la utilidad del ejercicio
+        total_patrimonio = utilidad_neta # Inicializamos con la utilidad acumulada
         
         for f in filas_bg:
             debe = float(f['d'] or 0)
@@ -2241,9 +2241,10 @@ def api_balance_general():
                 patrimonio.append(obj)
                 total_patrimonio += saldo
 
-        patrimonio.append({"cuenta": "Utilidad neta del período", "saldo": utilidad_neta})
+        patrimonio.append({"cuenta": "Utilidad neta acumulada a la fecha", "saldo": utilidad_neta})
 
         return jsonify({
+            "fecha_corte": end_date,
             "activos": {
                 "corrientes": activos_corrientes,
                 "no_corrientes": activos_no_corrientes,

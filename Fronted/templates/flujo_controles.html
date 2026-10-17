@@ -1,0 +1,65 @@
+<details class="card flujo-controles" ontoggle="if(this.open) cargarConfiguracionFlujo()" style="margin-bottom:1rem;padding:1rem">
+    <summary style="cursor:pointer;font-weight:700">Configuración y revisión del contador</summary>
+    <p>Configure las cuentas, revise los asientos pendientes y documente los ajustes antes de guardar el corte.</p>
+    <div id="flujo-control-mensaje" role="status" aria-live="polite"></div>
+    <details style="margin:1rem 0">
+        <summary>Etiquetas de cuentas y reglas por tipo de transacción</summary>
+        <form onsubmit="guardarEtiquetaFlujo(event)" style="display:grid;gap:.6rem;margin:1rem 0">
+            <label>Cuenta <select id="flujo-config-cuenta" class="form-control" onchange="mostrarEtiquetaFlujo()" required></select></label>
+            <label>Etiqueta <select id="flujo-config-etiqueta" class="form-control"><option value="Operacion">Operación</option><option value="Inversion">Inversión</option><option value="Financiamiento">Financiamiento</option><option value="Efectivo_Equivalente">Efectivo y equivalentes</option></select></label>
+            <label><input type="checkbox" id="flujo-config-nomonetario"> Ajustar automáticamente este ingreso/gasto sin efectivo (depreciación, amortización o provisión)</label>
+            <label>Justificación <input id="flujo-config-motivo" class="form-control" required maxlength="1000"></label>
+            <button class="btn btn-primary" type="submit">Guardar etiqueta</button>
+        </form>
+        <form onsubmit="guardarReglaFlujo(event)" style="display:grid;gap:.6rem;margin:1rem 0">
+            <label>Tipo de transacción (módulo de origen) <select id="flujo-regla-origen" class="form-control" required></select></label>
+            <label>Actividad <select id="flujo-regla-actividad" class="form-control"><option value="">Usar etiquetas de las cuentas</option><option value="Operacion">Operación</option><option value="Inversion">Inversión</option><option value="Financiamiento">Financiamiento</option></select></label>
+            <p>Una regla de tipo se aplica a sus cobros y pagos. Las distribuciones manuales tienen prioridad.</p>
+            <label>Justificación <input id="flujo-regla-motivo" class="form-control" required maxlength="1000"></label>
+            <button class="btn btn-primary" type="submit">Guardar regla</button>
+        </form>
+    </details>
+    <details style="margin:1rem 0">
+        <summary>Revisar un asiento, distribuir efectivo y registrar ajustes</summary>
+        <form onsubmit="consultarAsientoFlujo(event)" style="display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap">
+            <label>ID del asiento <input id="flujo-asiento-id" type="number" min="1" required class="form-control"></label>
+            <button type="submit" class="btn btn-secondary">Consultar asiento</button>
+        </form>
+        <div id="flujo-asiento-detalle" style="overflow-x:auto"></div>
+        <div id="flujo-asiento-herramientas" hidden>
+            <form onsubmit="guardarDistribucionFlujo(event)" style="margin:1rem 0">
+                <p>Distribuya únicamente el efectivo: entradas positivas y salidas negativas. Excluya transferencias internas y operaciones a crédito.</p>
+                <div id="flujo-distribucion-filas"></div>
+                <button type="button" class="btn btn-secondary" onclick="agregarDistribucionFlujo()">Añadir actividad</button>
+                <label>Justificación <input id="flujo-distribucion-motivo" class="form-control" required maxlength="1000"></label>
+                <button type="submit" class="btn btn-primary">Aplicar distribución</button>
+            </form>
+            <form onsubmit="guardarAjusteFlujo(event)" style="display:grid;gap:.6rem;margin:1rem 0">
+                <strong>Ajuste del método indirecto</strong>
+                <label>Movimiento de referencia <select id="flujo-ajuste-movimiento" class="form-control" required></select></label>
+                <label>Ajuste total sobre la utilidad (positivo suma; negativo resta) <input id="flujo-ajuste-importe" type="number" step="0.01" value="0" required class="form-control"></label>
+                <p>Este importe sustituye el ajuste automático del movimiento. Cero lo elimina. No modifica el mayor ni duplica la depreciación.</p>
+                <label><input id="flujo-ajuste-restaurar" type="checkbox"> Restaurar cálculo automático</label>
+                <label>Justificación <input id="flujo-ajuste-motivo" class="form-control" required maxlength="1000"></label>
+                <button type="submit" class="btn btn-primary">Registrar ajuste</button>
+            </form>
+            <details>
+                <summary>Corregir el registro contable de este comprobante</summary>
+                <p>Ingrese cómo debe quedar el comprobante completo. Se registrará un asiento por las diferencias, conservando el original. Después, confirme la distribución de efectivo del asiento original. Esto corrige el mayor; no modifica la factura comercial ni el inventario.</p>
+                <form onsubmit="guardarCorreccionFlujo(event)">
+                    <div id="flujo-correccion-filas"></div>
+                    <button type="button" class="btn btn-secondary" onclick="agregarCorreccionFlujo()">Añadir línea</button>
+                    <label>Fecha del ajuste <input id="flujo-correccion-fecha" type="date" required class="form-control"></label>
+                    <label>Justificación <input id="flujo-correccion-motivo" required maxlength="1000" class="form-control"></label>
+                    <button type="submit" class="btn btn-primary">Registrar corrección contable</button>
+                </form>
+            </details>
+        </div>
+    </details>
+    <details style="margin:1rem 0">
+        <summary>Cortes guardados y auditoría</summary>
+        <button type="button" class="btn btn-secondary" onclick="cargarHistorialFlujo()">Cargar historial</button>
+        <div id="flujo-cortes-lista"></div>
+        <div id="flujo-auditoria-lista" style="max-height:25rem;overflow:auto"></div>
+    </details>
+</details>

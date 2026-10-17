@@ -8,6 +8,9 @@ let metodoFlujoActual = 'Directo';
 let flujoActualData = null;
 let partidasEnTransito = [];
 let conciliacionActualData = null;
+let solicitudFlujo = 0;
+let solicitudConciliacion = 0;
+function escapeFlujo(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // Formateador de moneda en Córdobas (C$)
 function formatCordoba(val) {
@@ -46,6 +49,8 @@ async function loadFlujoEfectivo(metodo = null) {
     const container = document.getElementById('reporte-flujo-efectivo');
     if (!container) return;
 
+    const solicitud = ++solicitudFlujo;
+    flujoActualData = null;
     try {
         const finIni = document.getElementById('fin-fecha-inicio');
         const finFin = document.getElementById('fin-fecha-fin');
@@ -65,9 +70,10 @@ async function loadFlujoEfectivo(metodo = null) {
 
         const resp = await fetch(url);
         const data = await resp.json();
+        if (solicitud !== solicitudFlujo) return;
 
         if (data.error) {
-            container.innerHTML = `<div class="alert alert-danger" style="padding: 1rem; color: #ef4444; background: rgba(239, 68, 68, 0.1); border-radius: 6px;">${data.error}</div>`;
+            container.innerHTML = `<div class="alert alert-danger" style="padding: 1rem; color: #ef4444; background: rgba(239, 68, 68, 0.1); border-radius: 6px;">${escapeFlujo(data.error)}</div>`;
             return;
         }
 
@@ -88,7 +94,9 @@ function renderFlujoEfectivoHTML(data, container) {
         subtituloPeriodo = `Al ${data.periodo.end}`;
     }
 
-    let html = `
+    const avisos = (data.pendientes_clasificacion || []).map(p => `Asiento ${p.asiento_id}: ${p.motivo}`);
+    if (data.metodo === 'Indirecto' && data.diferencia_entre_metodos !== 0) avisos.push('Diferencia con el método directo: ' + formatCordoba(data.diferencia_entre_metodos) + '. Revise los ajustes y el capital de trabajo.');
+    let html = (avisos.length ? `<div role="alert" style="padding:1rem;background:#fff3cd;color:#664d03;margin-bottom:1rem"><strong>Reporte pendiente de revisión</strong><ul>${avisos.map(a => `<li>${escapeFlujo(a)}</li>`).join('')}</ul></div>` : '') + `
         <div style="max-width: 950px; margin: 0 auto; background: var(--bg-color); padding: 2.5rem; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); border: 1px solid var(--border-color);">
             <!-- MEMBRETE COMERCIAL OFICIAL -->
             <div style="text-align: center; border-bottom: 2px solid #059669; padding-bottom: 1.25rem; margin-bottom: 2rem;">
@@ -123,15 +131,34 @@ function renderFlujoEfectivoHTML(data, container) {
 
     if (data.metodo === 'Directo') {
         if (data.actividades_operacion && data.actividades_operacion.length > 0) {
-            data.actividades_operacion.forEach(item => {
+            data.actividades_operacion.forEach((item, idx) => {
                 const esEntrada = item.importe >= 0;
+                const tieneDesglose = item.movimientos && item.movimientos.length > 1;
+                const rowId = `dir_op_row_${idx}`;
                 html += `
                     <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
                         <td style="padding: 0.5rem 1rem 0.5rem 2rem;">
                             <i class="ph-bold ${esEntrada ? 'ph-arrow-down-left text-green-600' : 'ph-arrow-up-right text-red-500'}" style="margin-right: 6px;"></i>
-                            ${item.concepto}
+                            <span style="font-weight: 500;">${escapeFlujo(item.concepto)}</span>
+                            ${tieneDesglose ? `
+                                <a href="javascript:void(0)" onclick="toggleDesgloseWk('${rowId}')" style="margin-left: 0.6rem; font-size: 0.75rem; color: #2563eb; text-decoration: none; font-weight: 500; background: rgba(37,99,235,0.08); padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px;">
+                                    <span id="btn_${rowId}">&#9656; Ver ${item.movimientos.length} transacciones</span>
+                                </a>
+                            ` : ''}
+                            ${tieneDesglose ? `
+                                <div id="${rowId}" style="display: none; margin-top: 0.4rem; padding: 0.5rem 0.75rem; background: rgba(0,0,0,0.02); border-left: 3px solid #059669; border-radius: 4px; font-size: 0.8rem;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        ${item.movimientos.map(m => `
+                                            <tr style="border-bottom: 1px dashed rgba(0,0,0,0.06);">
+                                                <td style="padding: 3px 0; color: var(--text-muted);">${escapeFlujo(m.concepto)}</td>
+                                                <td class="text-right" style="padding: 3px 0; font-family: monospace; color: ${m.importe >= 0 ? '#059669' : '#dc2626'};">${formatCordoba(m.importe)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </table>
+                                </div>
+                            ` : ''}
                         </td>
-                        <td class="text-right" style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.95rem; font-weight: 500; color: ${esEntrada ? '#059669' : '#dc2626'};">
+                        <td class="text-right" style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.95rem; font-weight: 600; color: ${esEntrada ? '#059669' : '#dc2626'};">
                             ${formatCordoba(item.importe)}
                         </td>
                     </tr>
@@ -160,7 +187,7 @@ function renderFlujoEfectivoHTML(data, container) {
             ind.ajustes_no_monetarios.forEach(aj => {
                 html += `
                     <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
-                        <td style="padding: 0.45rem 1rem 0.45rem 3rem;">${aj.concepto}</td>
+                        <td style="padding: 0.45rem 1rem 0.45rem 3rem;">${escapeFlujo(aj.concepto)}</td>
                         <td class="text-right" style="padding: 0.45rem 0.75rem; font-family: monospace;">${formatCordoba(aj.importe)}</td>
                     </tr>
                 `;
@@ -174,11 +201,32 @@ function renderFlujoEfectivoHTML(data, container) {
             </tr>
         `;
         if (ind.cambios_capital_trabajo && ind.cambios_capital_trabajo.length > 0) {
-            ind.cambios_capital_trabajo.forEach(cw => {
+            ind.cambios_capital_trabajo.forEach((cw, idx) => {
+                const tieneDesglose = cw.movimientos && cw.movimientos.length > 1;
+                const rowId = `wk_row_${idx}`;
                 html += `
                     <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
-                        <td style="padding: 0.45rem 1rem 0.45rem 3rem;">${cw.descripcion}</td>
-                        <td class="text-right" style="padding: 0.45rem 0.75rem; font-family: monospace; color: ${cw.impacto >= 0 ? '#059669' : '#dc2626'};">
+                        <td style="padding: 0.5rem 1rem 0.5rem 3rem;">
+                            <span style="font-weight: 500;">${escapeFlujo(cw.descripcion)}</span>
+                            ${tieneDesglose ? `
+                                <a href="javascript:void(0)" onclick="toggleDesgloseWk('${rowId}')" style="margin-left: 0.6rem; font-size: 0.75rem; color: #2563eb; text-decoration: none; font-weight: 500; background: rgba(37,99,235,0.08); padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 3px;">
+                                    <span id="btn_${rowId}">&#9656; Ver ${cw.movimientos.length} asientos</span>
+                                </a>
+                            ` : ''}
+                            ${tieneDesglose ? `
+                                <div id="${rowId}" style="display: none; margin-top: 0.4rem; padding: 0.5rem 0.75rem; background: rgba(0,0,0,0.02); border-left: 3px solid #2563eb; border-radius: 4px; font-size: 0.8rem;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        ${cw.movimientos.map(m => `
+                                            <tr style="border-bottom: 1px dashed rgba(0,0,0,0.06);">
+                                                <td style="padding: 3px 0; color: var(--text-muted);">${escapeFlujo(m.descripcion)}</td>
+                                                <td class="text-right" style="padding: 3px 0; font-family: monospace; color: ${m.impacto >= 0 ? '#059669' : '#dc2626'};">${formatCordoba(m.impacto)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </table>
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td class="text-right" style="padding: 0.5rem 0.75rem; font-family: monospace; font-weight: 600; color: ${cw.impacto >= 0 ? '#059669' : '#dc2626'};">
                             ${formatCordoba(cw.impacto)}
                         </td>
                     </tr>
@@ -214,7 +262,7 @@ function renderFlujoEfectivoHTML(data, container) {
                 <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
                     <td style="padding: 0.5rem 1rem 0.5rem 2rem;">
                         <i class="ph-bold ${esEntrada ? 'ph-arrow-down-left text-green-600' : 'ph-arrow-up-right text-red-500'}" style="margin-right: 6px;"></i>
-                        ${item.concepto}
+                        ${escapeFlujo(item.concepto)}
                     </td>
                     <td class="text-right" style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.95rem; font-weight: 500; color: ${esEntrada ? '#059669' : '#dc2626'};">
                         ${formatCordoba(item.importe)}
@@ -252,7 +300,7 @@ function renderFlujoEfectivoHTML(data, container) {
                 <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
                     <td style="padding: 0.5rem 1rem 0.5rem 2rem;">
                         <i class="ph-bold ${esEntrada ? 'ph-arrow-down-left text-green-600' : 'ph-arrow-up-right text-red-500'}" style="margin-right: 6px;"></i>
-                        ${item.concepto}
+                        ${escapeFlujo(item.concepto)}
                     </td>
                     <td class="text-right" style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.95rem; font-weight: 500; color: ${esEntrada ? '#059669' : '#dc2626'};">
                         ${formatCordoba(item.importe)}
@@ -308,7 +356,7 @@ function renderFlujoEfectivoHTML(data, container) {
     // -------------------------------------------------------------------------
     // CARD DE CUADRATURA ESTRICTA CONTRA BALANCE GENERAL (RF102)
     // -------------------------------------------------------------------------
-    const cuadrado = data.esta_cuadrado;
+    const cuadrado = data.puede_guardar;
     html += `
         <div style="margin-top: 2rem; border-radius: 8px; padding: 1.5rem; border: 2px solid ${cuadrado ? '#10b981' : '#f59e0b'}; background: ${cuadrado ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.06)'};">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
@@ -323,7 +371,7 @@ function renderFlujoEfectivoHTML(data, container) {
                 </div>
                 <div style="text-align: right;">
                     <span style="display: inline-block; padding: 0.4rem 0.85rem; border-radius: 20px; font-weight: bold; font-size: 0.85rem; background: ${cuadrado ? '#10b981' : '#f59e0b'}; color: white;">
-                        ${cuadrado ? '✓ Cuadrado al Centavo' : 'Diferencia: ' + formatCordoba(data.diferencia_cuadratura)}
+                        ${cuadrado ? '✓ Cuadrado al Centavo' : 'Revisión pendiente. Diferencia: ' + formatCordoba(data.diferencia_cuadratura)}
                     </span>
                 </div>
             </div>
@@ -336,7 +384,7 @@ function renderFlujoEfectivoHTML(data, container) {
         data.desglose_efectivo.forEach(c => {
             html += `
                 <div style="background: var(--bg-body); padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">${c.codigo} &bull; ${c.nombre}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeFlujo(c.codigo)} &bull; ${escapeFlujo(c.nombre)}</div>
                     <div style="font-size: 1.1rem; font-weight: bold; font-family: monospace; color: var(--text-color); margin-top: 0.25rem;">
                         ${formatCordoba(c.saldo)}
                     </div>
@@ -363,14 +411,14 @@ function renderFlujoEfectivoHTML(data, container) {
         <div style="margin-top: 3.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; text-align: center;">
             <div>
                 <div style="border-top: 1.5px solid var(--text-color); padding-top: 0.6rem; width: 85%; margin: 0 auto;">
-                    <strong style="font-size: 0.95rem; color: var(--text-color); display: block;">Lic. Gerente Administrativo y Financiero</strong>
-                    <span style="font-size: 0.82rem; color: var(--text-muted);">Representante Legal &bull; Jehová Jireh Moto Repuestos</span>
+                    <strong style="font-size: 0.95rem; color: var(--text-color); display: block;">Gerente Administrativo y Financiero</strong>
+                    <span style="font-size: 0.82rem; color: var(--text-muted);">Nombre y firma</span>
                 </div>
             </div>
             <div>
                 <div style="border-top: 1.5px solid var(--text-color); padding-top: 0.6rem; width: 85%; margin: 0 auto;">
-                    <strong style="font-size: 0.95rem; color: var(--text-color); display: block;">Contador Público Autorizado (CPA)</strong>
-                    <span style="font-size: 0.82rem; color: var(--text-muted);">Contador Externo &bull; Colegiado CCPN No. 4920</span>
+                    <strong style="font-size: 0.95rem; color: var(--text-color); display: block;">Contador Externo</strong>
+                    <span style="font-size: 0.82rem; color: var(--text-muted);">Nombre y firma</span>
                 </div>
             </div>
         </div>
@@ -390,30 +438,21 @@ async function guardarCorteFlujoOficial() {
         return;
     }
 
-    if (!confirm("¿Desea oficializar y guardar este corte del Estado de Flujos de Efectivo en la base de datos?")) {
+    if (!confirm("¿Desea guardar este corte verificado, con su detalle, como borrador?")) {
         return;
     }
 
     try {
+        if (!flujoActualData.puede_guardar) {
+            alert('Resuelva las partidas pendientes y las diferencias antes de guardar.');
+            return;
+        }
         const payload = {
-            ejercicio_fiscal: new Date().getFullYear(),
-            periodo_tipo: 'Mensual',
-            fecha_inicio: flujoActualData.periodo.start === 'Inicio' ? '2026-01-01' : flujoActualData.periodo.start,
+            fecha_inicio: flujoActualData.periodo.start,
             fecha_fin: flujoActualData.periodo.end,
             metodo: flujoActualData.metodo,
-            saldo_inicial_efectivo: flujoActualData.saldo_inicial,
-            flujo_neto_operacion: flujoActualData.flujo_neto_operacion,
-            flujo_neto_inversion: flujoActualData.flujo_neto_inversion,
-            flujo_neto_financiamiento: flujoActualData.flujo_neto_financiamiento,
-            variacion_neta_efectivo: flujoActualData.variacion_neta_efectivo,
-            saldo_final_calculado: flujoActualData.saldo_final_calculado,
-            saldo_final_balance_general: flujoActualData.saldo_final_balance,
-            observaciones: `Corte oficial generado bajo método ${flujoActualData.metodo}`,
-            detalles: [
-                ...(flujoActualData.actividades_operacion || []).map(i => ({ actividad: 'Operacion', concepto: i.concepto, tipo_movimiento: i.tipo, importe: i.importe })),
-                ...(flujoActualData.actividades_inversion || []).map(i => ({ actividad: 'Inversion', concepto: i.concepto, tipo_movimiento: i.tipo, importe: i.importe })),
-                ...(flujoActualData.actividades_financiamiento || []).map(i => ({ actividad: 'Financiamiento', concepto: i.concepto, tipo_movimiento: i.tipo, importe: i.importe }))
-            ]
+            periodo_tipo: 'Personalizado',
+            revision: flujoActualData.revision
         };
 
         const resp = await fetch('/api/finanzas/flujo_efectivo/guardar', {
@@ -442,6 +481,7 @@ function imprimirFlujoEfectivo() {
     if (!reportElem) return;
 
     const ventana = window.open('', '_blank');
+    if (!ventana) { alert('Permita abrir la ventana de impresión para imprimir o guardar como PDF.'); return; }
     ventana.document.write(`
         <!DOCTYPE html>
         <html>
@@ -475,29 +515,32 @@ async function cargarDatosConciliacion() {
     const inputAnio = document.getElementById('conc-anio');
     if (!selectCta || !selectMes || !inputAnio) return;
 
-    const cuentaId = selectCta.value || 2;
+    const cuentaId = selectCta.value || '';
     const mes = selectMes.value || (new Date().getMonth() + 1);
     const anio = inputAnio.value || new Date().getFullYear();
 
+    const solicitud = ++solicitudConciliacion;
+    conciliacionActualData = null;
+    partidasEnTransito = [];
+    document.getElementById('conc-input-saldo-banco').value = '';
+    document.getElementById('conc-badge-cuadratura').textContent = 'Cargando el período…';
+    renderPartidasTransito();
     try {
         const resp = await fetch(`/api/finanzas/conciliacion/datos?cuenta_id=${cuentaId}&anio=${anio}&mes=${mes}`);
         const data = await resp.json();
+        if (solicitud !== solicitudConciliacion) return;
 
         if (data.error) {
+            document.getElementById('conc-badge-cuadratura').textContent = data.error;
             console.error(data.error);
             return;
         }
 
+        if (solicitud !== solicitudConciliacion) return;
         conciliacionActualData = data;
 
-        // Actualizar dropdown de cuentas de bancos si vienen opciones
-        if (data.cuentas_bancos && selectCta.options.length <= 1) {
-            selectCta.innerHTML = '';
-            data.cuentas_bancos.forEach(b => {
-                selectCta.innerHTML += `<option value="${b.id}" ${b.id == cuentaId ? 'selected' : ''}>${b.codigo} - ${b.nombre}</option>`;
-            });
-        }
-
+        selectCta.innerHTML = data.cuentas_bancos.map(b => `<option value="${b.id}">${escapeFlujo(b.codigo)} - ${escapeFlujo(b.nombre)}</option>`).join('');
+        selectCta.value = data.cuenta.id;
         // Saldo según Libros
         const lblLibros = document.getElementById('conc-lbl-saldo-libros');
         if (lblLibros) lblLibros.innerText = formatCordoba(data.saldo_segun_libros);
@@ -509,7 +552,7 @@ async function cargarDatosConciliacion() {
                 tbodyMovs.innerHTML = data.movimientos_mes.map(m => `
                     <tr>
                         <td style="padding: 4px 6px;">${m.fecha}</td>
-                        <td style="padding: 4px 6px;">${m.concepto}</td>
+                        <td style="padding: 4px 6px;">${escapeFlujo(m.concepto)}</td>
                         <td class="text-right" style="padding: 4px 6px; font-family: monospace; color: #059669;">${m.debe > 0 ? formatCordoba(m.debe) : '-'}</td>
                         <td class="text-right" style="padding: 4px 6px; font-family: monospace; color: #dc2626;">${m.haber > 0 ? formatCordoba(m.haber) : '-'}</td>
                     </tr>
@@ -519,19 +562,10 @@ async function cargarDatosConciliacion() {
             }
         }
 
-        // Cargar saldo de banco y partidas si ya existía conciliación previa
         const inputBanco = document.getElementById('conc-input-saldo-banco');
-        if (data.conciliacion_guardada) {
-            if (inputBanco) inputBanco.value = data.conciliacion_guardada.saldo_segun_banco;
-            partidasEnTransito = data.partidas_pendientes || [];
-        } else {
-            // Sugerir por defecto el mismo saldo de libros como punto de partida si está vacío
-            if (inputBanco && (inputBanco.value === '0.00' || !inputBanco.value)) {
-                inputBanco.value = data.saldo_segun_libros;
-            }
-            partidasEnTransito = [];
-        }
-
+        inputBanco.value = data.conciliacion_guardada ? data.conciliacion_guardada.saldo_segun_banco : '';
+        partidasEnTransito = data.partidas_pendientes || [];
+        if (data.solo_lectura) alert('Corte histórico de solo lectura: ya existen conciliaciones posteriores.');
         renderPartidasTransito();
         recalcularConciliacionEnVivo();
         cargarReclasificaciones();
@@ -552,21 +586,30 @@ function renderPartidasTransito() {
 
     tbody.innerHTML = partidasEnTransito.map((p, idx) => `
         <tr>
-            <td style="padding: 4px 6px; font-weight: 600;">${p.tipo_partida}</td>
-            <td style="padding: 4px 6px;">${p.numero_documento_referencia}</td>
-            <td class="text-right" style="padding: 4px 6px; font-family: monospace; font-weight: bold;">${formatCordoba(p.monto)}</td>
-            <td style="padding: 4px 6px;">
-                <span style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: ${p.efecto_en_saldo === 'Suma' ? '#dcfce7' : '#fee2e2'}; color: ${p.efecto_en_saldo === 'Suma' ? '#166534' : '#991b1b'}; font-weight: bold;">
-                    ${p.efecto_en_saldo}
-                </span>
+            <td>${escapeFlujo(p.tipo_partida)}${p.heredada ? '<br><small>Pendiente anterior</small>' : ''}</td>
+            <td>${escapeFlujo(p.numero_documento_referencia)}</td>
+            <td>${formatCordoba(p.monto)}</td>
+            <td>${escapeFlujo(p.efecto_en_saldo)}<br>
+                <label><input type="checkbox" ${p.esta_conciliada ? 'checked' : ''} onchange="partidasEnTransito[${idx}].esta_conciliada=this.checked; recalcularConciliacionEnVivo()"> Resuelta</label>
+                <input class="form-control" aria-label="Referencia de resolución" placeholder="Referencia de resolución" value="${escapeFlujo(p.resolucion)}" oninput="partidasEnTransito[${idx}].resolucion=this.value">
+                <input class="form-control" type="number" min="1" aria-label="Movimiento contable vinculado" placeholder="ID movimiento (opcional)" value="${escapeFlujo(p.movimiento_contable_id || '')}" oninput="partidasEnTransito[${idx}].movimiento_contable_id=this.value ? Number(this.value) : null">
             </td>
-            <td style="padding: 4px 6px; text-align: center;">
-                <button type="button" class="btn btn-sm" style="padding: 2px 5px; color: #ef4444;" onclick="eliminarPartidaTransito(${idx})" title="Eliminar partida">
-                    <i class="ph-bold ph-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+            <td>${p.heredada ? 'Conservar' : `<button class="btn btn-sm" onclick="eliminarPartidaTransito(${idx})">Eliminar</button>`}</td>
+        </tr>`).join('');
+}
+
+function resumenConciliacionPantalla(libros, banco, partidas) {
+    let l = Math.round(Number(libros) * 100), b = Math.round(Number(banco) * 100);
+    for (const p of partidas) {
+        if (p.esta_conciliada) continue;
+        const m = Math.round(Number(p.monto) * 100);
+        if (p.tipo_partida === 'Deposito en Transito') b += m;
+        else if (p.tipo_partida === 'Cheque en Transito') b -= m;
+        else if (p.tipo_partida === 'Nota de Credito') l += m;
+        else if (p.tipo_partida === 'Nota de Debito') l -= m;
+        else if (p.tipo_partida === 'Error en Libros') l += p.efecto_en_saldo === 'Suma' ? m : -m;
+    }
+    return {libros: l / 100, banco: b / 100, diferencia: (b-l) / 100};
 }
 
 function recalcularConciliacionEnVivo() {
@@ -576,32 +619,16 @@ function recalcularConciliacionEnVivo() {
     const inputBanco = document.getElementById('conc-input-saldo-banco');
     const saldoBanco = parseFloat(inputBanco ? inputBanco.value : 0) || 0;
 
-    // Ajustes banco:
-    // Depósitos en tránsito: suman al saldo del banco
-    // Cheques en tránsito: restan al saldo del banco
-    let ajusteBanco = 0;
-    let ajusteLibros = 0;
-
-    partidasEnTransito.forEach(p => {
-        const m = parseFloat(p.monto || 0);
-        if (p.tipo_partida === 'Deposito en Transito') {
-            ajusteBanco += m;
-        } else if (p.tipo_partida === 'Cheque en Transito') {
-            ajusteBanco -= m;
-        } else if (p.tipo_partida === 'Nota de Credito') {
-            ajusteLibros += m;
-        } else if (p.tipo_partida === 'Nota de Debito') {
-            ajusteLibros -= m;
-        } else {
-            if (p.efecto_en_saldo === 'Suma') ajusteBanco += m;
-            else ajusteBanco -= m;
-        }
-    });
-
-    const saldoBancoAjustado = saldoBanco + ajusteBanco;
-    const saldoLibrosAjustado = saldoLibros + ajusteLibros;
-    const diferencia = Math.abs(saldoBancoAjustado - saldoLibrosAjustado);
-    const cuadrado = diferencia < 0.01;
+    const badgePendiente = document.getElementById('conc-badge-cuadratura');
+    if (!inputBanco || inputBanco.value.trim() === '') {
+        if (badgePendiente) badgePendiente.textContent = 'Ingrese el saldo del extracto bancario de este período.';
+        for (const id of ['conc-saldo-libros-ajustado', 'conc-saldo-banco-ajustado']) document.getElementById(id).textContent = '—';
+        return;
+    }
+    const resumen = resumenConciliacionPantalla(saldoLibros, saldoBanco, partidasEnTransito);
+    const saldoBancoAjustado = resumen.banco, saldoLibrosAjustado = resumen.libros;
+    const diferencia = resumen.diferencia;
+    const cuadrado = diferencia === 0;
 
     // Actualizar etiquetas
     const lblLibrosAj = document.getElementById('conc-saldo-libros-ajustado');
@@ -641,12 +668,14 @@ function agregarPartidaTransito(event) {
     const monto = parseFloat(document.getElementById('partida-monto').value) || 0;
     const desc = document.getElementById('partida-desc').value.trim() || tipo;
 
-    let efecto = 'Resta';
+    if (!Number.isFinite(monto) || monto <= 0) { alert('Ingrese un monto positivo.'); return; }
+    let efecto = tipo === 'Error en Libros' ? document.getElementById('partida-efecto').value : 'Resta';
     if (tipo === 'Deposito en Transito' || tipo === 'Nota de Credito') {
         efecto = 'Suma';
     }
 
     partidasEnTransito.push({
+        uid: crypto.randomUUID(),
         tipo_partida: tipo,
         fecha: fecha,
         numero_documento_referencia: doc,
@@ -671,45 +700,15 @@ function eliminarPartidaTransito(index) {
 async function guardarConciliacionBancaria() {
     if (!conciliacionActualData) return;
 
-    const selectCta = document.getElementById('conc-cuenta-banco');
-    const selectMes = document.getElementById('conc-mes');
-    const inputAnio = document.getElementById('conc-anio');
+    if (conciliacionActualData.solo_lectura) { alert('Este corte es histórico y no se puede modificar.'); return; }
     const inputBanco = document.getElementById('conc-input-saldo-banco');
-
-    const cuentaId = selectCta.value || 2;
-    const mes = selectMes.value;
-    const anio = inputAnio.value;
-    const saldoLibros = parseFloat(conciliacionActualData.saldo_segun_libros || 0);
-    const saldoBanco = parseFloat(inputBanco.value || 0);
-
-    let ajusteBanco = 0;
-    let ajusteLibros = 0;
-    partidasEnTransito.forEach(p => {
-        const m = parseFloat(p.monto || 0);
-        if (p.tipo_partida === 'Deposito en Transito') ajusteBanco += m;
-        else if (p.tipo_partida === 'Cheque en Transito') ajusteBanco -= m;
-        else if (p.tipo_partida === 'Nota de Credito') ajusteLibros += m;
-        else if (p.tipo_partida === 'Nota de Debito') ajusteLibros -= m;
-        else {
-            if (p.efecto_en_saldo === 'Suma') ajusteBanco += m;
-            else ajusteBanco -= m;
-        }
-    });
-
-    const saldoBancoAjustado = saldoBanco + ajusteBanco;
-    const saldoLibrosAjustado = saldoLibros + ajusteLibros;
-    const diferencia = Math.abs(saldoBancoAjustado - saldoLibrosAjustado);
-
+    if (!inputBanco.value.trim()) { alert('Ingrese el saldo del extracto bancario.'); return; }
     const payload = {
-        cuenta_id: cuentaId,
-        anio: anio,
-        mes: mes,
-        fecha_corte: conciliacionActualData.fecha_corte,
-        saldo_segun_libros: saldoLibros,
-        saldo_segun_banco: saldoBanco,
-        diferencia: diferencia,
-        estado: diferencia < 0.01 ? 'Conciliada' : 'Borrador',
-        observaciones: `Conciliación bancaria ${mes}/${anio}. Saldo banco ajustado: C$ ${saldoBancoAjustado.toFixed(2)} vs libros ajustado: C$ ${saldoLibrosAjustado.toFixed(2)}.`,
+        cuenta_id: conciliacionActualData.cuenta.id,
+        anio: conciliacionActualData.anio,
+        mes: conciliacionActualData.mes,
+        saldo_segun_banco: inputBanco.value,
+        revision: conciliacionActualData.revision,
         partidas: partidasEnTransito
     };
 
@@ -722,7 +721,7 @@ async function guardarConciliacionBancaria() {
         const res = await resp.json();
         if (res.success) {
             alert("✓ " + res.message);
-            cargarDatosConciliacion();
+            await cargarDatosConciliacion();
         } else {
             alert("Error: " + (res.error || "No se pudo guardar la conciliación."));
         }
@@ -747,12 +746,12 @@ async function cargarReclasificaciones() {
             tbody.innerHTML = data.reclasificaciones.map(r => `
                 <tr>
                     <td>${r.created_at ? r.created_at.substring(0, 16) : 'N/A'}</td>
-                    <td><strong>#${r.asiento_id || 'N/A'}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">${r.asiento_concepto || ''}</span></td>
-                    <td><span class="badge">${r.origen_modulo}</span></td>
-                    <td>${r.actividad_anterior}</td>
-                    <td><strong style="color: #059669;">${r.actividad_nueva}</strong></td>
-                    <td>${r.motivo}</td>
-                    <td><i class="ph-bold ph-user"></i> ${r.usuario}</td>
+                    <td><strong>#${r.asiento_id || 'N/A'}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">${escapeFlujo(r.asiento_concepto || '')}</span></td>
+                    <td><span class="badge">${escapeFlujo(r.origen_modulo)}</span></td>
+                    <td>${escapeFlujo(r.actividad_anterior)}</td>
+                    <td><strong style="color: #059669;">${escapeFlujo(r.actividad_nueva)}</strong></td>
+                    <td>${escapeFlujo(r.motivo)}</td>
+                    <td><i class="ph-bold ph-user"></i> ${escapeFlujo(r.usuario)}</td>
                 </tr>
             `).join('');
         } else {
@@ -787,11 +786,15 @@ async function guardarReclasificacion(event) {
     }
 
     try {
+        const asientoResp = await fetch('/api/finanzas/flujo/asiento/' + encodeURIComponent(asientoId));
+        const asiento = await asientoResp.json();
+        if (!asientoResp.ok) throw new Error(asiento.error);
         const resp = await fetch('/api/finanzas/reclasificaciones', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 asiento_id: asientoId ? parseInt(asientoId) : null,
+                revision: asiento.revision,
                 origen_modulo: origen,
                 actividad_anterior: actAnt,
                 actividad_nueva: actNueva,
@@ -805,6 +808,7 @@ async function guardarReclasificacion(event) {
             cerrarModalReclasificacion();
             document.getElementById('form-reclasificacion').reset();
             cargarReclasificaciones();
+            await loadFlujoEfectivo();
         } else {
             alert("Error: " + (res.error || "No se pudo registrar"));
         }
@@ -813,6 +817,19 @@ async function guardarReclasificacion(event) {
         alert("Error de red al guardar reclasificación.");
     }
 }
+
+window.toggleDesgloseWk = function(rowId) {
+    const el = document.getElementById(rowId);
+    const btn = document.getElementById('btn_' + rowId);
+    if (!el) return;
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        if (btn) btn.innerHTML = '&#9662; Ocultar asientos';
+    } else {
+        el.style.display = 'none';
+        if (btn) btn.innerHTML = '&#9656; Ver desglose';
+    }
+};
 
 // Inicialización automática cuando se selecciona la pestaña de finanzas
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>{{ titulo }} — Jehová Jireh</title>
+<style>
+body {font:14px Arial,sans-serif;color:#172033;max-width:1000px;margin:30px auto;padding:20px}
+header{text-align:center;border-bottom:2px solid #047857;padding-bottom:20px}
+h1{font-size:23px}h2{font-size:19px}table{width:100%;border-collapse:collapse;margin:24px 0}
+th,td{padding:8px;border-bottom:1px solid #ddd;text-align:right}th:first-child,td:first-child{text-align:left}
+.firmas{display:flex;gap:60px;margin-top:80px;break-inside:avoid}.firmas p{border-top:1px solid;flex:1;text-align:center;padding-top:10px}
+.aviso{padding:12px;background:#fff3cd}.acciones{display:flex;gap:12px;margin-bottom:20px}
+@media print{.acciones{display:none}body{margin:0;padding:0}@page{margin:18mm}thead{display:table-header-group}tr{break-inside:avoid}}
+</style></head><body>
+<div class="acciones"><button onclick="window.print()">Imprimir / Guardar como PDF</button><span>Para exportar a PDF, seleccione «Guardar como PDF» en el destino de impresión.</span></div>
+<header><h1>JEHOVÁ JIREH MOTO REPUESTOS</h1><h2>{{ titulo }}</h2><p>{{ periodo }}</p><p>Expresado en córdobas (C$)</p></header>
+{% for aviso in advertencias %}<p class="aviso">{{ aviso }}</p>{% endfor %}
+<table><thead><tr>{% for e in encabezados %}<th>{{ e }}</th>{% endfor %}</tr></thead><tbody>
+{% for fila in filas %}<tr>{% for celda in fila %}<td>{% if loop.first %}{{ celda }}{% else %}{{ '{:,.2f}'.format(celda) }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table>
+<div class="firmas"><p>Gerente Administrativo y Financiero<br>Nombre y firma</p><p>Contador Externo<br>Nombre y firma</p></div>
+</body></html>

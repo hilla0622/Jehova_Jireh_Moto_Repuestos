@@ -2714,8 +2714,79 @@ async function guardarCategoria(e) {
 }
 
 // ==============================================================================
-// MÁ"DULO DE ESTADOS FINANCIEROS Y CONTABILIDAD
+// MÓDULO DE ESTADOS FINANCIEROS Y CONTABILIDAD
 // ==============================================================================
+
+function obtenerFechaHoyLocal() {
+    const d = new Date();
+    const anio = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+}
+
+function inicializarFechasFinanzas(forzar = false) {
+    const inputInicio = document.getElementById('fin-fecha-inicio');
+    const inputFin = document.getElementById('fin-fecha-fin');
+    if (!inputInicio || !inputFin) return;
+
+    const hoy = obtenerFechaHoyLocal();
+    const inicioMes = hoy.substring(0, 7) + '-01';
+
+    if (forzar || !inputInicio.value) inputInicio.value = inicioMes;
+    if (forzar || !inputFin.value) inputFin.value = hoy;
+
+    // Sincronizar selectores de conciliación si están disponibles
+    const d = new Date();
+    const selectMes = document.getElementById('conc-mes');
+    const inputAnio = document.getElementById('conc-anio');
+    if (selectMes && (!selectMes.value || forzar)) {
+        selectMes.value = String(d.getMonth() + 1);
+    }
+    if (inputAnio && (!inputAnio.value || forzar)) {
+        inputAnio.value = String(d.getFullYear());
+    }
+}
+
+function sincronizarConciliacionConFechas(anio, mes) {
+    const selectMes = document.getElementById('conc-mes');
+    const inputAnio = document.getElementById('conc-anio');
+    if (selectMes && mes) selectMes.value = String(mes);
+    if (inputAnio && anio) inputAnio.value = String(anio);
+}
+
+function aplicarPeriodoFinanzas(preset) {
+    const inputInicio = document.getElementById('fin-fecha-inicio');
+    const inputFin = document.getElementById('fin-fecha-fin');
+    if (!inputInicio || !inputFin) return;
+
+    const ahora = new Date();
+    const anioActual = ahora.getFullYear();
+    const mesActual = ahora.getMonth(); // 0-indexed
+
+    if (preset === 'este-mes') {
+        const hoy = obtenerFechaHoyLocal();
+        inputInicio.value = hoy.substring(0, 7) + '-01';
+        inputFin.value = hoy;
+        sincronizarConciliacionConFechas(anioActual, mesActual + 1);
+    } else if (preset === 'mes-anterior') {
+        const primerDiaAnt = new Date(anioActual, mesActual - 1, 1);
+        const ultimoDiaAnt = new Date(anioActual, mesActual, 0);
+        const fAnio = primerDiaAnt.getFullYear();
+        const fMes = String(primerDiaAnt.getMonth() + 1).padStart(2, '0');
+        const fDiaFin = String(ultimoDiaAnt.getDate()).padStart(2, '0');
+        inputInicio.value = `${fAnio}-${fMes}-01`;
+        inputFin.value = `${fAnio}-${fMes}-${fDiaFin}`;
+        sincronizarConciliacionConFechas(fAnio, primerDiaAnt.getMonth() + 1);
+    } else if (preset === 'este-anio') {
+        const hoy = obtenerFechaHoyLocal();
+        inputInicio.value = `${anioActual}-01-01`;
+        inputFin.value = hoy;
+        sincronizarConciliacionConFechas(anioActual, mesActual + 1);
+    }
+
+    cargarDatosFinanzas();
+}
 
 function switchFinanzasTab(subtab, btn) {
     const section = document.getElementById('tab-finanzas');
@@ -2738,11 +2809,18 @@ function switchFinanzasTab(subtab, btn) {
         loadFlujoEfectivo();
     } else if (subtab === 'fin-conciliacion' && typeof cargarDatosConciliacion === 'function') {
         cargarDatosConciliacion();
+    } else if (subtab === 'fin-resultados' && typeof loadEstadoResultados === 'function') {
+        loadEstadoResultados();
+    } else if (subtab === 'fin-balance' && typeof loadBalanceGeneral === 'function') {
+        loadBalanceGeneral();
+    } else if (subtab === 'fin-asientos' && typeof loadAsientosContables === 'function') {
+        loadAsientosContables();
     }
 }
 
 async function cargarDatosFinanzas() {
     try {
+        inicializarFechasFinanzas(false);
         const tareas = [
             loadCatalogoCuentas(),
             loadAsientosContables(),
@@ -2902,11 +2980,9 @@ async function loadEstadoResultados() {
 
         let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
-        // Las variables start y end ya fueron declaradas al inicio de la función.
-        let subtitle = "Del 01 de Enero a la fecha actual";
-        if (start && end) subtitle = `Del ${start} al ${end}`;
-        else if (start) subtitle = `A partir del ${start}`;
-        else if (end) subtitle = `Hasta el ${end}`;
+        const pStart = (data.periodo && data.periodo.start) || start;
+        const pEnd = (data.periodo && data.periodo.end) || end;
+        let subtitle = (pStart && pEnd) ? `Del ${pStart} al ${pEnd}` : (pEnd ? `Hasta el ${pEnd}` : "Período actual");
         
         let html = `<div style="max-width: 800px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
         html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;
@@ -2967,8 +3043,8 @@ async function loadBalanceGeneral() {
 
         let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
-        // La variable end ya fue declarada al inicio de la función.
-        let subtitle = end ? `Al ${end}` : "A la fecha actual";
+        const corte = data.fecha_corte || end;
+        let subtitle = corte ? `Al ${corte}` : "A la fecha de corte actual";
         
         let html = `<div style="max-width: 900px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
         html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;

@@ -1375,6 +1375,17 @@
                                 <label style="font-size: 0.85rem; font-weight: bold; margin: 0; margin-left: 0.5rem;">Hasta:</label>
                                 <input type="date" id="fin-fecha-fin" class="form-control" style="padding: 0.2rem 0.5rem; height: auto;">
                             </div>
+                            <div class="btn-group-presets" style="display: flex; align-items: center; gap: 0.35rem;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="aplicarPeriodoFinanzas('este-mes')" title="Del 1ro de este mes a hoy" style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <i class="ph-bold ph-calendar"></i> Este Mes
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="aplicarPeriodoFinanzas('mes-anterior')" title="Mes calendario anterior completo" style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <i class="ph-bold ph-calendar-blank"></i> Mes Anterior
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="aplicarPeriodoFinanzas('este-anio')" title="Del 1ro de enero a hoy" style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <i class="ph-bold ph-calendar-check"></i> Año Actual
+                                </button>
+                            </div>
                             <button class="btn btn-primary" onclick="openModal('modal-asiento')">
                                 <i class="ph-bold ph-plus"></i> Nuevo Asiento
                             </button>
@@ -1382,6 +1393,12 @@
                                 <i class="ph-bold ph-funnel"></i> Filtrar / Refrescar
                             </button>
                         </div>
+                    </div>
+
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+                        <label>Exportar estado <select id="fin-exportar-tipo" class="form-control"><option value="flujo">Flujo de Efectivo</option><option value="resultados">Estado de Resultados</option><option value="balance">Balance General</option><option value="comprobacion">Balance de Comprobación</option></select></label>
+                        <button class="btn btn-secondary" onclick="exportarEstadoFinanciero(false)">Imprimir / Guardar PDF</button>
+                        <button class="btn btn-secondary" onclick="exportarEstadoFinanciero(true)">Descargar HTML</button>
                     </div>
 
                     <!-- Subtabs Financieros -->
@@ -1559,12 +1576,13 @@
                                     <button class="btn btn-secondary btn-sm" onclick="imprimirFlujoEfectivo()" title="Imprimir o Exportar en PDF">
                                         <i class="ph-bold ph-printer"></i> Imprimir
                                     </button>
-                                    <button class="btn btn-primary btn-sm" onclick="guardarCorteFlujoOficial()" style="background: #10b981; border-color: #059669;" title="Oficializar y registrar en BD">
-                                        <i class="ph-bold ph-floppy-disk"></i> Guardar Corte Oficial
+                                    <button class="btn btn-primary btn-sm" onclick="guardarCorteFlujoOficial()" style="background: #10b981; border-color: #059669;" title="Guardar borrador verificado">
+                                        <i class="ph-bold ph-floppy-disk"></i> Guardar Corte Verificado
                                     </button>
                                 </div>
                             </div>
                             <div class="card-body" style="padding: 2rem;">
+                                {% include 'flujo_controles.html' %}
                                 <div id="reporte-flujo-efectivo" class="reporte-financiero">
                                     <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
                                         <i class="ph-bold ph-spinner ph-spin" style="font-size: 2.5rem; color: #10b981;"></i>
@@ -1589,7 +1607,7 @@
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                                     <select id="conc-cuenta-banco" class="form-control" style="max-width: 220px; padding: 0.35rem 0.6rem; height: auto;" onchange="cargarDatosConciliacion()">
-                                        <option value="2">1.1.02 - Bancos</option>
+                                        <option value="">Seleccionar cuenta bancaria</option>
                                     </select>
                                     <select id="conc-mes" class="form-control" style="max-width: 140px; padding: 0.35rem 0.6rem; height: auto;" onchange="cargarDatosConciliacion()">
                                         <option value="1">Enero</option>
@@ -1599,7 +1617,7 @@
                                         <option value="5">Mayo</option>
                                         <option value="6">Junio</option>
                                         <option value="7">Julio</option>
-                                        <option value="8" selected>Agosto</option>
+                                        <option value="8">Agosto</option>
                                         <option value="9">Septiembre</option>
                                         <option value="10">Octubre</option>
                                         <option value="11">Noviembre</option>
@@ -1653,7 +1671,7 @@
                                             <label style="font-size: 0.85rem; font-weight: bold; margin: 0; white-space: nowrap;">Saldo al Corte del Banco:</label>
                                             <div style="position: relative; flex: 1;">
                                                 <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-weight: bold; color: var(--text-muted);">C$</span>
-                                                <input type="number" step="0.01" id="conc-input-saldo-banco" class="form-control" style="padding-left: 2.2rem; font-size: 1.1rem; font-weight: bold;" value="0.00" oninput="recalcularConciliacionEnVivo()">
+                                                <input type="number" step="0.01" id="conc-input-saldo-banco" class="form-control" style="padding-left: 2.2rem; font-size: 1.1rem; font-weight: bold;" placeholder="Saldo del extracto" oninput="recalcularConciliacionEnVivo()">
                                             </div>
                                         </div>
                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -3125,6 +3143,8 @@
                             <option value="Error en Libros">Ajuste por Error de Registro</option>
                         </select>
                     </div>
+                    <label for="partida-efecto">Efecto del error en libros (solo para ese tipo)</label>
+                    <select id="partida-efecto" class="form-control"><option value="Suma">Sumar a libros</option><option value="Resta">Restar de libros</option></select>
                     <div class="grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div class="form-group">
                             <label style="font-weight: bold; font-size: 0.85rem;">Fecha del Documento:</label>
@@ -5490,6 +5510,7 @@
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
     <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.3"></script>
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
-    <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=1.0"></script>
+    <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>
 </body>
 </html>

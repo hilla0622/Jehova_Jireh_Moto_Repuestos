@@ -2340,11 +2340,18 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='cuentas_contables' AND COLUMN_NAME='ajuste_no_monetario')
+BEGIN
+    ALTER TABLE [cuentas_contables] ADD [ajuste_no_monetario] bit DEFAULT ((0)) NOT NULL;
+END
+GO
+
 -- Etiquetas iniciales para cuentas contables
 UPDATE [cuentas_contables] SET [flujo_categoria] = 'Efectivo_Equivalente', [es_efectivo_equivalente] = 1 WHERE [codigo] IN ('1.1.01', '1.1.02');
 UPDATE [cuentas_contables] SET [flujo_categoria] = 'Inversion', [es_efectivo_equivalente] = 0 WHERE [codigo] IN ('1.2.01', '1.2.02', '1.2.03');
-UPDATE [cuentas_contables] SET [flujo_categoria] = 'Financiamiento', [es_efectivo_equivalente] = 0 WHERE [codigo] IN ('2.1.02', '3.1.01', '3.1.02');
-UPDATE [cuentas_contables] SET [flujo_categoria] = 'Operacion', [es_efectivo_equivalente] = 0 WHERE [flujo_categoria] IS NULL;
+UPDATE [cuentas_contables] SET [flujo_categoria] = 'Financiamiento', [es_efectivo_equivalente] = 0 WHERE [codigo] IN ('3.1.01', '3.1.02');
+UPDATE [cuentas_contables] SET [flujo_categoria] = 'Operacion', [es_efectivo_equivalente] = 0 WHERE [flujo_categoria] IS NULL OR [codigo] = '2.1.02';
+UPDATE [cuentas_contables] SET [ajuste_no_monetario] = 1 WHERE [codigo] = '6.1.09';
 GO
 
 -- 2. Tabla: conciliaciones_bancarias (RF98)
@@ -2480,6 +2487,31 @@ CREATE TABLE [flujo_reclasificaciones_auditoria] (
     CONSTRAINT [fk_reclasif_movimiento] FOREIGN KEY ([movimiento_id]) REFERENCES [movimientos_contables]([id]),
     CONSTRAINT [fk_reclasif_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
 );
+END
+GO
+
+-- 8. Tabla: flujo_eventos (RF96-RF102 Auditoría de eventos y versiones)
+IF OBJECT_ID('flujo_eventos', 'U') IS NULL
+BEGIN
+CREATE TABLE [flujo_eventos] (
+    [id] int IDENTITY(1,1) NOT NULL,
+    [tipo] varchar(30) NOT NULL,
+    [clave] varchar(100) NOT NULL,
+    [contenido] nvarchar(max) NOT NULL,
+    [motivo] nvarchar(1000) NOT NULL,
+    [usuario_id] int NOT NULL,
+    [created_at] datetime2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT [pk_flujo_eventos] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_flujo_eventos_usuario] FOREIGN KEY ([usuario_id]) REFERENCES [usuarios]([id])
+);
+CREATE INDEX [IX_flujo_eventos_tipo_clave] ON [flujo_eventos]([tipo], [clave], [id]);
+END
+GO
+
+-- 9. Índice de unicidad para conciliaciones bancarias por cuenta y período
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_conciliacion_periodo' AND object_id = OBJECT_ID('conciliaciones_bancarias'))
+BEGIN
+    CREATE UNIQUE INDEX [UX_conciliacion_periodo] ON [conciliaciones_bancarias]([cuenta_id], [anio], [mes]);
 END
 GO
 

@@ -2082,4 +2082,189 @@ body {
         background: #ffffff !important;
         color: #0f172a !important;
     }
-}
+}
+
+/* ==============================================================================
+   MÓDULO TRIBUTARIO: DECLARACIÓN ANUAL IR (FORMULARIO 106 - VET DGI)
+   ============================================================================== */
+.vet-portal-header {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.vet-portal-title h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+.vet-portal-title p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+.vet-badge-106 {
+    background: #ffffff;
+    color: #0369a1;
+    font-size: 1.4rem;
+    font-weight: 900;
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    border: 2px solid #bae6fd;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fiscal-subtabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    overflow-x: auto;
+}
+.fiscal-subtab-btn {
+    background: none;
+    border: none;
+    padding: 0.6rem 1.1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.fiscal-subtab-btn:hover {
+    color: var(--primary);
+    background: rgba(2, 132, 199, 0.08);
+}
+.fiscal-subtab-btn.active {
+    color: var(--primary);
+    background: rgba(2, 132, 199, 0.12);
+    font-weight: 700;
+}
+.fiscal-tab-view {
+    display: none;
+}
+.fiscal-tab-view.active {
+    display: block;
+}
+
+.vet-section-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+.vet-section-header {
+    background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0369a1;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+body.dark-mode .vet-section-header {
+    background: #1e293b;
+    color: #38bdf8;
+}
+.row-highlight-total {
+    background: rgba(2, 132, 199, 0.08) !important;
+    font-weight: bold !important;
+    border-top: 2px solid #0284c7;
+    border-bottom: 2px solid #0284c7;
+}
+
+.kpi-fiscal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.kpi-fiscal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+.kpi-fiscal-card:hover {
+    transform: translateY(-2px);
+}
+.kpi-fiscal-card.highlight {
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(3, 105, 161, 0.15) 100%);
+    border-color: #0284c7;
+}
+.kpi-fiscal-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+.kpi-fiscal-val {
+    font-size: 1.35rem;
+    font-weight: 800;
+    font-family: monospace;
+    color: var(--text-main);
+}
+.kpi-fiscal-card.highlight .kpi-fiscal-val {
+    color: #0284c7;
+}
+
+.alert-cuadre {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+.alert-cuadre.alert-success {
+    background: rgba(22, 163, 74, 0.12);
+    color: #16a34a;
+    border: 1px solid rgba(22, 163, 74, 0.3);
+}
+.alert-cuadre.alert-warning {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-fiscal-status {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    border-radius: 6px;
+    display: inline-block;
+}
+.badge-fiscal-status.badge-pagar {
+    background: rgba(220, 38, 38, 0.12);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.badge-fiscal-status.badge-favor {
+    background: rgba(22, 163, 74, 0.12);
+    color: #16a34a;
+    border: 1px solid rgba(22, 163, 74, 0.3);
+}
+

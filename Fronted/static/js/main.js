@@ -253,6 +253,7 @@ function switchTab(tabId) {
         if (tabId === 'tab-usuarios') loadUsuarios();
         if (tabId === 'tab-panel') loadDashboardStats();
         if (tabId === 'tab-finanzas') cargarDatosFinanzas();
+        if (tabId === 'tab-fiscal' && typeof cargarModuloFiscal === 'function') cargarModuloFiscal();
     }
 }
 

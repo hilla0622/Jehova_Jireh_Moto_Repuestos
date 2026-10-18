@@ -73,6 +73,11 @@
                     <i class="ph-bold ph-bank"></i>
                     <span>Estados Financieros</span>
                 </a>
+
+                <a href="#fiscal" class="nav-item" data-tab="tab-fiscal">
+                    <i class="ph-bold ph-receipt"></i>
+                    <span>Declaración DGI</span>
+                </a>
                 {% endif %}
 
                 {% if usuario.rol == 'Administrador' %}
@@ -226,6 +231,10 @@
                                 <button class="action-tile" onclick="switchTab('tab-reportes')">
                                     <i class="ph-bold ph-chart-line-up"></i>
                                     <span>Reportes y Contabilidad</span>
+                                </button>
+                                <button class="action-tile" onclick="switchTab('tab-fiscal')">
+                                    <i class="ph-bold ph-receipt"></i>
+                                    <span>Declaración DGI</span>
                                 </button>
                                 {% endif %}
 
@@ -1759,6 +1768,370 @@
                     </div>
                 </section>
                 {% endif %}
+
+                <!-- TAB FISCAL: DECLARACIÓN ANUAL DGI FORMULARIO 106 (RF129 - RF139) -->
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
+                <section id="tab-fiscal" class="tab-content">
+                    
+                    <!-- ENCABEZADO OFICIAL VENTANILLA ELECTRÓNICA TRIBUTARIA (VET - DGI) -->
+                    <div class="vet-portal-header">
+                        <div class="vet-portal-title">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                                <i class="ph-bold ph-bank" style="font-size: 1.6rem; color: #bae6fd;"></i>
+                                <span style="font-weight: 800; font-size: 1.15rem; letter-spacing: 0.5px;">DIRECCIÓN GENERAL DE INGRESOS (DGI)</span>
+                            </div>
+                            <h3>Ventanilla Electrónica Tributaria (VET) — Declaración Anual IR</h3>
+                            <p>Gobierno de Reconciliación y Unidad Nacional • Pagando a tiempo, Ganamos todos</p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                            <div class="vet-badge-106">
+                                <span>106</span>
+                                <span style="font-size: 0.85rem; font-weight: 700; line-height: 1.1; text-align: left;">RENTA ANUAL<br>IR 106</span>
+                            </div>
+
+                            <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(4px); padding: 0.5rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="margin: 0; font-weight: bold; font-size: 0.85rem; color: #ffffff;">Ejercicio Fiscal:</label>
+                                <select id="fiscal-select-anio" class="form-control" style="width: auto; padding: 0.25rem 0.6rem; height: auto; font-weight: bold; color: #0369a1; background: #ffffff;">
+                                    <option value="2026" selected>2026 (Año Actual)</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                </select>
+                            </div>
+
+                            <div style="display: flex; gap: 0.4rem;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="cargarSimulacionFiscal()" title="Recalcular desde libros contables">
+                                    <i class="ph-bold ph-arrows-clockwise"></i> Recalcular
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="guardarDeclaracionFiscal(false)" style="background: #ffffff; color: #0284c7; border: none; font-weight: bold;">
+                                    <i class="ph-bold ph-floppy-disk"></i> Guardar Borrador
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="guardarDeclaracionFiscal(true)" style="background: #16a34a; color: #ffffff; border: none; font-weight: bold;">
+                                    <i class="ph-bold ph-check-circle"></i> Aprobar Declaración
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="imprimirFormulario106()" style="color: #ffffff; border-color: rgba(255,255,255,0.6);">
+                                    <i class="ph-bold ph-printer"></i> Imprimir VET
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fiscal-loading-state" style="display: none; padding: 0.75rem 1rem; margin-bottom: 1rem; background: #e0f2fe; color: #0369a1; border-radius: 6px; font-weight: bold;">
+                        <i class="ph-bold ph-spinner ph-spin"></i> Generando simulación oficial del Formulario 106 desde la base de datos contable...
+                    </div>
+
+                    <!-- SUBPESTAÑAS DEL MÓDULO FISCAL -->
+                    <div class="fiscal-subtabs">
+                        <button class="fiscal-subtab-btn active" onclick="switchFiscalSubtab('vet', this)">
+                            <i class="ph-bold ph-file-text"></i> Formulario IR-106 (VET DGI)
+                        </button>
+                        <button class="fiscal-subtab-btn" onclick="switchFiscalSubtab('acreditamientos', this)">
+                            <i class="ph-bold ph-certificate"></i> Acreditamientos y Retenciones Sufridas
+                        </button>
+                        <button class="fiscal-subtab-btn" onclick="switchFiscalSubtab('ajustes', this)">
+                            <i class="ph-bold ph-sliders-horizontal"></i> Conciliación y Ajustes Fiscales
+                        </button>
+                        <button class="fiscal-subtab-btn" onclick="switchFiscalSubtab('historial', this)">
+                            <i class="ph-bold ph-clock-counter-clockwise"></i> Historial y Presentaciones
+                        </button>
+                    </div>
+
+                    <!-- VISTA 1: FORMULARIO IR-106 (ESTILO VET DGI) -->
+                    <div id="fiscal-subtab-vet" class="fiscal-tab-view active">
+                        
+                        <!-- SECCIÓN A: DATOS GENERALES -->
+                        <div class="vet-section-box">
+                            <div class="vet-section-header">
+                                <span>A. DATOS GENERALES DEL CONTRIBUYENTE</span>
+                                <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Declaración Tipo: <strong>Original</strong> • Período: <strong id="vet-periodo-fiscal">12 / 2026</strong></span>
+                            </div>
+                            <div style="padding: 1rem 1.25rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+                                    <div>
+                                        <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Número RUC</div>
+                                        <div id="vet-empresa-ruc" style="font-size: 1.05rem; font-weight: 800; font-family: monospace; color: var(--primary);">J0310000000001</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Razón Social</div>
+                                        <div id="vet-empresa-razon" style="font-size: 1.05rem; font-weight: 700;">Jehová Jireh Moto Repuestos y Servicios</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">No. Declaración</div>
+                                        <div id="vet-no-declaracion" style="font-size: 1rem; font-family: monospace; font-weight: bold;">IR106-2026-SIM</div>
+                                    </div>
+                                    <div style="grid-column: 1 / -1;">
+                                        <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Actividad Económica Principal</div>
+                                        <div id="vet-empresa-actividad" style="font-size: 0.95rem;">Comercio al por menor de repuestos, lubricantes y mantenimiento de motocicletas</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ALERTA DE CUADRE CONTABLE -->
+                        <div id="vet-alerta-cuadre" class="alert-cuadre alert-success">
+                            <i class="ph-bold ph-check-circle"></i> Verificando cuadre de Balance General...
+                        </div>
+
+                        <!-- SECCIÓN B: BALANCE GENERAL (RENGLONES 1 AL 23) -->
+                        <div class="vet-section-box">
+                            <div class="vet-section-header">
+                                <span>B. BALANCE GENERAL FISCAL (RENGLONES OFICIALES DGI 1 AL 23)</span>
+                                <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Alimentado desde Asientos y Catálogo Contable</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table" style="font-size: 0.9rem;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 70px; text-align: center;">Renglón</th>
+                                            <th>Descripción del Rubro Fiscal</th>
+                                            <th style="width: 170px; text-align: right;">Importe Contable (C$)</th>
+                                            <th style="width: 130px; text-align: center;">Cuentas Contables</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vet-tbody-balance">
+                                        <tr><td colspan="4" class="text-center text-muted">Cargando renglones del balance...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN D: ESTADO DE RESULTADOS -->
+                        <div class="vet-section-box">
+                            <div class="vet-section-header">
+                                <span>D. ESTADO DE RESULTADOS (INGRESOS, COSTOS Y GASTOS DEDUCIBLES)</span>
+                                <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Base para la Renta Bruta y Utilidad Contable</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table" style="font-size: 0.9rem;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 70px; text-align: center;">Renglón</th>
+                                            <th>Descripción del Rubro Fiscal</th>
+                                            <th style="width: 170px; text-align: right;">Importe Contable (C$)</th>
+                                            <th style="width: 130px; text-align: center;">Cuentas Contables</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vet-tbody-resultados">
+                                        <tr><td colspan="4" class="text-center text-muted">Cargando estado de resultados...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN E: CÁLCULO DEL IR (CONCILIACIÓN FISCAL) -->
+                        <div class="vet-section-box">
+                            <div class="vet-section-header">
+                                <span>E. CÁLCULO DEL IR Y CONCILIACIÓN FISCAL (LEY 822 ART. 52 Y 59)</span>
+                                <span style="font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="badge-metodo-aplicado">IR 30%</span>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <div class="kpi-fiscal-grid">
+                                    <div class="kpi-fiscal-card">
+                                        <div class="kpi-fiscal-title">Renta Neta Gravable</div>
+                                        <div id="kpi-renta-gravable" class="kpi-fiscal-val">C$ 0.00</div>
+                                        <small style="color: var(--text-muted); font-size: 0.75rem;">Utilidad contable ± Ajustes</small>
+                                    </div>
+                                    <div class="kpi-fiscal-card">
+                                        <div class="kpi-fiscal-title">IR Actividades Económicas (30%)</div>
+                                        <div id="kpi-ir-30" class="kpi-fiscal-val">C$ 0.00</div>
+                                        <small style="color: var(--text-muted); font-size: 0.75rem;">Ley 822 Art. 52</small>
+                                    </div>
+                                    <div class="kpi-fiscal-card">
+                                        <div class="kpi-fiscal-title">Pago Mínimo Definitivo (1%)</div>
+                                        <div id="kpi-pmd-1" class="kpi-fiscal-val">C$ 0.00</div>
+                                        <small style="color: var(--text-muted); font-size: 0.75rem;">1% de Ingresos Brutos (Art. 59)</small>
+                                    </div>
+                                    <div class="kpi-fiscal-card highlight">
+                                        <div class="kpi-fiscal-title">IR Determinado Oficial</div>
+                                        <div id="kpi-ir-determinado" class="kpi-fiscal-val">C$ 0.00</div>
+                                        <small style="color: var(--primary); font-weight: bold; font-size: 0.75rem;">El mayor entre el 30% o el PMD</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN F: LIQUIDACIÓN DEL IMPUESTO -->
+                        <div class="vet-section-box">
+                            <div class="vet-section-header">
+                                <span>F. LIQUIDACIÓN DEL IMPUESTO (ACREDITAMIENTOS Y SALDO FINAL)</span>
+                                <span id="liq-saldo-final-badge" class="badge-fiscal-status badge-pagar">SALDO A PAGAR</span>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; align-items: center;">
+                                    <div>
+                                        <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                                <td style="padding: 0.6rem 0; color: var(--text-main);">IR Determinado Oficial del Ejercicio:</td>
+                                                <td id="liq-ir-determinado" style="padding: 0.6rem 0; text-align: right; font-weight: bold; font-family: monospace;">C$ 0.00</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                                <td style="padding: 0.6rem 0; color: var(--text-muted);">(-) Anticipos Mensuales Pagados del 1%:</td>
+                                                <td id="liq-anticipos" style="padding: 0.6rem 0; text-align: right; color: var(--accent-green); font-family: monospace;">- C$ 0.00</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                                <td style="padding: 0.6rem 0; color: var(--text-muted);">(-) Retenciones en la Fuente Sufridas (Clientes / POS):</td>
+                                                <td id="liq-retenciones" style="padding: 0.6rem 0; text-align: right; color: var(--accent-green); font-family: monospace;">- C$ 0.00</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                                <td style="padding: 0.6rem 0; color: var(--text-muted);">(-) Saldo a Favor / Créditos Años Anteriores:</td>
+                                                <td id="liq-creditos" style="padding: 0.6rem 0; text-align: right; color: var(--accent-green); font-family: monospace;">- C$ 0.00</td>
+                                            </tr>
+                                            <tr style="border-bottom: 2px solid var(--border-color); font-weight: bold;">
+                                                <td style="padding: 0.6rem 0;">(=) Total Acreditamientos Fiscales:</td>
+                                                <td id="liq-total-acred" style="padding: 0.6rem 0; text-align: right; font-family: monospace; color: var(--accent-green);">C$ 0.00</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <div style="background: var(--bg-color); border: 2px dashed var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center;">
+                                        <div style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem;">
+                                            Resultado Neto de la Declaración
+                                        </div>
+                                        <div id="liq-saldo-final-valor" style="font-size: 2.2rem; font-weight: 900; font-family: monospace; color: #dc2626; margin-bottom: 0.5rem;">
+                                            C$ 0.00
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
+                                            Monto neto a enterar a la DGI mediante Boleta de Pago Bancario o a solicitar en compensación.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BOTONES DE ACCIÓN DE LA VET -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding: 1rem 0; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 1rem;">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button type="button" class="btn btn-outline" onclick="abrirModalAcreditamiento()">
+                                    <i class="ph-bold ph-plus-circle"></i> Registrar Constancia de Retención
+                                </button>
+                                <button type="button" class="btn btn-outline" onclick="abrirModalAjusteFiscal()">
+                                    <i class="ph-bold ph-sliders"></i> Registrar Ajuste Fiscal
+                                </button>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button type="button" class="btn btn-secondary" onclick="guardarDeclaracionFiscal(false)">
+                                    <i class="ph-bold ph-pencil-simple"></i> Editar la Declaración (Guardar Borrador)
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="guardarDeclaracionFiscal(true)" style="background: #0284c7;">
+                                    <i class="ph-bold ph-paper-plane-right"></i> Confirmar Envío / Aprobar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem; text-align: center; color: var(--text-muted); font-size: 0.75rem;">
+                            Copyright © DGI • Dirección General de Ingresos de Nicaragua • Plataforma Jehová Jireh Moto Repuestos
+                        </div>
+                    </div>
+
+                    <!-- VISTA 2: ACREDITAMIENTOS Y RETENCIONES SUFRIDAS -->
+                    <div id="fiscal-subtab-acreditamientos" class="fiscal-tab-view">
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <div>
+                                    <h3>Acreditamientos y Constancias de Retención</h3>
+                                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">
+                                        Constancias de retención que le aplicaron clientes, entidades o el POS (bancos), y anticipos pagados que reducen el IR Anual.
+                                    </p>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="abrirModalAcreditamiento()">
+                                    <i class="ph-bold ph-plus"></i> Registrar Constancia
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tipo</th>
+                                                <th>No. Constancia</th>
+                                                <th>Fecha</th>
+                                                <th>Agente Retenedor (Cliente / Banco)</th>
+                                                <th style="text-align: right;">Base Gravable (C$)</th>
+                                                <th style="text-align: center;">% Retención</th>
+                                                <th style="text-align: right;">Importe Retenido (C$)</th>
+                                                <th style="text-align: center;">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-acreditamientos">
+                                            <tr><td colspan="8" class="text-center text-muted">Cargando acreditamientos...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VISTA 3: CONCILIACIÓN Y AJUSTES FISCALES -->
+                    <div id="fiscal-subtab-ajustes" class="fiscal-tab-view">
+                        <div class="card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <div>
+                                    <h3>Ajustes Fiscales y Conciliación Tributaria</h3>
+                                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">
+                                        Deducciones no aplicables o gastos no deducibles conforme al Art. 43 de la Ley de Concertación Tributaria (Ley 822).
+                                    </p>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="abrirModalAjusteFiscal()">
+                                    <i class="ph-bold ph-plus"></i> Nuevo Ajuste Fiscal
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert-cuadre alert-success" style="margin-bottom: 1rem;">
+                                    <i class="ph-bold ph-info"></i>
+                                    Los gastos no deducibles aumentan la renta neta gravable antes del cálculo de la alícuota del 30%.
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Concepto del Ajuste</th>
+                                                <th>Tipo de Ajuste</th>
+                                                <th>Efecto Fiscal</th>
+                                                <th>Referencia Legal</th>
+                                                <th style="text-align: right;">Importe (C$)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-ajustes-fiscales">
+                                            <tr><td colspan="5" class="text-center text-muted">Sin ajustes fiscales manuales registrados. La conciliación toma los saldos puros del Estado de Resultados.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VISTA 4: HISTORIAL Y PRESENTACIONES -->
+                    <div id="fiscal-subtab-historial" class="fiscal-tab-view">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Historial de Declaraciones Guardadas y Presentaciones DGI</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Declaración</th>
+                                                <th>Fecha Creación</th>
+                                                <th>Estado</th>
+                                                <th style="text-align: right;">IR Determinado</th>
+                                                <th style="text-align: right;">Acreditamientos</th>
+                                                <th style="text-align: right;">Saldo Neto</th>
+                                                <th style="text-align: center;">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-historial-fiscal">
+                                            <tr><td colspan="7" class="text-center text-muted">Cargando declaraciones...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+                {% endif %}
+
 
                 <!-- TAB RRHH: RECURSOS HUMANOS Y NÓMINA -->
                 {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Responsable de Recursos Humanos'] %}
@@ -5505,6 +5878,217 @@
         </div>
     </div>
 
+    <!-- ═══ MODALES: MÓDULO TRIBUTARIO Y FISCAL (DGI) ═══ -->
+    
+    <!-- MODAL 1: REGISTRAR CONSTANCIA DE RETENCIÓN / ANTICIPO -->
+    <div class="modal" id="modal-acreditamiento">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-certificate"></i> Registrar Constancia de Retención / Anticipo</h3>
+                <button class="modal-close" onclick="closeModal('modal-acreditamiento')">&times;</button>
+            </div>
+            <form id="form-acreditamiento" onsubmit="guardarAcreditamientoFiscal(event)">
+                <div class="modal-body">
+                    <div class="alert-cuadre alert-success" style="margin-bottom: 1rem; font-size: 0.85rem;">
+                        <i class="ph-bold ph-info"></i>
+                        Seleccione el código oficial según el Catálogo de Retenciones en la Fuente de la DGI (Septiembre 2024).
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Código Oficial DGI / Tipo de Retención:</label>
+                        <select id="acred-tipo-codigo" class="form-control" required>
+                            <!-- Carga dinámica desde fiscal.js -->
+                        </select>
+                        <input type="hidden" id="acred-tipo" value="RETENCION_SUFRIDA">
+                    </div>
+
+                    <div class="grid-3col">
+                        <div class="form-group">
+                            <label>Ejercicio Fiscal:</label>
+                            <input type="number" id="acred-anio" class="form-control" value="2026" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mes:</label>
+                            <select id="acred-mes" class="form-control">
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10" selected>Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha de Emisión:</label>
+                            <input type="date" id="acred-fecha" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>No. de Constancia / Referencia:</label>
+                            <input type="text" id="acred-referencia" class="form-control" placeholder="Ej: RET-2026-00459" required>
+                        </div>
+                        <div class="form-group">
+                            <label>RUC Agente Retenedor (Cliente o Banco):</label>
+                            <input type="text" id="acred-agente-ruc" class="form-control" placeholder="Ej: J0310000000002">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nombre o Razón Social del Agente Retenedor:</label>
+                        <input type="text" id="acred-agente-nombre" class="form-control" placeholder="Ej: Distribuidora Nacional S.A. o BAC Credomatic POS">
+                    </div>
+
+                    <div class="grid-3col">
+                        <div class="form-group">
+                            <label>Monto Base Imponible (C$):</label>
+                            <input type="number" step="0.01" id="acred-monto-base" class="form-control" placeholder="0.00" value="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>% Alícuota Retención:</label>
+                            <input type="number" step="0.01" id="acred-porcentaje" class="form-control" placeholder="2.0" value="2.0">
+                        </div>
+                        <div class="form-group">
+                            <label>Importe Retenido (C$):</label>
+                            <input type="number" step="0.01" id="acred-importe-total" class="form-control" placeholder="0.00" required style="font-weight: bold; color: var(--accent-green);">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Concepto / Observaciones:</label>
+                        <input type="text" id="acred-concepto" class="form-control" placeholder="Ej: Retención 2% en compra de repuestos según Art. 44 LCT">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-acreditamiento')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-floppy-disk"></i> Guardar Constancia</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: REGISTRAR AJUSTE FISCAL (CONCILIACIÓN TRIBUTARIA) -->
+    <div class="modal" id="modal-ajuste-fiscal">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-sliders"></i> Registrar Ajuste Fiscal</h3>
+                <button class="modal-close" onclick="closeModal('modal-ajuste-fiscal')">&times;</button>
+            </div>
+            <form id="form-ajuste-fiscal" onsubmit="guardarAjusteFiscal(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Ejercicio Fiscal:</label>
+                        <input type="number" id="ajuste-anio" class="form-control" value="2026" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Concepto del Ajuste:</label>
+                        <input type="text" id="ajuste-concepto" class="form-control" placeholder="Ej: Gastos personales no deducibles o multas" required>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Tipo de Ajuste:</label>
+                            <select id="ajuste-tipo" class="form-control">
+                                <option value="Gasto No Deducible" selected>Gasto No Deducible</option>
+                                <option value="Ingreso No Gravable">Ingreso No Gravable</option>
+                                <option value="Deducción Especial">Deducción Especial</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Efecto en la Renta:</label>
+                            <select id="ajuste-efecto" class="form-control">
+                                <option value="Aumenta Renta" selected>Aumenta Renta Neta</option>
+                                <option value="Disminuye Renta">Disminuye Renta Neta</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Importe (C$):</label>
+                            <input type="number" step="0.01" id="ajuste-importe" class="form-control" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Referencia Normativa:</label>
+                            <input type="text" id="ajuste-normativa" class="form-control" value="Ley 822 Art. 43">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Justificación Técnica:</label>
+                        <textarea id="ajuste-justificacion" class="form-control" rows="2" placeholder="Motivo contable y fiscal del ajuste..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-ajuste-fiscal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Aplicar Ajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: REGISTRAR PRESENTACIÓN Y PAGO ANTE LA DGI -->
+    <div class="modal" id="modal-presentacion-dgi">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-paper-plane-tilt"></i> Registrar Presentación / Pago DGI</h3>
+                <button class="modal-close" onclick="closeModal('modal-presentacion-dgi')">&times;</button>
+            </div>
+            <form id="form-presentacion-dgi" onsubmit="guardarPresentacionDGI(event)">
+                <input type="hidden" id="pres-decl-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>No. de Transacción / Confirmación DGI (VET):</label>
+                        <input type="text" id="pres-referencia" class="form-control" placeholder="Ej: VET-2026-CONF-984321" required>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Fecha de Presentación:</label>
+                            <input type="date" id="pres-fecha" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Importe Pagado (C$):</label>
+                            <input type="number" step="0.01" id="pres-monto" class="form-control" required style="font-weight: bold; color: var(--primary);">
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Banco o Ventanilla:</label>
+                            <select id="pres-banco" class="form-control">
+                                <option value="BAC Credomatic">BAC Credomatic</option>
+                                <option value="Banco de la Producción (BANPRO)">BANPRO</option>
+                                <option value="Banco LAFISE Bancentro">LAFISE</option>
+                                <option value="Banco BDF">BDF</option>
+                                <option value="Ventanilla DGI Central">Ventanilla DGI</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Medio de Pago:</label>
+                            <select id="pres-medio-pago" class="form-control">
+                                <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                                <option value="Débito Automático">Débito Automático</option>
+                                <option value="Cheque de Gerencia">Cheque de Gerencia</option>
+                                <option value="Efectivo en Ventanilla">Efectivo en Ventanilla</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones de Presentación:</label>
+                        <textarea id="pres-observaciones" class="form-control" rows="2" placeholder="Detalles de confirmación DGI..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-presentacion-dgi')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check-circle"></i> Registrar en DGI</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Script Principal SPA del Sistema -->
     <script src="{{ url_for('static', filename='js/main.js') }}?v=5.3"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
@@ -5512,5 +6096,7 @@
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
     <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=2.0"></script>
     <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>
+    <!-- Script Módulo Tributario y Declaración DGI (RF129 - RF139) -->
+    <script src="{{ url_for('static', filename='js/fiscal.js') }}?v=1.0"></script>
 </body>
 </html>

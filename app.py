@@ -3293,5 +3293,11 @@ register_corte_v_routes(app)
 from routes_flujo_efectivo import register_flujo_efectivo_routes
 register_flujo_efectivo_routes(app)
 
+# ==============================================================================
+# RUTAS DE MÓDULO TRIBUTARIO: DECLARACIÓN ANUAL DGI FORMULARIO 106 (RF129 - RF139)
+# ==============================================================================
+from routes_fiscal import register_fiscal_routes
+register_fiscal_routes(app)
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -31,7 +31,7 @@ def fecha(data, campo, opcional=False):
     if not valor and opcional:
         return None
     try:
-        return date.fromisoformat(valor).isoformat()
+        return date.fromisoformat(str(valor)[:10])
     except (TypeError, ValueError):
         raise ValueError(f'{campo}: fecha inválida.')
 
@@ -290,7 +290,7 @@ def register_rrhh_control_routes(app):
                     previo = cur.fetchone()
                     if not previo or previo[0] != eid or previo[1] != equipo or int(previo[3]) != cantidad:
                         raise ValueError('La reposición debe conservar trabajador, equipo y cantidad de la entrega original.')
-                    if entrega < str(previo[2])[:10]:
+                    if str(entrega)[:10] < str(previo[2])[:10]:
                         raise ValueError('La reposición no puede ser anterior a la entrega original.')
                     cur.execute('SELECT id FROM higiene_epp WHERE repone_a_id=?', (anterior,))
                     if cur.fetchone():
@@ -364,7 +364,7 @@ def register_rrhh_control_routes(app):
                 cur.execute('''INSERT INTO higiene_riesgo_seguimientos
                     (riesgo_id, fecha_revision, observaciones, estado, registrado_por) VALUES (?, ?, ?, ?, ?)''',
                     (riesgo_id, dia, obs, estado, usuario()))
-                if row[0] is None or dia >= str(row[0])[:10]:
+                if row[0] is None or str(dia)[:10] >= str(row[0])[:10]:
                     cur.execute('UPDATE higiene_riesgos SET fecha_revision=?, estado=? WHERE id=?', (dia, estado, riesgo_id))
             return jsonify(success=True), 201
         except ValueError as exc:

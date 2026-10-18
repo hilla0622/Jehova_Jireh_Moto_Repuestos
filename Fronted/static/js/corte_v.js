@@ -1317,7 +1317,7 @@ async function cargarContratosLaborales() {
                     <td><code>${c.numero_contrato}</code></td>
                     <td><strong>${c.empleado}</strong><br><small class="text-muted">${c.cargo || '—'}</small></td>
                     <td>${c.tipo_contratacion}</td>
-                    <td style="text-align: right; font-weight: 700;">${cs(c.salario)}</td>
+                    <td style="text-align: right; font-weight: 700;">${cs(c.salario_mensual)}</td>
                     <td>${c.fecha_inicio} al ${c.fecha_fin || 'Indefinido'}</td>
                     <td><span class="badge" style="background:${bBg}; color:${bColor}; font-weight:700;">${c.estado}</span></td>
                     <td>
@@ -1460,7 +1460,7 @@ async function abrirHistorialLaboral(empId, empNombre) {
                 <td><strong style="color:var(--primary);">${h.valor_nuevo || '—'}</strong></td>
                 <td>${h.fecha_vigencia || '—'}</td>
                 <td>${h.motivo || 'Actualización de condiciones'}</td>
-                <td><small>${h.registrado_por || 'Admin'}</small></td>
+                <td><small>${h.usuario_responsable || 'Admin'}</small></td>
             </tr>
         `).join('');
     } catch (e) {
@@ -1480,10 +1480,21 @@ async function cargarJornadasLaborales() {
         const sel = document.getElementById('emp-jornada-select');
         if (sel) {
             sel.innerHTML = '<option value="">-- Asignar Jornada --</option>' +
-                data.map(j => `<option value="${j.id}">${j.nombre_jornada} (${j.hora_entrada} a ${j.hora_salida})</option>`).join('');
+                data.map(j => `<option value="${j.id}">${j.nombre} (${j.hora_entrada} a ${j.hora_salida})</option>`).join('');
         }
     } catch (e) {
         console.error('Error cargando jornadas:', e);
+    }
+}
+
+async function asegurarEmpleadosCache() {
+    if (!_empleadosCache || _empleadosCache.length === 0) {
+        try {
+            const res = await fetch('/api/empleados');
+            _empleadosCache = await res.json();
+        } catch (e) {
+            console.error('Error cargando empleados:', e);
+        }
     }
 }
 
@@ -1519,10 +1530,19 @@ async function cargarAsistenciaDiaria(fecha = null) {
                     <td>${a.hora_salida || '—'}</td>
                     <td><span class="badge" style="background:${bg}; color:${col}; font-weight:700;">${a.estado}</span></td>
                     <td>${a.observaciones || '—'}</td>
-                    <td>
-                        <button class="btn btn-secondary" style="padding:3px 7px; font-size:0.75rem;" onclick="marcarSalidaAsistencia(${a.id})" title="Marcar Salida">
-                            <i class="ph-bold ph-sign-out"></i> Salida
-                        </button>
+                    <td style="text-align:center;">
+                        <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap;">
+                            ${!a.hora_salida ? `
+                            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="marcarSalidaAsistencia(${a.id})" title="Marcar Salida">
+                                <i class="ph-bold ph-sign-out"></i> Salida
+                            </button>` : ''}
+                            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="editarAsistencia(${a.id})" title="Editar Asistencia">
+                                <i class="ph-bold ph-pencil"></i> Editar
+                            </button>
+                            <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="eliminarAsistencia(${a.id})" title="Eliminar Asistencia">
+                                <i class="ph-bold ph-trash"></i> Eliminar
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -1532,24 +1552,84 @@ async function cargarAsistenciaDiaria(fecha = null) {
     }
 }
 
-function abrirModalNuevaAsistencia() {
+async function abrirModalNuevaAsistencia() {
+    await asegurarEmpleadosCache();
     const sel = document.getElementById('asist-empleado-id');
     if (sel && _empleadosCache) {
         sel.innerHTML = '<option value="">-- Seleccionar Empleado --</option>' +
             _empleadosCache.filter(e => e.activo).map(e => `<option value="${e.id}">${e.nombre_completo}</option>`).join('');
     }
-    document.getElementById('asist-fecha').value = new Date().toISOString().slice(0, 10);
+    const idEl = document.getElementById('asist-id');
+    if (idEl) idEl.value = '';
+
+    const fInput = document.getElementById('filtro-asistencia-fecha');
+    document.getElementById('asist-fecha').value = (fInput && fInput.value) ? fInput.value : new Date().toISOString().slice(0, 10);
+    document.getElementById('asist-hora-entrada').value = '08:00';
+    document.getElementById('asist-hora-salida').value = '17:00';
+    document.getElementById('asist-estado').value = 'Presente';
+    const tardanzaEl = document.getElementById('asist-tardanza');
+    if (tardanzaEl) tardanzaEl.value = '0';
+    document.getElementById('asist-observaciones').value = '';
+
+    const tit = document.getElementById('modal-asistencia-titulo');
+    if (tit) tit.textContent = 'Registrar Asistencia';
+    const btn = document.getElementById('btn-guardar-asistencia');
+    if (btn) btn.innerHTML = '<i class="ph-bold ph-check"></i> Guardar';
+
+    openModal('modal-registro-asistencia');
+}
+
+async function editarAsistencia(id) {
+    await asegurarEmpleadosCache();
+    let item = _asistenciaCache.find(a => a.id === id);
+    if (!item) {
+        try {
+            const res = await fetch(`/api/rrhh/asistencia/${id}`);
+            if (res.ok) item = await res.json();
+        } catch (e) {
+            console.error('Error buscando asistencia:', e);
+        }
+    }
+    if (!item) {
+        Swal.fire('Error', 'Registro de asistencia no encontrado.', 'error');
+        return;
+    }
+
+    const sel = document.getElementById('asist-empleado-id');
+    if (sel && _empleadosCache) {
+        sel.innerHTML = '<option value="">-- Seleccionar Empleado --</option>' +
+            _empleadosCache.map(e => `<option value="${e.id}" ${e.id === item.empleado_id ? 'selected' : ''}>${e.nombre_completo}</option>`).join('');
+    }
+
+    const idEl = document.getElementById('asist-id');
+    if (idEl) idEl.value = item.id;
+    document.getElementById('asist-empleado-id').value = item.empleado_id;
+    document.getElementById('asist-fecha').value = item.fecha ? item.fecha.slice(0, 10) : '';
+    document.getElementById('asist-hora-entrada').value = item.hora_entrada ? item.hora_entrada.slice(0, 5) : '';
+    document.getElementById('asist-hora-salida').value = item.hora_salida ? item.hora_salida.slice(0, 5) : '';
+    document.getElementById('asist-estado').value = item.estado || 'Presente';
+    const tardanzaEl = document.getElementById('asist-tardanza');
+    if (tardanzaEl) tardanzaEl.value = item.minutos_tardanza || 0;
+    document.getElementById('asist-observaciones').value = item.observaciones || '';
+
+    const tit = document.getElementById('modal-asistencia-titulo');
+    if (tit) tit.textContent = `Editar Asistencia #${item.id}`;
+    const btn = document.getElementById('btn-guardar-asistencia');
+    if (btn) btn.innerHTML = '<i class="ph-bold ph-check"></i> Actualizar';
+
     openModal('modal-registro-asistencia');
 }
 
 async function guardarAsistencia(e) {
     if (e) e.preventDefault();
+    const asistId = document.getElementById('asist-id')?.value;
     const data = {
         empleado_id: parseInt(document.getElementById('asist-empleado-id').value),
         fecha: document.getElementById('asist-fecha').value,
-        hora_entrada: document.getElementById('asist-hora-entrada').value,
+        hora_entrada: document.getElementById('asist-hora-entrada').value || null,
         hora_salida: document.getElementById('asist-hora-salida').value || null,
         estado: document.getElementById('asist-estado').value,
+        minutos_tardanza: parseInt(document.getElementById('asist-tardanza')?.value || 0),
         observaciones: document.getElementById('asist-observaciones').value.trim()
     };
 
@@ -1559,32 +1639,79 @@ async function guardarAsistencia(e) {
     }
 
     try {
-        const res = await fetch('/api/rrhh/asistencia', {
-            method: 'POST',
+        const url = asistId ? `/api/rrhh/asistencia/${asistId}` : '/api/rrhh/asistencia';
+        const method = asistId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if (res.ok) {
-            Swal.fire('Registrado', 'Asistencia registrada correctamente.', 'success');
+        const respData = await res.json();
+        if (res.ok && respData.success) {
+            Swal.fire(
+                asistId ? 'Actualizado' : 'Registrado',
+                respData.mensaje || (asistId ? 'Asistencia actualizada correctamente.' : 'Asistencia registrada correctamente.'),
+                'success'
+            );
             closeModal('modal-registro-asistencia');
             cargarAsistenciaDiaria(data.fecha);
+        } else {
+            Swal.fire('Error', respData.error || 'No se pudo guardar la asistencia.', 'error');
         }
     } catch (e) {
-        Swal.fire('Error', 'Fallo de conexión.', 'error');
+        Swal.fire('Error', 'Fallo de conexión al guardar la asistencia.', 'error');
+    }
+}
+
+async function eliminarAsistencia(id) {
+    const item = _asistenciaCache.find(a => a.id === id);
+    const empNombre = item ? item.empleado : 'este empleado';
+    const fecha = item ? item.fecha : '';
+
+    const confirm = await Swal.fire({
+        title: '¿Eliminar asistencia?',
+        text: `Se eliminará el registro de asistencia de ${empNombre} correspondiente al ${fecha}. Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await fetch(`/api/rrhh/asistencia/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            Swal.fire('Eliminado', data.mensaje || 'Registro de asistencia eliminado.', 'success');
+            cargarAsistenciaDiaria(fecha);
+        } else {
+            Swal.fire('Error', data.error || 'No se pudo eliminar el registro.', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error', 'Fallo de conexión al eliminar la asistencia.', 'error');
     }
 }
 
 async function marcarSalidaAsistencia(id) {
     const hora = new Date().toTimeString().slice(0, 5);
     try {
-        const res = await fetch('/api/rrhh/asistencia', {
-            method: 'POST',
+        const res = await fetch(`/api/rrhh/asistencia/${id}`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: id, hora_salida: hora })
+            body: JSON.stringify({ hora_salida: hora })
         });
-        if (res.ok) {
+        const data = await res.json();
+        if (res.ok && data.success) {
             Swal.fire('Salida Marcada', `Hora registrada: ${hora}`, 'success');
             cargarAsistenciaDiaria();
+        } else {
+            Swal.fire('Error', data.error || 'No se pudo marcar la salida.', 'error');
         }
     } catch (e) {
         Swal.fire('Error', 'No se pudo marcar la salida.', 'error');
@@ -1608,7 +1735,13 @@ async function cargarHorasExtras() {
             return;
         }
 
-        tbody.innerHTML = data.map(h => `
+        tbody.innerHTML = data.map(h => {
+            const periodo = new Intl.DateTimeFormat('es-NI', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+                .format(new Date(`${h.fecha}T12:00:00Z`));
+            const estadoNomina = h.nomina_id
+                ? 'Incluida en nómina'
+                : `Pendiente de nómina ${periodo}`;
+            return `
             <tr>
                 <td><strong>${h.empleado}</strong></td>
                 <td>${h.fecha}</td>
@@ -1616,9 +1749,10 @@ async function cargarHorasExtras() {
                 <td style="text-align: center;"><span class="badge" style="background: rgba(59,130,246,0.15); color: #3b82f6;">+${h.recargo_porcentaje}% Ley 185</span></td>
                 <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${cs(h.monto_total)}</td>
                 <td><small>${h.motivo || 'Cierre de inventario / Demanda alta'}</small></td>
-                <td><span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e;">Aprobado por ${h.autorizado_por}</span></td>
+                <td><small>Aprobado por ${h.autorizado_por || '—'}</small><br><span class="badge" style="background: ${h.nomina_id ? 'rgba(59,130,246,0.15)' : 'rgba(245,158,11,0.15)'}; color: ${h.nomina_id ? '#3b82f6' : '#b45309'};">${estadoNomina}</span></td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
     } catch (e) {
         console.error('Error cargando horas extras:', e);
     }
@@ -1656,7 +1790,17 @@ async function guardarHorasExtras(e) {
         });
         const resp = await res.json();
         if (res.ok) {
-            Swal.fire('¡Horas Extras Aprobadas!', resp.mensaje, 'success');
+            let mensaje = resp.mensaje;
+            let tipo = 'success';
+            if (resp.nomina_id) {
+                const ajuste = await fetch(`/api/nomina/${resp.nomina_id}/incluir-horas-extras`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+                });
+                const resultado = await ajuste.json();
+                if (ajuste.ok) mensaje = `${mensaje} ${resultado.mensaje}`;
+                else { mensaje = `${mensaje} La nómina requiere revisión: ${resultado.error || 'no se pudo aplicar el ajuste.'}`; tipo = 'warning'; }
+            }
+            Swal.fire(tipo === 'success' ? '¡Horas extras registradas!' : 'Horas aprobadas; nómina pendiente', mensaje, tipo);
             closeModal('modal-horas-extras');
             cargarHorasExtras();
         } else {
@@ -1694,10 +1838,18 @@ async function cargarLiquidacionesLaborales() {
                     : 'No registrada'}</td>
                 <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${cs(l.neto_a_pagar)}</td>
                 <td><span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e;">${l.estado}</span></td>
-                <td>
-                    <a href="/rrhh/liquidacion/${l.id}/imprimir" target="_blank" class="btn btn-secondary" style="padding:3px 7px; font-size:0.75rem;" title="Imprimir Finiquito Legal">
-                        <i class="ph-bold ph-printer"></i> Imprimir Finiquito
-                    </a>
+                <td style="text-align:center;">
+                    <div style="display:inline-flex; gap:5px; align-items:center; justify-content:center; flex-wrap:wrap;">
+                        <a href="/rrhh/liquidacion/${l.id}/imprimir" target="_blank" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" title="Imprimir Finiquito Legal">
+                            <i class="ph-bold ph-printer"></i> Imprimir
+                        </a>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="editarLiquidacion(${l.id})" title="Editar Liquidación">
+                            <i class="ph-bold ph-pencil"></i> Editar
+                        </button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="eliminarLiquidacion(${l.id})" title="Eliminar Liquidación">
+                            <i class="ph-bold ph-trash"></i> Eliminar
+                        </button>
+                    </div>
                 </td>
             </tr>
         `).join('');
@@ -1706,25 +1858,85 @@ async function cargarLiquidacionesLaborales() {
     }
 }
 
-function abrirModalNuevaLiquidacion() {
+async function abrirModalNuevaLiquidacion() {
+    await asegurarEmpleadosCache();
     const sel = document.getElementById('liq-empleado-id');
     if (sel && _empleadosCache) {
         sel.innerHTML = '<option value="">-- Seleccionar Empleado a Liquidar --</option>' +
             _empleadosCache.map(e => `<option value="${e.id}" data-ingreso="${e.fecha_ingreso || ''}">${e.nombre_completo} (Ingreso: ${e.fecha_ingreso ? e.fecha_ingreso.slice(0, 10) : '—'})</option>`).join('');
     }
+    const idEl = document.getElementById('liq-id');
+    if (idEl) idEl.value = '';
+
     document.getElementById('liq-fecha-salida').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('liq-motivo').value = 'Renuncia Voluntaria';
+    document.getElementById('liq-dias-pendientes').value = 0;
+    document.getElementById('liq-deducciones').value = '0.00';
+    const estEl = document.getElementById('liq-estado');
+    if (estEl) estEl.value = 'Borrador';
+
+    const tit = document.getElementById('modal-liquidacion-titulo');
+    if (tit) tit.innerHTML = '<i class="ph-bold ph-receipt"></i> Calcular Liquidación / Finiquito (Ley 185)';
+    const btn = document.getElementById('btn-guardar-liquidacion');
+    if (btn) btn.innerHTML = '<i class="ph-bold ph-calculator"></i> Liquidar y Generar Finiquito';
+
+    openModal('modal-liquidacion-laboral');
+}
+
+async function editarLiquidacion(id) {
+    await asegurarEmpleadosCache();
+    let l = _liquidacionesCache.find(x => x.id === id);
+    if (!l) {
+        try {
+            const res = await fetch(`/api/rrhh/liquidaciones/${id}`);
+            if (res.ok) l = await res.json();
+        } catch (e) {
+            console.error('Error buscando liquidación:', e);
+        }
+    }
+    if (!l) {
+        Swal.fire('Error', 'Liquidación no encontrada.', 'error');
+        return;
+    }
+
+    const sel = document.getElementById('liq-empleado-id');
+    if (sel && _empleadosCache) {
+        sel.innerHTML = '<option value="">-- Seleccionar Empleado a Liquidar --</option>' +
+            _empleadosCache.map(e => `<option value="${e.id}" ${e.id === l.empleado_id ? 'selected' : ''}>${e.nombre_completo} (Ingreso: ${e.fecha_ingreso ? e.fecha_ingreso.slice(0, 10) : '—'})</option>`).join('');
+    }
+    const idEl = document.getElementById('liq-id');
+    if (idEl) idEl.value = l.id;
+
+    document.getElementById('liq-empleado-id').value = l.empleado_id;
+    document.getElementById('liq-fecha-salida').value = l.fecha_salida ? l.fecha_salida.slice(0, 10) : '';
+    document.getElementById('liq-motivo').value = l.motivo_salida || 'Renuncia Voluntaria';
+    document.getElementById('liq-dias-pendientes').value = l.dias_pendientes_pago || 0;
+    document.getElementById('liq-deducciones').value = (l.deducciones_totales || 0).toFixed(2);
+    const estEl = document.getElementById('liq-estado');
+    if (estEl) estEl.value = l.estado || 'Borrador';
+
+    const tit = document.getElementById('modal-liquidacion-titulo');
+    if (tit) tit.innerHTML = `<i class="ph-bold ph-pencil"></i> Editar Liquidación ${l.codigo || ''}`;
+    const btn = document.getElementById('btn-guardar-liquidacion');
+    if (btn) btn.innerHTML = '<i class="ph-bold ph-check"></i> Actualizar Liquidación';
+
     openModal('modal-liquidacion-laboral');
 }
 
 async function guardarLiquidacion(e) {
     if (e) e.preventDefault();
+    const liqId = document.getElementById('liq-id')?.value;
+    const estEl = document.getElementById('liq-estado');
     const data = {
         empleado_id: parseInt(document.getElementById('liq-empleado-id').value),
         fecha_salida: document.getElementById('liq-fecha-salida').value,
         motivo_salida: document.getElementById('liq-motivo').value,
-        dias_pendientes: parseFloat(document.getElementById('liq-dias-pendientes').value || 0),
-        deducciones: parseFloat(document.getElementById('liq-deducciones').value || 0)
+        dias_pendientes_pago: parseFloat(document.getElementById('liq-dias-pendientes').value || 0),
+        deducciones_totales: parseFloat(document.getElementById('liq-deducciones').value || 0)
     };
+    if (estEl && estEl.value) {
+        data.estado = estEl.value;
+    }
 
     if (!data.empleado_id || !data.fecha_salida) {
         Swal.fire('Atención', 'Seleccione empleado y fecha de salida.', 'warning');
@@ -1732,15 +1944,18 @@ async function guardarLiquidacion(e) {
     }
 
     try {
-        const res = await fetch('/api/rrhh/liquidaciones', {
-            method: 'POST',
+        const url = liqId ? `/api/rrhh/liquidaciones/${liqId}` : '/api/rrhh/liquidaciones';
+        const method = liqId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         const resp = await res.json();
-        if (res.ok) {
+        if (res.ok && resp.success) {
             Swal.fire({
-                title: '¡Liquidación Calculada!',
+                title: liqId ? '¡Liquidación Actualizada!' : '¡Liquidación Calculada!',
                 text: resp.mensaje,
                 icon: 'success',
                 showCancelButton: true,
@@ -1748,18 +1963,51 @@ async function guardarLiquidacion(e) {
                 cancelButtonText: 'Cerrar'
             }).then(result => {
                 if (result.isConfirmed) {
-                    window.open(`/rrhh/liquidacion/${resp.id}/imprimir`, '_blank');
+                    window.open(`/rrhh/liquidacion/${resp.id || liqId}/imprimir`, '_blank');
                 }
             });
             closeModal('modal-liquidacion-laboral');
             cargarLiquidacionesLaborales();
         } else {
-            Swal.fire('Error', resp.error, 'error');
+            Swal.fire('Error', resp.error || 'No se pudo guardar la liquidación.', 'error');
         }
     } catch (e) {
         Swal.fire('Error', 'Fallo de conexión.', 'error');
     }
 }
+
+async function eliminarLiquidacion(id) {
+    const l = _liquidacionesCache.find(x => x.id === id);
+    const cod = l ? l.codigo : `#${id}`;
+    const emp = l ? l.empleado : 'este empleado';
+
+    const confirm = await Swal.fire({
+        title: '¿Eliminar liquidación?',
+        text: `Se eliminará la liquidación ${cod} de ${emp}. Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await fetch(`/api/rrhh/liquidaciones/${id}`, { method: 'DELETE' });
+        const resp = await res.json();
+        if (res.ok && resp.success) {
+            Swal.fire('Eliminado', resp.mensaje || 'Liquidación eliminada correctamente.', 'success');
+            cargarLiquidacionesLaborales();
+        } else {
+            Swal.fire('Error', resp.error || 'No se pudo eliminar la liquidación.', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error', 'Fallo de conexión al eliminar liquidación.', 'error');
+    }
+}
+
 
 // -----------------------------------------------------------------------------
 // RF109: SEGUIMIENTO DE PAGOS DE NÓMINA
@@ -1774,7 +2022,7 @@ async function cargarPagosNomina() {
         if (!tbody) return;
 
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:1.5rem;">No se registran comprobantes de pago de nómina.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:1.5rem;">No se registran comprobantes de pago de nómina.</td></tr>';
             return;
         }
 
@@ -1787,6 +2035,16 @@ async function cargarPagosNomina() {
                 <td><code>${p.numero_referencia || '—'}</code></td>
                 <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${cs(p.monto_pagado)}</td>
                 <td><span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e;">${p.estado}</span></td>
+                <td style="text-align:center;">
+                    <div style="display:inline-flex; gap:5px; align-items:center; justify-content:center; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="editarPagoNomina(${p.id})" title="Editar Pago">
+                            <i class="ph-bold ph-pencil"></i> Editar
+                        </button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="eliminarPagoNomina(${p.id})" title="Eliminar Pago">
+                            <i class="ph-bold ph-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </td>
             </tr>
         `).join('');
     } catch (e) {
@@ -1812,9 +2070,9 @@ async function cargarIncidentesHigiene() {
                 <td>${i.fecha}</td>
                 <td><strong>${i.area}</strong></td>
                 <td>${i.empleado || 'General'}</td>
-                <td>${i.descripcion_suceso}</td>
+                <td>${i.descripcion}</td>
                 <td>${i.medidas_correctivas}</td>
-                <td><span class="badge" style="background:rgba(34,197,94,0.15); color:#22c55e;">${i.estado_caso}</span></td>
+                <td><span class="badge" style="background:rgba(34,197,94,0.15); color:#22c55e;">${i.estado_seguimiento}</span></td>
             </tr>
         `).join('');
     } catch (e) {}
@@ -1830,8 +2088,8 @@ async function cargarCapacitacionesHigiene() {
             <tr>
                 <td><strong>${c.nombre_capacitacion}</strong></td>
                 <td>${c.fecha}</td>
-                <td>${c.instructor_o_responsable}</td>
-                <td>${c.participantes_detalle || 'Todo el personal'}</td>
+                <td>${c.facilitador}</td>
+                <td>${c.asistentes_conteo} participantes</td>
                 <td><span class="badge" style="background:rgba(59,130,246,0.15); color:#3b82f6;">Completada</span></td>
             </tr>
         `).join('');
@@ -2062,17 +2320,17 @@ async function cargarMarcoLegal() {
         container.innerHTML = data.map(n => `
             <div class="card" style="margin-bottom: 1rem; border-left: 4px solid var(--primary);">
                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 style="margin:0;"><i class="ph-bold ph-scales"></i> ${n.nombre}</h3>
-                    <a href="${n.enlace_oficial}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem; padding:4px 8px;">
+                    <h3 style="margin:0;"><i class="ph-bold ph-scales"></i> ${n.ley}</h3>
+                    <a href="${n.enlace}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size:0.75rem; padding:4px 8px;">
                         <i class="ph-bold ph-arrow-square-out"></i> Ver Ley Completa
                     </a>
                 </div>
                 <div class="card-body">
-                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">${n.descripcion}</p>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">${n.resumen}</p>
                     <div style="background:var(--bg-card); border-radius:6px; padding:0.75rem;">
                         <strong style="font-size:0.8rem; text-transform:uppercase; color:var(--primary);">Artículos Clave Aplicados al Sistema:</strong>
                         <ul style="margin:0.5rem 0 0 1.2rem; font-size:0.82rem; color:var(--text-main);">
-                            ${n.articulos_clave.map(a => `<li>${a}</li>`).join('')}
+                            <li>${n.articulo}: ${n.tema}</li>
                         </ul>
                     </div>
                 </div>
@@ -2158,6 +2416,8 @@ window.abrirHistorialLaboral = abrirHistorialLaboral;
 window.cargarJornadasLaborales = cargarJornadasLaborales;
 window.cargarAsistenciaDiaria = cargarAsistenciaDiaria;
 window.abrirModalNuevaAsistencia = abrirModalNuevaAsistencia;
+window.editarAsistencia = editarAsistencia;
+window.eliminarAsistencia = eliminarAsistencia;
 window.guardarAsistencia = guardarAsistencia;
 window.marcarSalidaAsistencia = marcarSalidaAsistencia;
 window.cargarHorasExtras = cargarHorasExtras;
@@ -2165,6 +2425,8 @@ window.abrirModalHorasExtras = abrirModalHorasExtras;
 window.guardarHorasExtras = guardarHorasExtras;
 window.cargarLiquidacionesLaborales = cargarLiquidacionesLaborales;
 window.abrirModalNuevaLiquidacion = abrirModalNuevaLiquidacion;
+window.editarLiquidacion = editarLiquidacion;
+window.eliminarLiquidacion = eliminarLiquidacion;
 window.cargarPagosNomina = cargarPagosNomina;
 window.cargarRiesgosHigiene = cargarRiesgosHigiene;
 window.cargarIncidentesHigiene = cargarIncidentesHigiene;

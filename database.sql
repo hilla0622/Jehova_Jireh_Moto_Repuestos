@@ -613,8 +613,10 @@ CREATE TABLE [horas_extras] (
     [monto_total] decimal(12,2) NOT NULL,
     [estado] varchar(30) DEFAULT ('Aprobada') NULL,
     [autorizado_por] varchar(100) NULL,
+    [nomina_id] int NULL,
     [created_at] datetime DEFAULT (getdate()) NULL,
-    CONSTRAINT [pk_horas_extras] PRIMARY KEY ([id])
+    CONSTRAINT [pk_horas_extras] PRIMARY KEY ([id]),
+    CONSTRAINT [fk_horasextras_nomina] FOREIGN KEY ([nomina_id]) REFERENCES [nomina]([id])
 );
 END
 GO

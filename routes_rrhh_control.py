@@ -84,6 +84,13 @@ def register_rrhh_control_routes(app):
                 VALUES (?, ?, ?, ?, ?, ?)''', (clase, referencia, *archivo, usuario()))
 
     def serializar(rows):
+        if isinstance(rows, dict):
+            for key, value in rows.items():
+                if isinstance(value, date):
+                    rows[key] = value.isoformat()[:10]
+                elif isinstance(value, Decimal):
+                    rows[key] = float(value)
+            return rows
         for row in rows:
             for key, value in row.items():
                 if isinstance(value, date):
@@ -132,6 +139,73 @@ def register_rrhh_control_routes(app):
             return jsonify(success=True, mensaje='Pago confirmado.', saldo_pendiente=float(saldo-monto)), 201
         except (ValueError, InvalidOperation):
             return jsonify(error='Verifique el importe, los identificadores y los datos del pago.'), 400
+
+    @app.route('/api/rrhh/pagos-nomina/<int:pago_id>', methods=['GET', 'PUT', 'DELETE'])
+    @login_required
+    def pago_control_item(pago_id):
+        if request.method == 'GET':
+            row = execute_query('''SELECT p.*, e.nombre_completo AS empleado
+                FROM pagos_nomina p JOIN empleados e ON e.id=p.empleado_id
+                WHERE p.id=?''', (pago_id,), fetchone=True)
+            if not row:
+                return jsonify(error='Pago no encontrado.'), 404
+            return jsonify(serializar(row))
+
+        if request.method == 'DELETE':
+            with transaccion() as cur:
+                cur.execute('SELECT id FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (pago_id,))
+                if not cur.fetchone():
+                    return jsonify(error='Pago no encontrado.'), 404
+                cur.execute('DELETE FROM pagos_nomina WHERE id=?', (pago_id,))
+            return jsonify(success=True, mensaje='Comprobante de pago eliminado correctamente.')
+
+        if request.method == 'PUT':
+            data = request.get_json(silent=True) or {}
+            try:
+                dia = fecha(data, 'fecha_pago') if data.get('fecha_pago') else None
+                metodo = texto(data, 'metodo_pago', 50) if data.get('metodo_pago') else None
+                ref = texto(data, 'numero_referencia', 100) if data.get('numero_referencia') else None
+                estado = texto(data, 'estado', 30) if data.get('estado') else None
+                monto_val = data.get('monto_pagado')
+                monto = Decimal(str(monto_val)) if monto_val is not None else None
+                if monto is not None and (not monto.is_finite() or monto <= 0 or monto > Decimal('9999999999.99') or monto != monto.quantize(Decimal('.01'))):
+                    raise ValueError('El pago debe ser positivo, finito y tener hasta dos decimales.')
+
+                with transaccion() as cur:
+                    cur.execute('SELECT id, nomina_id, empleado_id, monto_pagado, fecha_pago, metodo_pago, numero_referencia, estado FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (pago_id,))
+                    actual = cur.fetchone()
+                    if not actual:
+                        return jsonify(error='Pago no encontrado.'), 404
+
+                    nid, eid = actual[1], actual[2]
+                    nuevo_monto = monto if monto is not None else Decimal(str(actual[3]))
+                    nuevo_dia = dia or actual[4]
+                    nuevo_metodo = metodo or actual[5]
+                    nuevo_ref = ref if ref is not None else actual[6]
+                    nuevo_estado = estado or actual[7]
+
+                    if nuevo_monto != Decimal(str(actual[3])):
+                        cur.execute('SELECT neto_pagar FROM detalle_nomina WHERE nomina_id=? AND empleado_id=?', (nid, eid))
+                        detalle = cur.fetchone()
+                        if detalle:
+                            cur.execute("SELECT ISNULL(SUM(monto_pagado),0) FROM pagos_nomina WHERE nomina_id=? AND empleado_id=? AND estado='Confirmado' AND id!=?", (nid, eid, pago_id))
+                            otros_pagos = Decimal(str(cur.fetchone()[0]))
+                            saldo_max = Decimal(str(detalle[0])) - otros_pagos
+                            if nuevo_monto > saldo_max:
+                                return jsonify(error=f'El monto supera el saldo disponible: C$ {saldo_max:,.2f}.'), 409
+
+                    if nuevo_ref:
+                        cur.execute('SELECT id FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE numero_referencia=? AND metodo_pago=? AND estado=\'Confirmado\' AND id!=?', (nuevo_ref, nuevo_metodo, pago_id))
+                        if cur.fetchone():
+                            return jsonify(error='La referencia de pago ya fue registrada para ese método.'), 409
+
+                    cur.execute('''UPDATE pagos_nomina
+                        SET monto_pagado=?, fecha_pago=?, metodo_pago=?, numero_referencia=?, estado=?
+                        WHERE id=?''', (str(nuevo_monto), nuevo_dia, nuevo_metodo, nuevo_ref, nuevo_estado, pago_id))
+
+                return jsonify(success=True, mensaje='Comprobante de pago actualizado correctamente.')
+            except (ValueError, InvalidOperation) as exc:
+                return jsonify(error=str(exc) or 'Verifique los datos del pago.'), 400
 
     @app.route('/api/rrhh/expedientes/<int:emp_id>', methods=['GET', 'POST'])
     @login_required

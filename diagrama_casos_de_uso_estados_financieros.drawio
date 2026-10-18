@@ -1,165 +1,247 @@
-<mxfile host="app.diagrams.net" modified="2026-10-14T05:40:00.000Z" agent="Antigravity" version="21.6.8" type="device">
-  <diagram id="CU_Estados_Financieros_JJ" name="Casos de Uso - Módulo Elaboración de Estados Financieros">
-    <mxGraphModel dx="1600" dy="1300" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1550" pageHeight="1300" math="0" shadow="0">
+<mxfile host="app.diagrams.net" modified="2026-10-15T20:10:00.000Z" agent="Antigravity" version="21.6.8" type="device">
+  <diagram id="CU_Contabilidad_JJ" name="Casos de Uso - Módulo Contabilidad y Estados Financieros">
+    <mxGraphModel dx="1800" dy="1800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1550" pageHeight="1760" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <!-- Marco del Sistema -->
         <mxCell id="sys_boundary" value="" style="shape=rect;html=1;whiteSpace=wrap;align=center;verticalAlign=bottom;strokeColor=#104E8B;strokeWidth=2.5;fillColor=#FFFFFF;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="190" y="30" width="980" height="1160" as="geometry" />
+          <mxGeometry x="180" y="30" width="1060" height="1660" as="geometry" />
         </mxCell>
-        <!-- Título Superior -->
-        <mxCell id="title_header" value="Módulo: Elaboración de Estados Financieros y Contabilidad" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=15;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
-          <mxGeometry x="215" y="42" width="600" height="30" as="geometry" />
+        <mxCell id="title_header" value="Módulo: Elaboración de Estados Financieros, Contabilidad y Gestión Tributaria" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=15;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
+          <mxGeometry x="205" y="42" width="750" height="30" as="geometry" />
         </mxCell>
-        <!-- Pie de Página -->
         <mxCell id="footer_text" value="Aplicación Web Administrativa para la Gestión de Ventas, Inventario y Procesos Operativos de Jehová Jireh Masatepe Moto Repuestos" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=11.5;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
-          <mxGeometry x="215" y="1155" width="850" height="25" as="geometry" />
+          <mxGeometry x="205" y="1662" width="950" height="25" as="geometry" />
         </mxCell>
-        <!-- Actor: Contador (Izquierda - Cyan) -->
-        <mxCell id="actor_contador" value="CONTADOR" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=11;fontStyle=1;fontColor=#000000;strokeColor=#0891B2;strokeWidth=2;fillColor=#06B6D4;" vertex="1" parent="1">
-          <mxGeometry x="45" y="520" width="55" height="105" as="geometry" />
+        <mxCell id="actor_contador" value="CONTADOR&#xa;(EXTERNO)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=11;fontStyle=1;fontColor=#000000;strokeColor=#0891B2;strokeWidth=2;fillColor=#06B6D4;" vertex="1" parent="1">
+          <mxGeometry x="45" y="820" width="55" height="105" as="geometry" />
         </mxCell>
-        <!-- Actor: Gerente Administrativo y Financiero (Derecha - Naranja) -->
-        <mxCell id="actor_admin" value="GERENTE ADMINISTRATIVO&#xa;Y FINANCIERO" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fontColor=#000000;strokeColor=#A0522D;strokeWidth=2;fillColor=#FF8C00;" vertex="1" parent="1">
-          <mxGeometry x="1220" y="700" width="55" height="105" as="geometry" />
+        <mxCell id="actor_gerente" value="GERENTE ADMINISTRATIVO&#xa;Y FINANCIERO" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fontColor=#000000;strokeColor=#A0522D;strokeWidth=2;fillColor=#FF8C00;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="880" width="55" height="105" as="geometry" />
         </mxCell>
         <mxCell id="cu_login" value="Iniciar Sesión" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="80" width="250" height="46" as="geometry" />
-        </mxCell>
-        <mxCell id="cu_auth" value="Autenticar Usuario" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
-          <mxGeometry x="580" y="80" width="210" height="46" as="geometry" />
+          <mxGeometry x="230" y="75" width="270" height="44" as="geometry" />
         </mxCell>
         <mxCell id="cu_cat" value="Gestionar Catálogo de Cuentas&#xa;Contables" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="152" width="260" height="50" as="geometry" />
+          <mxGeometry x="230" y="135" width="280" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_saldos" value="Registrar Saldos Iniciales&#xa;Contables" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="226" width="260" height="48" as="geometry" />
+          <mxGeometry x="230" y="195" width="280" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_asientos" value="Registrar Asientos Manuales y&#xa;Gastos Operativos" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="298" width="260" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="cu_cuadre" value="Validar Cuadre Estricto&#xa;Debe = Haber" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
-          <mxGeometry x="580" y="298" width="220" height="48" as="geometry" />
+          <mxGeometry x="230" y="255" width="280" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_asientos_auto" value="Generar Asientos Automáticos por&#xa;Integración (Ventas, Compras, Nómina)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="372" width="275" height="52" as="geometry" />
+          <mxGeometry x="230" y="315" width="295" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_correc_clasif" value="Corregir Errores de Clasificación&#xa;en Operaciones" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="375" width="290" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_diario" value="Consultar Libro Diario General" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="448" width="260" height="48" as="geometry" />
+          <mxGeometry x="230" y="435" width="280" height="44" as="geometry" />
         </mxCell>
         <mxCell id="cu_mayor" value="Consultar Libro Mayor" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="520" width="260" height="48" as="geometry" />
-        </mxCell>
-        <mxCell id="cu_etiquetas_flujo" value="Configurar Etiquetas de Flujo&#xa;en Cuentas Contables" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="592" width="270" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="cu_clasif_flujo" value="Clasificar Transacciones Complejas&#xa;y Ajustes de Efectivo" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="666" width="270" height="50" as="geometry" />
+          <mxGeometry x="230" y="495" width="280" height="44" as="geometry" />
         </mxCell>
         <mxCell id="cu_conciliacion" value="Realizar Conciliación Bancaria y&#xa;Depuración de Partidas" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="740" width="270" height="50" as="geometry" />
+          <mxGeometry x="230" y="555" width="290" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_etiquetas_flujo" value="Configurar Etiquetas de Flujo&#xa;en Cuentas Contables" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="615" width="290" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_clasif_flujo" value="Clasificar Transacciones Complejas&#xa;y Ajustes de Efectivo" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="675" width="290" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_ajustes_nomet" value="Registrar Ajustes por Partidas&#xa;que No Implican Efectivo" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="735" width="290" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_comp" value="Generar Balance de Comprobación" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="814" width="260" height="48" as="geometry" />
+          <mxGeometry x="230" y="795" width="280" height="44" as="geometry" />
         </mxCell>
         <mxCell id="cu_er" value="Elaborar Estado de Resultados&#xa;(Pérdidas y Ganancias)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="886" width="260" height="50" as="geometry" />
+          <mxGeometry x="230" y="855" width="280" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_bg" value="Elaborar Balance General&#xa;(Situación Financiera)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="958" width="260" height="50" as="geometry" />
+          <mxGeometry x="230" y="935" width="280" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_flujo" value="Elaborar Estado de Flujo de Efectivo" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
-          <mxGeometry x="240" y="1032" width="260" height="50" as="geometry" />
+          <mxGeometry x="230" y="1000" width="280" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_info_trib" value="Registrar Información Tributaria&#xa;del Negocio (RF58)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1070" width="295" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_reglas_trib" value="Administrar Reglas Tributarias&#xa;(RF59)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1130" width="295" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_datos_fiscales" value="Registrar Datos Fiscales y&#xa;Documentos de Respaldo (RF60)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1190" width="295" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_anticipos_cred" value="Registrar Anticipos, Retenciones&#xa;y Créditos Fiscales (RF61)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1250" width="295" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_ajustes_fisc" value="Registrar Ajustes Fiscales de&#xa;Conciliación (RF65)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1310" width="295" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_prep_ir" value="Preparar Formulario de Declaración&#xa;Anual del IR (RF62)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1370" width="295" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_rev_ir" value="Revisar y Aprobar Declaración&#xa;Anual Preparada (RF66)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1445" width="295" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_export_ir" value="Exportar e Imprimir Declaración&#xa;Anual del IR (PDF / Excel) (RF67)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1515" width="300" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_hist_trib" value="Consultar historial y registrar&#xa;presentación y pagos (RF68)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10.5;fontStyle=1;fillColor=#CFE2F3;strokeColor=#4A709C;strokeWidth=1.5;fontColor=#0B2545;" vertex="1" parent="1">
+          <mxGeometry x="230" y="1580" width="305" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_auth" value="Autenticar Usuario" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="75" width="210" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_cuadre" value="Validar Cuadre Estricto&#xa;Debe = Haber" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="580" y="255" width="220" height="46" as="geometry" />
         </mxCell>
         <mxCell id="cu_cuadre_efectivo" value="Verificar y Cuadrar Saldo&#xa;Final de Efectivo" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
-          <mxGeometry x="580" y="1032" width="220" height="50" as="geometry" />
+          <mxGeometry x="580" y="1000" width="230" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="cu_export" value="Exportar e Imprimir Estados&#xa;Financieros (PDF / Excel)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
-          <mxGeometry x="600" y="915" width="230" height="52" as="geometry" />
+        <mxCell id="cu_export_eeff" value="Exportar e Imprimir Estados&#xa;Financieros (PDF / Excel)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontColor=#7F4B00;" vertex="1" parent="1">
+          <mxGeometry x="600" y="885" width="235" height="52" as="geometry" />
         </mxCell>
-        <mxCell id="rel_inc_1" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_login" target="cu_auth">
+        <mxCell id="cu_calc_ir" value="Calcular Preliminarmente IR&#xa;y Saldo Resultante (RF64)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="600" y="1350" width="240" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="cu_valida_trib" value="Realizar Validación Preventiva&#xa;de la Declaración (RF63)" style="shape=ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;strokeWidth=1.5;fontColor=#4A154B;" vertex="1" parent="1">
+          <mxGeometry x="600" y="1410" width="240" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_1" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_login" target="cu_auth">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_inc_2" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_asientos" target="cu_cuadre">
+        <mxCell id="rel_2" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_asientos" target="cu_cuadre">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_inc_3" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_flujo" target="cu_cuadre_efectivo">
+        <mxCell id="rel_3" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_flujo" target="cu_cuadre_efectivo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_ext_1" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export" target="cu_comp">
+        <mxCell id="rel_4" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export_eeff" target="cu_comp">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_ext_2" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export" target="cu_er">
+        <mxCell id="rel_5" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export_eeff" target="cu_er">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_ext_3" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export" target="cu_bg">
+        <mxCell id="rel_6" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export_eeff" target="cu_bg">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="rel_ext_4" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export" target="cu_flujo">
+        <mxCell id="rel_7" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#D79B00;strokeColor=#D79B00;strokeWidth=1.5;" edge="1" parent="1" source="cu_export_eeff" target="cu_flujo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_0" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_login">
+        <mxCell id="rel_8" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_prep_ir" target="cu_calc_ir">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_1" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_cat">
+        <mxCell id="rel_9" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_prep_ir" target="cu_valida_trib">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_2" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_saldos">
+        <mxCell id="rel_10" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="html=1;verticalAlign=bottom;labelBackgroundColor=none;endArrow=open;endFill=0;dashed=1;fontFamily=Helvetica;fontSize=9.5;fontStyle=2;fontColor=#0000FF;strokeColor=#0000FF;strokeWidth=1.5;" edge="1" parent="1" source="cu_rev_ir" target="cu_valida_trib">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_3" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_asientos">
+        <mxCell id="assoc_cont_1" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_login">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_4" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_asientos_auto">
+        <mxCell id="assoc_cont_2" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_cat">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_5" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_diario">
+        <mxCell id="assoc_cont_3" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_saldos">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_6" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_mayor">
+        <mxCell id="assoc_cont_4" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_asientos">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_7" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_etiquetas_flujo">
+        <mxCell id="assoc_cont_5" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_asientos_auto">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_8" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_clasif_flujo">
+        <mxCell id="assoc_cont_6" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_correc_clasif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_cont_7" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_diario">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_cont_8" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_mayor">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="assoc_cont_9" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_conciliacion">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_10" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_comp">
+        <mxCell id="assoc_cont_10" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_etiquetas_flujo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_11" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_er">
+        <mxCell id="assoc_cont_11" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_clasif_flujo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_12" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_bg">
+        <mxCell id="assoc_cont_12" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_ajustes_nomet">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_cont_13" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_flujo">
+        <mxCell id="assoc_cont_13" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_comp">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_admin_0" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_diario">
+        <mxCell id="assoc_cont_14" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_er">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_admin_1" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_mayor">
+        <mxCell id="assoc_cont_15" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_bg">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_admin_2" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_comp">
+        <mxCell id="assoc_cont_16" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_flujo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_admin_3" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_er">
+        <mxCell id="assoc_cont_17" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_info_trib">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_admin_4" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_bg">
+        <mxCell id="assoc_cont_18" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_reglas_trib">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_admin_5" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_flujo">
+        <mxCell id="assoc_cont_19" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_datos_fiscales">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="assoc_admin_6" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_admin" target="cu_export">
+        <mxCell id="assoc_cont_20" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_anticipos_cred">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_cont_21" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_ajustes_fisc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_cont_22" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_prep_ir">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_cont_23" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_rev_ir">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_cont_24" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_export_ir">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_cont_25" style="endArrow=none;html=1;rounded=0;strokeColor=#0891B2;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_contador" target="cu_hist_trib">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_1" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_diario">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_2" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_mayor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_3" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_comp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_4" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_er">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_5" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_bg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_6" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_flujo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_7" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_export_ir">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_8" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_hist_trib">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc_ger_ext_1" style="endArrow=none;html=1;rounded=0;strokeColor=#A0522D;strokeWidth=1.5;fontFamily=Helvetica;" edge="1" parent="1" source="actor_gerente" target="cu_export_eeff">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

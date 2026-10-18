@@ -336,6 +336,8 @@ def register_corte_v_routes(app):
             rows = execute_query(query, (fecha_param,), fetchall=True)
             for r in rows:
                 r['fecha'] = str(r['fecha'])[:10]
+                for campo in ('hora_entrada', 'hora_salida'):
+                    r[campo] = str(r[campo])[:5] if r[campo] is not None else None
             return jsonify(rows)
 
         if request.method == 'POST':
@@ -343,12 +345,22 @@ def register_corte_v_routes(app):
                 return jsonify({"error": "No tienes permisos."}), 403
 
             data = request.json or {}
+            reg_id = data.get('id')
+            if reg_id:
+                reg_id = int(reg_id)
+                h_out = data.get('hora_salida')
+                if h_out:
+                    execute_query("UPDATE asistencia_laboral SET hora_salida = ? WHERE id = ?", (h_out, reg_id), commit=True)
+                    return jsonify({"success": True, "mensaje": "Hora de salida registrada correctamente."})
+
             emp_id = int(data.get('empleado_id', 0))
+            if emp_id <= 0:
+                return jsonify({"error": "Seleccione un empleado válido."}), 400
             f_asist = data.get('fecha', str(date.today()))
             h_in = data.get('hora_entrada', '08:00')
-            h_out = data.get('hora_salida', '17:00')
-            estado = data.get('estado', 'Completa')
-            tardanza = int(data.get('minutos_tardanza', 0))
+            h_out = data.get('hora_salida') or None
+            estado = data.get('estado', 'Presente')
+            tardanza = int(data.get('minutos_tardanza', 0) or 0)
             obs = data.get('observaciones', '').strip()
 
             execute_query("""
@@ -356,6 +368,60 @@ def register_corte_v_routes(app):
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (emp_id, f_asist, h_in, h_out, estado, tardanza, obs), commit=True)
             return jsonify({"success": True, "mensaje": "Asistencia registrada correctamente."}), 201
+
+    @app.route('/api/rrhh/asistencia/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+    @login_required
+    def api_asistencia_laboral_detalle(id):
+        if session['user']['rol'] not in ROLES_RRHH:
+            return jsonify({"error": "No tienes permisos."}), 403
+
+        if request.method == 'GET':
+            query = """
+                SELECT a.id, a.empleado_id, e.nombre_completo AS empleado, e.cargo,
+                       a.fecha, a.hora_entrada, a.hora_salida, a.estado,
+                       a.minutos_tardanza, ISNULL(a.observaciones, '') AS observaciones
+                FROM asistencia_laboral a
+                INNER JOIN empleados e ON a.empleado_id = e.id
+                WHERE a.id = ?
+            """
+            row = execute_query(query, (id,), fetchone=True)
+            if not row:
+                return jsonify({"error": "Registro de asistencia no encontrado."}), 404
+            row['fecha'] = str(row['fecha'])[:10]
+            for campo in ('hora_entrada', 'hora_salida'):
+                row[campo] = str(row[campo])[:5] if row[campo] is not None else None
+            return jsonify(row)
+
+        if request.method == 'DELETE':
+            registro = execute_query("SELECT id FROM asistencia_laboral WHERE id = ?", (id,), fetchone=True)
+            if not registro:
+                return jsonify({"error": "Registro de asistencia no encontrado."}), 404
+            execute_query("DELETE FROM asistencia_laboral WHERE id = ?", (id,), commit=True)
+            return jsonify({"success": True, "mensaje": "Registro de asistencia eliminado correctamente."})
+
+        if request.method == 'PUT':
+            registro = execute_query("""
+                SELECT id, empleado_id, fecha, hora_entrada, hora_salida, estado, minutos_tardanza, observaciones
+                FROM asistencia_laboral WHERE id = ?
+            """, (id,), fetchone=True)
+            if not registro:
+                return jsonify({"error": "Registro de asistencia no encontrado."}), 404
+
+            data = request.json or {}
+            emp_id = int(data.get('empleado_id') or registro['empleado_id'])
+            f_asist = data.get('fecha') or str(registro['fecha'])[:10]
+            h_in = data.get('hora_entrada') if 'hora_entrada' in data else (str(registro['hora_entrada'])[:5] if registro['hora_entrada'] else None)
+            h_out = data.get('hora_salida') if 'hora_salida' in data else (str(registro['hora_salida'])[:5] if registro['hora_salida'] else None)
+            estado = data.get('estado') or registro['estado']
+            tardanza = int(data.get('minutos_tardanza') if data.get('minutos_tardanza') is not None else (registro['minutos_tardanza'] or 0))
+            obs = data.get('observaciones', registro['observaciones'] or '').strip() if 'observaciones' in data else (registro['observaciones'] or '')
+
+            execute_query("""
+                UPDATE asistencia_laboral
+                SET empleado_id = ?, fecha = ?, hora_entrada = ?, hora_salida = ?, estado = ?, minutos_tardanza = ?, observaciones = ?
+                WHERE id = ?
+            """, (emp_id, f_asist, h_in, h_out, estado, tardanza, obs, id), commit=True)
+            return jsonify({"success": True, "mensaje": "Asistencia actualizada correctamente."})
 
     # =========================================================================
     # 7. HORAS EXTRAS (RF104) — Recargo legal 100% (Art. 62 Ley 185)
@@ -367,7 +433,7 @@ def register_corte_v_routes(app):
             query = """
                 SELECT h.id, h.empleado_id, e.nombre_completo AS empleado, h.fecha,
                        h.cantidad_horas, h.motivo, h.valor_hora_ordinaria,
-                       h.recargo_porcentaje, h.monto_total, h.estado,
+                       h.recargo_porcentaje, h.monto_total, h.estado, h.nomina_id,
                        ISNULL(h.autorizado_por, '') AS autorizado_por
                 FROM horas_extras h
                 INNER JOIN empleados e ON h.empleado_id = e.id
@@ -408,7 +474,8 @@ def register_corte_v_routes(app):
             parametros = parametros_calculo(execute_query('SELECT * FROM parametros_laborales', fetchall=True))
             recargo = parametros.get('HORAS_EXTRAS_RECARGO', 100)
             monto_total = round(cant_horas * valor_hora * (1 + recargo / 100), 2)
-            autorizado = session.get('user', {}).get('username', 'admin')
+            u = session.get('user', {})
+            autorizado = u.get('nombre') or u.get('username') or 'admin'
 
             execute_query("""
                 INSERT INTO horas_extras 
@@ -416,9 +483,13 @@ def register_corte_v_routes(app):
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'Aprobada', ?)
             """, (emp_id, f_he, cant_horas, motivo, valor_hora, recargo, monto_total, autorizado), commit=True)
 
+            dt_he = datetime.strptime(str(f_he)[:10], '%Y-%m-%d')
+            payroll = execute_query("SELECT id FROM nomina WHERE periodo_mes=? AND periodo_anio=?",
+                                    (dt_he.month, dt_he.year), fetchone=True)
             return jsonify({
                 "success": True, 
-                "mensaje": f"{cant_horas} horas extras registradas y aprobadas (C$ {monto_total:,.2f}, recargo {recargo:g}%)."
+                "mensaje": f"{cant_horas} horas extras registradas y aprobadas (C$ {monto_total:,.2f}, recargo {recargo:g}%).",
+                "nomina_id": payroll['id'] if payroll else None
             }), 201
 
     # =========================================================================
@@ -509,14 +580,12 @@ def register_corte_v_routes(app):
             total_percepciones = round(monto_pend + monto_vac + monto_agui + monto_indem, 2)
             neto_pagar = max(0.0, round(total_percepciones - deducciones, 2))
 
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT ISNULL(MAX(id), 0) + 1 FROM liquidaciones_laborales")
-            next_id = cursor.fetchone()[0]
+            next_row = execute_query("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM liquidaciones_laborales", fetchone=True)
+            next_id = int(next_row['next_id']) if next_row else 1
             codigo_liq = f"LIQ-2026-{next_id:03d}"
             elaborado = session.get('user', {}).get('username', 'admin')
 
-            cursor.execute("""
+            execute_query("""
                 INSERT INTO liquidaciones_laborales
                 (codigo, empleado_id, fecha_ingreso, fecha_salida, motivo_salida, salario_base,
                  antiguedad_anios, antiguedad_meses, antiguedad_dias, monto_dias_pendientes,
@@ -526,15 +595,117 @@ def register_corte_v_routes(app):
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Borrador', ?)
             """, (codigo_liq, emp_id, d_ing, d_egr, motivo, salario, anios, meses, dias,
                   monto_pend, saldo_vac, monto_vac, monto_agui, monto_indem,
-                  total_percepciones, deducciones, neto_pagar, elaborado))
-            conn.commit()
-            conn.close()
+                  total_percepciones, deducciones, neto_pagar, elaborado), commit=True)
 
             return jsonify({
                 "success": True,
                 "mensaje": f"Liquidación {codigo_liq} calculada exitosamente (Neto a pagar: C$ {neto_pagar:,.2f}).",
                 "id": next_id
             }), 201
+
+    @app.route('/api/rrhh/liquidaciones/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+    @login_required
+    def api_liquidacion_detalle(id):
+        if request.method == 'GET':
+            query = """
+                SELECT l.*, e.nombre_completo AS empleado, e.cargo
+                FROM liquidaciones_laborales l
+                INNER JOIN empleados e ON l.empleado_id = e.id
+                WHERE l.id = ?
+            """
+            r = execute_query(query, (id,), fetchone=True)
+            if not r:
+                return jsonify({"error": "Liquidación no encontrada."}), 404
+            for campo in ('salario_base', 'total_percepciones', 'deducciones_totales', 'neto_a_pagar',
+                          'monto_dias_pendientes', 'dias_vacaciones_pendientes', 'monto_vacaciones',
+                          'monto_aguinaldo_proporcional', 'monto_indemnizacion_antiguedad'):
+                if campo in r and r[campo] is not None:
+                    r[campo] = float(r[campo])
+            r['fecha_ingreso'] = str(r['fecha_ingreso'])[:10] if r.get('fecha_ingreso') else ''
+            r['fecha_salida'] = str(r['fecha_salida'])[:10] if r.get('fecha_salida') else ''
+            return jsonify(r)
+
+        if session['user']['rol'] not in ROLES_RRHH:
+            return jsonify({"error": "No tienes permisos."}), 403
+
+        if request.method == 'DELETE':
+            row = execute_query("SELECT id, codigo FROM liquidaciones_laborales WHERE id = ?", (id,), fetchone=True)
+            if not row:
+                return jsonify({"error": "Liquidación no encontrada."}), 404
+            execute_query("DELETE FROM liquidaciones_laborales WHERE id = ?", (id,), commit=True)
+            return jsonify({"success": True, "mensaje": f"Liquidación {row['codigo']} eliminada correctamente."})
+
+        if request.method == 'PUT':
+            row = execute_query("SELECT * FROM liquidaciones_laborales WHERE id = ?", (id,), fetchone=True)
+            if not row:
+                return jsonify({"error": "Liquidación no encontrada."}), 404
+
+            data = request.json or {}
+            emp_id = int(data.get('empleado_id') or row['empleado_id'])
+            f_salida = data.get('fecha_salida') or str(row['fecha_salida'])[:10]
+            motivo = data.get('motivo_salida') or row['motivo_salida']
+            dias_pendientes = int(data.get('dias_pendientes_pago') if data.get('dias_pendientes_pago') is not None else (row.get('dias_pendientes_pago') or 0))
+            deducciones = float(data.get('deducciones_totales') if data.get('deducciones_totales') is not None else (row.get('deducciones_totales') or 0.0))
+            estado = data.get('estado') or row.get('estado') or 'Borrador'
+
+            emp = execute_query("SELECT * FROM empleados WHERE id = ?", (emp_id,), fetchone=True)
+            if not emp:
+                return jsonify({"error": "Empleado no encontrado."}), 404
+
+            f_ingreso = emp['fecha_ingreso']
+            salario = float(emp['salario_base'])
+            valor_dia = round(salario / 30.0, 2)
+
+            d_ing = datetime.strptime(str(f_ingreso)[:10], '%Y-%m-%d').date() if f_ingreso else date(2022, 1, 1)
+            d_egr = datetime.strptime(str(f_salida)[:10], '%Y-%m-%d').date()
+
+            diff_dias = max(1, (d_egr - d_ing).days)
+            anios = diff_dias // 365
+            meses = (diff_dias % 365) // 30
+            dias = (diff_dias % 365) % 30
+
+            monto_pend = round(dias_pendientes * valor_dia, 2)
+            saldo_vac = float(emp.get('dias_vacaciones_disponibles') or 0.0)
+            monto_vac = round(saldo_vac * valor_dia, 2)
+
+            anio_egr = d_egr.year
+            d_inicio_agui = date(anio_egr - 1, 12, 1)
+            base_agui = max(d_inicio_agui, d_ing)
+            dias_agui = max(0, (d_egr - base_agui).days + 1)
+            meses_agui = dias_agui / 30.0
+            monto_agui = round((salario / 12.0) * (meses_agui if meses_agui <= 12.0 else 12.0), 2)
+
+            monto_indem = 0.0
+            if 'Despido Injustificado' in motivo or 'Art. 45' in motivo:
+                anios_completos = anios
+                meses_fraccion = meses + (dias / 30.0)
+                if anios_completos <= 3:
+                    meses_indem = anios_completos + (meses_fraccion / 12.0)
+                else:
+                    meses_indem = 3.0 + ((anios_completos - 3) * (20.0 / 30.0)) + (meses_fraccion * (20.0 / 360.0))
+                meses_indem = min(5.0, meses_indem)
+                monto_indem = round(meses_indem * salario, 2)
+
+            total_percepciones = round(monto_pend + monto_vac + monto_agui + monto_indem, 2)
+            neto_pagar = max(0.0, round(total_percepciones - deducciones, 2))
+
+            execute_query("""
+                UPDATE liquidaciones_laborales
+                SET empleado_id = ?, fecha_salida = ?, motivo_salida = ?, salario_base = ?,
+                    antiguedad_anios = ?, antiguedad_meses = ?, antiguedad_dias = ?,
+                    monto_dias_pendientes = ?, dias_vacaciones_pendientes = ?, monto_vacaciones = ?,
+                    monto_aguinaldo_proporcional = ?, monto_indemnizacion_antiguedad = ?,
+                    total_percepciones = ?, deducciones_totales = ?, neto_a_pagar = ?, estado = ?
+                WHERE id = ?
+            """, (emp_id, d_egr, motivo, salario, anios, meses, dias,
+                  monto_pend, saldo_vac, monto_vac, monto_agui, monto_indem,
+                  total_percepciones, deducciones, neto_pagar, estado, id), commit=True)
+
+            return jsonify({
+                "success": True,
+                "mensaje": f"Liquidación {row['codigo']} actualizada correctamente (Neto a pagar: C$ {neto_pagar:,.2f}).",
+                "id": id
+            })
 
     @app.route('/rrhh/liquidacion/<int:id>/imprimir')
     @login_required

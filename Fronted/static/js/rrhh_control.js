@@ -215,10 +215,17 @@ function guardarDocumentoExpediente(event) {
 
 async function abrirPagoControl() {
     const form = rrhhFormulario('form-pago-control');
+    if (form.elements.pago_id) form.elements.pago_id.value = '';
+    form.elements.nomina_id.disabled = false;
+    form.elements.empleado_id.disabled = false;
     form.elements.fecha_pago.value = rrhhHoy();
     form.elements.nomina_id.innerHTML = '<option value="">Cargando nóminas…</option>';
     form.elements.empleado_id.innerHTML = '<option value="">Seleccione una nómina</option>';
     document.getElementById('pago-saldo').textContent = '';
+    const tit = document.getElementById('modal-pago-control-titulo');
+    if (tit) tit.textContent = 'Registrar pago de nómina';
+    const btn = document.getElementById('btn-guardar-pago-control');
+    if (btn) btn.textContent = 'Confirmar pago';
     openModal('modal-pago-control');
     try {
         const rows = await rrhhApi('/api/nomina/historial');
@@ -250,7 +257,94 @@ function mostrarSaldoPago() {
 }
 function guardarPagoControl(event) {
     return rrhhGuardar(event, async form => {
-        await rrhhApi('/api/rrhh/pagos-nomina', rrhhJson('POST', Object.fromEntries(new FormData(form))));
-        closeModal('modal-pago-control'); await cargarPagosNomina();
+        const id = form.elements.pago_id?.value;
+        const payload = Object.fromEntries(new FormData(form));
+        if (id) {
+            await rrhhApi(`/api/rrhh/pagos-nomina/${id}`, rrhhJson('PUT', payload));
+        } else {
+            await rrhhApi('/api/rrhh/pagos-nomina', rrhhJson('POST', payload));
+        }
+        closeModal('modal-pago-control');
+        if (typeof cargarPagosNomina === 'function') await cargarPagosNomina();
     });
 }
+
+async function editarPagoNomina(id) {
+    let p = (typeof _pagosNominaCache !== 'undefined' ? _pagosNominaCache : []).find(x => x.id === id);
+    if (!p) {
+        try {
+            p = await rrhhApi(`/api/rrhh/pagos-nomina/${id}`);
+        } catch (e) {
+            console.error('Error buscando pago:', e);
+        }
+    }
+    if (!p) {
+        Swal.fire('Error', 'Comprobante de pago no encontrado.', 'error');
+        return;
+    }
+
+    const form = rrhhFormulario('form-pago-control');
+    if (form.elements.pago_id) form.elements.pago_id.value = p.id;
+
+    try {
+        const rows = await rrhhApi('/api/nomina/historial');
+        form.elements.nomina_id.innerHTML = rows.map(r => `<option value="${r.id}" ${r.id === p.nomina_id ? 'selected' : ''}>#${r.id} · ${r.mes}/${r.anio}</option>`).join('');
+    } catch (e) { }
+
+    form.elements.nomina_id.value = p.nomina_id;
+    form.elements.nomina_id.disabled = true;
+
+    form.elements.empleado_id.innerHTML = `<option value="${p.empleado_id}" selected>${rrhhEsc(p.empleado || 'Empleado')}</option>`;
+    form.elements.empleado_id.disabled = true;
+
+    form.elements.fecha_pago.value = p.fecha_pago ? p.fecha_pago.slice(0, 10) : rrhhHoy();
+    form.elements.metodo_pago.value = p.metodo_pago || 'Transferencia Bancaria';
+    form.elements.numero_referencia.value = p.numero_referencia || '';
+    form.elements.monto_pagado.removeAttribute('max');
+    form.elements.monto_pagado.value = p.monto_pagado;
+
+    if (form.elements.estado) {
+        form.elements.estado.value = p.estado || 'Confirmado';
+    }
+
+    document.getElementById('pago-saldo').textContent = `Monto registrado: C$ ${Number(p.monto_pagado).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+    const tit = document.getElementById('modal-pago-control-titulo');
+    if (tit) tit.textContent = `Editar comprobante de pago #${p.id}`;
+    const btn = document.getElementById('btn-guardar-pago-control');
+    if (btn) btn.textContent = 'Actualizar pago';
+
+    openModal('modal-pago-control');
+}
+
+async function eliminarPagoNomina(id) {
+    let p = (typeof _pagosNominaCache !== 'undefined' ? _pagosNominaCache : []).find(x => x.id === id);
+    const emp = p ? p.empleado : 'este trabajador';
+    const monto = p ? Number(p.monto_pagado).toLocaleString('en-US', {minimumFractionDigits: 2}) : '';
+    const ref = p && p.numero_referencia ? ` (Ref: ${p.numero_referencia})` : '';
+
+    const confirm = await Swal.fire({
+        title: '¿Eliminar comprobante de pago?',
+        text: `Se eliminará el pago de ${emp} por C$ ${monto}${ref}. Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await rrhhApi(`/api/rrhh/pagos-nomina/${id}`, { method: 'DELETE' });
+        Swal.fire('Eliminado', res.mensaje || 'Comprobante de pago eliminado correctamente.', 'success');
+        if (typeof cargarPagosNomina === 'function') await cargarPagosNomina();
+    } catch (e) {
+        Swal.fire('Error', e.message || 'No se pudo eliminar el comprobante de pago.', 'error');
+    }
+}
+
+window.editarPagoNomina = editarPagoNomina;
+window.eliminarPagoNomina = eliminarPagoNomina;
+window.abrirPagoControl = abrirPagoControl;
+

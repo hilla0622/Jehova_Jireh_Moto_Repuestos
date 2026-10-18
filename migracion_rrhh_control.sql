@@ -1,4 +1,11 @@
 -- Ampliación aditiva de RRHH. No reescribe nóminas ni dotaciones históricas.
+IF COL_LENGTH('horas_extras', 'nomina_id') IS NULL
+    ALTER TABLE [horas_extras] ADD [nomina_id] int NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'fk_horasextras_nomina')
+    ALTER TABLE [horas_extras] ADD CONSTRAINT [fk_horasextras_nomina]
+        FOREIGN KEY ([nomina_id]) REFERENCES [nomina]([id]);
+GO
 IF COL_LENGTH('detalle_nomina', 'historico_salario') IS NULL
     ALTER TABLE [detalle_nomina] ADD [historico_salario] decimal(12,2) NULL;
 GO

@@ -2003,10 +2003,11 @@
                                                 <th>Nº Referencia</th>
                                                 <th style="text-align: right;">Monto Pagado</th>
                                                 <th>Estado</th>
+                                                <th style="text-align: center;">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tbody-pagos-nomina">
-                                            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando pagos...</td></tr>
+                                            <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Cargando pagos...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -2190,7 +2191,7 @@
                                                 <th style="text-align: center;">Recargo Legal</th>
                                                 <th style="text-align: right;">Total Remuneración</th>
                                                 <th>Motivo</th>
-                                                <th>Autorización</th>
+                                                <th>Autorización / Estado</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tbody-horas-extras">
@@ -3613,6 +3614,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('modal-detalle-nomina')">Cerrar</button>
+                <button type="button" class="btn btn-secondary" onclick="incluirHorasExtrasPendientes(_nominaDetalleId)">
+                    <i class="ph-bold ph-clock-countdown"></i> Incluir horas extras pendientes
+                </button>
                 <button type="button" class="btn btn-primary" onclick="imprimirDetalleNomina()">
                     <i class="ph-bold ph-printer"></i> Imprimir
                 </button>
@@ -3996,10 +4000,11 @@
     <div class="modal" id="modal-registro-asistencia">
         <div class="modal-content modal-sm">
             <div class="modal-header">
-                <h3><i class="ph-bold ph-clock-user"></i> Registrar Asistencia</h3>
+                <h3><i class="ph-bold ph-clock-user"></i> <span id="modal-asistencia-titulo">Registrar Asistencia</span></h3>
                 <button class="modal-close" onclick="closeModal('modal-registro-asistencia')">&times;</button>
             </div>
             <form onsubmit="guardarAsistencia(event)">
+                <input type="hidden" id="asist-id" value="">
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Empleado: *</label>
@@ -4019,14 +4024,21 @@
                             <input type="time" id="asist-hora-salida" class="form-control" value="17:00">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Estado de Asistencia: *</label>
-                        <select id="asist-estado" class="form-control">
-                            <option value="Presente">Presente (Puntual)</option>
-                            <option value="Llegada Tardía">Llegada Tardía</option>
-                            <option value="Falta Injustificada">Falta Injustificada</option>
-                            <option value="Permiso">Permiso</option>
-                        </select>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Estado de Asistencia: *</label>
+                            <select id="asist-estado" class="form-control">
+                                <option value="Presente">Presente (Puntual)</option>
+                                <option value="Asistencia Completa">Asistencia Completa</option>
+                                <option value="Llegada Tardía">Llegada Tardía</option>
+                                <option value="Falta Injustificada">Falta Injustificada</option>
+                                <option value="Permiso">Permiso</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Minutos Tardanza:</label>
+                            <input type="number" id="asist-tardanza" class="form-control" min="0" value="0">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Observaciones:</label>
@@ -4035,7 +4047,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modal-registro-asistencia')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Guardar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-guardar-asistencia"><i class="ph-bold ph-check"></i> Guardar</button>
                 </div>
             </form>
         </div>
@@ -4084,10 +4096,11 @@
     <div class="modal" id="modal-liquidacion-laboral">
         <div class="modal-content modal-md">
             <div class="modal-header">
-                <h3><i class="ph-bold ph-receipt"></i> Calcular Liquidación / Finiquito (Ley 185)</h3>
+                <h3 id="modal-liquidacion-titulo"><i class="ph-bold ph-receipt"></i> Calcular Liquidación / Finiquito (Ley 185)</h3>
                 <button class="modal-close" onclick="closeModal('modal-liquidacion-laboral')">&times;</button>
             </div>
             <form onsubmit="guardarLiquidacion(event)">
+                <input type="hidden" id="liq-id">
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Empleado a Liquidar: *</label>
@@ -4118,13 +4131,67 @@
                             <input type="number" step="0.01" id="liq-deducciones" class="form-control" value="0.00">
                         </div>
                     </div>
-                    <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.25); border-radius:6px; padding:0.75rem; font-size:0.8rem; color:#15803d;">
+                    <div class="form-group" style="margin-top:0.5rem;">
+                        <label>Estado de la Liquidación:</label>
+                        <select id="liq-estado" class="form-control">
+                            <option value="Borrador">Borrador</option>
+                            <option value="Aprobado">Aprobado</option>
+                            <option value="Pagado">Pagado</option>
+                        </select>
+                    </div>
+                    <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.25); border-radius:6px; padding:0.75rem; font-size:0.8rem; color:#15803d; margin-top:0.75rem;">
                         <i class="ph-bold ph-info"></i> El sistema calculará de forma automática la antigüedad exacta (años, meses y días), el aguinaldo proporcional desde el 1 de diciembre, el saldo compensable de vacaciones y la indemnización legal por años de servicio (si corresponde).
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modal-liquidacion-laboral')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-calculator"></i> Liquidar y Generar Finiquito</button>
+                    <button type="submit" class="btn btn-primary" id="btn-guardar-liquidacion"><i class="ph-bold ph-calculator"></i> Liquidar y Generar Finiquito</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR NÓMINA / PLANILLA -->
+    <div class="modal" id="modal-editar-nomina">
+        <div class="modal-content modal-md">
+            <div class="modal-header">
+                <h3><i class="ph-bold ph-pencil"></i> Editar Planilla / Nómina</h3>
+                <button class="modal-close" onclick="closeModal('modal-editar-nomina')">&times;</button>
+            </div>
+            <form onsubmit="guardarEdicionNomina(event)">
+                <input type="hidden" id="edit-nomina-id">
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label>Período de Planilla:</label>
+                        <input type="text" id="edit-nomina-periodo" class="form-control" readonly style="font-weight:700;">
+                    </div>
+                    <div class="grid-2col" style="margin-bottom:1rem;">
+                        <div class="form-group">
+                            <label>Total Devengado:</label>
+                            <input type="text" id="edit-nomina-bruto" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Total Neto a Pagar:</label>
+                            <input type="text" id="edit-nomina-neto" class="form-control" readonly style="color:var(--accent-green); font-weight:700;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label>Estado de la Planilla: *</label>
+                        <select id="edit-nomina-estado" class="form-control" required>
+                            <option value="BORRADOR">Borrador</option>
+                            <option value="PROCESADA">Procesada</option>
+                            <option value="REVISADA">Revisada</option>
+                            <option value="PAGADA">Pagada</option>
+                            <option value="CERRADA">Cerrada</option>
+                        </select>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:6px; padding:0.75rem; font-size:0.8rem; color:#4f46e5;">
+                        <i class="ph-bold ph-info"></i> Puedes actualizar el estado administrativo de la planilla o consultar el desglose de empleados.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-editar-nomina')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -5001,6 +5068,49 @@
             finally { btn.disabled = false; btn.innerHTML = '<i class="ph-bold ph-calculator"></i> Calcular y Generar Nómina'; }
         }
 
+        async function editarNomina(id) {
+            try {
+                const res = await fetch(`/api/nomina/${id}`);
+                if (!res.ok) {
+                    mostrarNotificacionRRHH('No se pudo cargar la información de la nómina.', 'error');
+                    return;
+                }
+                const n = await res.json();
+                document.getElementById('edit-nomina-id').value = n.id;
+                document.getElementById('edit-nomina-periodo').value = `${MESES_ES[n.periodo_mes] || n.periodo_mes} ${n.periodo_anio}`;
+                document.getElementById('edit-nomina-bruto').value = cs(n.total_ingresos);
+                document.getElementById('edit-nomina-neto').value = cs(n.total_neto);
+                document.getElementById('edit-nomina-estado').value = (n.estado || 'CERRADA').toUpperCase();
+                openModal('modal-editar-nomina');
+            } catch (e) {
+                mostrarNotificacionRRHH('Error al obtener datos de la nómina.', 'error');
+            }
+        }
+
+        async function guardarEdicionNomina(e) {
+            if (e) e.preventDefault();
+            const id = document.getElementById('edit-nomina-id').value;
+            const nuevoEstado = document.getElementById('edit-nomina-estado').value;
+
+            try {
+                const res = await fetch(`/api/nomina/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    mostrarNotificacionRRHH(data.mensaje || 'Nómina actualizada exitosamente.', 'success');
+                    closeModal('modal-editar-nomina');
+                    cargarHistorialNominas();
+                } else {
+                    mostrarNotificacionRRHH(data.error || 'Error al actualizar nómina.', 'error');
+                }
+            } catch (e) {
+                mostrarNotificacionRRHH('Error de conexión al actualizar nómina.', 'error');
+            }
+        }
+
         async function eliminarNomina(id) {
             const confirmado = await confirmarAccion({
                 titulo: '¿Eliminar esta nómina?',
@@ -5037,9 +5147,12 @@
                     <td style="color:#22c55e;font-weight:600;">${cs(n.total_neto)}</td>
                     <td style="color:#f59e0b;">${cs(n.inss_patronal_total)}</td>
                     <td><span style="background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 8px;border-radius:20px;font-size:0.75rem;">${n.estado || 'CERRADA'}</span></td>
-                    <td>
-                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;" onclick="verDetalleNomina(${n.id})"><i class="ph-bold ph-eye"></i> Ver</button>
-                        <button class="btn btn-primary" style="background:#ef4444;border-color:#ef4444;padding:4px 10px;font-size:0.75rem;margin-left:4px;" onclick="eliminarNomina(${n.id})"><i class="ph-bold ph-trash"></i></button>
+                    <td style="text-align:center;">
+                        <div style="display:inline-flex; gap:5px; align-items:center; justify-content:center; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="verDetalleNomina(${n.id})" title="Ver Detalle"><i class="ph-bold ph-eye"></i> Ver</button>
+                            <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="editarNomina(${n.id})" title="Editar Nómina"><i class="ph-bold ph-pencil"></i> Editar</button>
+                            <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="eliminarNomina(${n.id})" title="Eliminar Nómina"><i class="ph-bold ph-trash"></i> Eliminar</button>
+                        </div>
                     </td>
                 </tr>`).join('');
             } catch (e) { console.error(e); }
@@ -5081,6 +5194,19 @@
                 }).join('');
                 openModal('modal-detalle-nomina');
             } catch (e) { mostrarNotificacionRRHH('Error cargando detalle.', 'error'); }
+        }
+
+        async function incluirHorasExtrasPendientes(nominaId) {
+            try {
+                const res = await fetch(`/api/nomina/${nominaId}/incluir-horas-extras`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+                const data = await res.json();
+                if (!res.ok) { mostrarNotificacionRRHH(data.error || 'No se pudieron incluir las horas extras.', 'error'); return; }
+                mostrarNotificacionRRHH(data.mensaje, 'success');
+                await cargarHistorialNominas();
+                await verDetalleNomina(nominaId);
+            } catch (e) {
+                mostrarNotificacionRRHH('No se pudieron incluir las horas extras pendientes.', 'error');
+            }
         }
 
         async function verColillaRRHH(nominaId, empId) {

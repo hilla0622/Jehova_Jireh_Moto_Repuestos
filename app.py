@@ -2845,8 +2845,8 @@ def api_nomina_generar():
                 vac_ganadas = round(vac_ganadas, 2)  # redondear a 2 decimales para mostrar
 
             # Cálculos de nómina (Ley 822 y Ley 185) sobre salario devengado real
-            cursor.execute("""SELECT ISNULL(SUM(monto_total), 0) FROM horas_extras
-                WHERE empleado_id=? AND fecha >= ? AND fecha <= ? AND estado='Aprobada'""",
+            cursor.execute("""SELECT ISNULL(SUM(monto_total), 0) FROM horas_extras WITH (UPDLOCK, HOLDLOCK)
+                WHERE empleado_id=? AND fecha >= ? AND fecha <= ? AND estado='Aprobada' AND nomina_id IS NULL""",
                 (e_id, inicio_periodo, fin_periodo))
             ingresos_extra = float(cursor.fetchone()[0])
             calc = calcular_nomina_empleado(salario_devengado, ingresos_extra, parametros)
@@ -2883,6 +2883,10 @@ def api_nomina_generar():
                  monto_septimo_dia,
                  calc['inatec_patronal'], salario_base_contrato, emp[4], emp[5], emp[6], emp[7], fecha_ingreso_val)
             )
+            cursor.execute("""UPDATE horas_extras SET nomina_id=?, estado='Incluida en nómina'
+                WHERE empleado_id=? AND fecha >= ? AND fecha <= ?
+                  AND estado='Aprobada' AND nomina_id IS NULL""",
+                (nomina_id, e_id, inicio_periodo, fin_periodo))
 
             # Acumular días de vacaciones computables correspondientes a este período
             cursor.execute(
@@ -3002,6 +3006,150 @@ def api_nomina_generar():
             conn.rollback()
             conn.close()
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/nomina/<int:nomina_id>/incluir-horas-extras', methods=['POST'])
+@login_required
+def api_nomina_incluir_horas_extras(nomina_id):
+    """Incorpora a la nómina horas extra aprobadas después de su generación."""
+    if session['user']['rol'] not in ROLES_RRHH:
+        return jsonify({"error": "No tienes permisos."}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""SELECT periodo_mes, periodo_anio FROM nomina WITH (UPDLOCK, HOLDLOCK)
+            WHERE id=?""", (nomina_id,))
+        payroll = cursor.fetchone()
+        if not payroll:
+            conn.rollback()
+            return jsonify({"error": "Nómina no encontrada."}), 404
+        mes, anio = int(payroll[0]), int(payroll[1])
+        inicio_periodo, fin_periodo = limites_periodo(mes, anio)
+        cursor.execute("""SELECT id, empleado_id, monto_total FROM horas_extras WITH (UPDLOCK, HOLDLOCK)
+            WHERE nomina_id IS NULL AND estado='Aprobada' AND fecha>=? AND fecha<=?
+            ORDER BY empleado_id, id""", (inicio_periodo, fin_periodo))
+        pending = cursor.fetchall()
+        if not pending:
+            conn.rollback()
+            return jsonify({"success": True, "mensaje": "No hay horas extras aprobadas pendientes para este período.", "incluidas": 0})
+
+        by_employee = {}
+        for extra_id, employee_id, amount in pending:
+            entry = by_employee.setdefault(int(employee_id), {'ids': [], 'amount': 0.0})
+            entry['ids'].append(int(extra_id))
+            entry['amount'] += float(amount or 0)
+
+        details = {}
+        for employee_id in by_employee:
+            cursor.execute("""SELECT id, salario_base, ISNULL(ingresos_extra,0), inss_laboral, ir,
+                ISNULL(neto_pagar,0), ISNULL(inss_patronal,0), ISNULL(provision_vacaciones,0),
+                ISNULL(provision_aguinaldo,0), ISNULL(inatec_patronal,0)
+                FROM detalle_nomina WITH (UPDLOCK, HOLDLOCK)
+                WHERE nomina_id=? AND empleado_id=?""", (nomina_id, employee_id))
+            detail = cursor.fetchone()
+            if not detail:
+                raise ValueError(f'No existe detalle de nómina para el empleado #{employee_id}. Genere primero su nómina ordinaria.')
+            cursor.execute("SELECT COUNT(*) FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE nomina_id=? AND empleado_id=?", (nomina_id, employee_id))
+            if int(cursor.fetchone()[0]):
+                raise ValueError(f'El empleado #{employee_id} ya tiene un pago registrado para esta nómina. Registre el ajuste como pago complementario para conservar la trazabilidad.')
+            details[employee_id] = detail
+
+        cursor.execute("SELECT * FROM parametros_laborales")
+        columns = [col[0] for col in cursor.description]
+        params = parametros_calculo(dict(zip(columns, row)) for row in cursor.fetchall())
+        totals = {'ingresos':0.0,'deducciones':0.0,'neto':0.0,'patronal':0.0,'inatec':0.0,'vac':0.0,'agui':0.0,'ir':0.0,'inss_lab':0.0,'inss_pat':0.0}
+
+        for employee_id, extra in by_employee.items():
+            old = details[employee_id]
+            calc = calcular_nomina_empleado(float(old[1] or 0), float(old[2] or 0) + extra['amount'], params)
+            delta = {
+                'ingresos': calc['salario_bruto'] - (float(old[1] or 0) + float(old[2] or 0)),
+                'deducciones': calc['total_deducciones'] - (float(old[3] or 0) + float(old[4] or 0)),
+                'neto': calc['salario_neto'] - float(old[5] or 0),
+                'patronal': calc['inss_patronal'] - float(old[6] or 0),
+                'inatec': calc['inatec_patronal'] - float(old[9] or 0),
+                'vac': calc['provision_vacaciones'] - float(old[7] or 0),
+                'agui': calc['provision_aguinaldo'] - float(old[8] or 0),
+                'ir': calc['ir_retencion'] - float(old[4] or 0),
+                'inss_lab': calc['inss_laboral'] - float(old[3] or 0),
+                'inss_pat': calc['inss_patronal'] - float(old[6] or 0),
+            }
+            for key, value in delta.items():
+                totals[key] += value
+            cursor.execute("""UPDATE detalle_nomina SET ingresos_extra=?, ir=?, inss_laboral=?, neto_pagar=?,
+                inss_patronal=?, provision_vacaciones=?, provision_aguinaldo=?, inatec_patronal=?
+                WHERE id=?""", (calc['ingresos_extra'], calc['ir_retencion'], calc['inss_laboral'], calc['salario_neto'],
+                    calc['inss_patronal'], calc['provision_vacaciones'], calc['provision_aguinaldo'], calc['inatec_patronal'], old[0]))
+            cursor.execute("UPDATE colilla_pago SET netoRecibir=? WHERE detalle_nomina_id=?", (calc['salario_neto'], old[0]))
+
+        cursor.execute("""UPDATE nomina SET total_ingresos=total_ingresos+?, total_deducciones=total_deducciones+?,
+            total_neto=total_neto+?, inss_patronal_total=ISNULL(inss_patronal_total,0)+?,
+            inatec_patronal_total=ISNULL(inatec_patronal_total,0)+?, provision_vac_total=provision_vac_total+?,
+            provision_agui_total=provision_agui_total+? WHERE id=?""",
+            (totals['ingresos'], totals['deducciones'], totals['neto'], totals['patronal'], totals['inatec'],
+             totals['vac'], totals['agui'], nomina_id))
+
+        account_specs = [
+            ('6.1.01','Sueldos y salarios','Gasto','Deudora'),
+            ('6.1.11','Cargas patronales de nómina','Gasto','Deudora'),
+            ('6.1.12','Provisiones de prestaciones laborales','Gasto','Deudora'),
+            ('2.1.06','INSS laboral y patronal por pagar','Pasivo corriente','Acreedora'),
+            ('2.1.07','IR laboral por pagar','Pasivo corriente','Acreedora'),
+            ('2.1.08','Prestaciones laborales por pagar','Pasivo corriente','Acreedora'),
+            ('2.1.04','Sueldos y salarios por pagar','Pasivo corriente','Acreedora'),
+            ('2.1.10','INATEC por pagar','Pasivo corriente','Acreedora'),
+        ]
+        accounts = {}
+        for code, name, classification, nature in account_specs:
+            cursor.execute("SELECT id, activo, nombre FROM cuentas_contables WITH (UPDLOCK, HOLDLOCK) WHERE codigo=?", (code,))
+            account = cursor.fetchone()
+            if account and (not account[1] or (code == '2.1.10' and 'INATEC' not in account[2].upper())):
+                raise ValueError(f'La cuenta contable {code} requiere revisión antes de ajustar la nómina.')
+            if not account:
+                cursor.execute("""INSERT INTO cuentas_contables (codigo,nombre,clasificacion,naturaleza,descripcion,activo)
+                    VALUES (?,?,?,?,?,1)""", (code,name,classification,nature,'Cuenta para ajuste de horas extras'))
+                cursor.execute('SELECT @@IDENTITY')
+                account = (cursor.fetchone()[0],1,name)
+            accounts[code] = account[0]
+
+        debits = [
+            ('6.1.01', totals['ingresos']),
+            ('6.1.11', totals['patronal'] + totals['inatec']),
+            ('6.1.12', totals['vac'] + totals['agui']),
+        ]
+        credits = [
+            ('2.1.06', totals['inss_lab'] + totals['inss_pat']), ('2.1.07', totals['ir']),
+            ('2.1.08', totals['vac'] + totals['agui']), ('2.1.04', totals['neto']), ('2.1.10', totals['inatec']),
+        ]
+        if round(sum(value for _, value in debits) - sum(value for _, value in credits), 2) != 0:
+            raise ValueError('El asiento del ajuste no cuadra. No se modificó la nómina.')
+        cursor.execute("""INSERT INTO asientos_contables (fecha,concepto,modulo_origen,referencia_id,usuario_id)
+            VALUES (GETDATE(),?,'RRHH_AJUSTE_HORAS_EXTRAS',?,?)""",
+            (f'Ajuste de horas extras nómina {mes:02d}/{anio}', nomina_id, session['user']['id']))
+        cursor.execute('SELECT @@IDENTITY')
+        journal_id = cursor.fetchone()[0]
+        for code, amount in debits:
+            if abs(amount) >= 0.005:
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id,cuenta_id,debe,haber) VALUES (?,?,?,0)", (journal_id,accounts[code],round(amount,2)))
+        for code, amount in credits:
+            if abs(amount) >= 0.005:
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id,cuenta_id,debe,haber) VALUES (?,?,0,?)", (journal_id,accounts[code],round(amount,2)))
+        for employee_id, extra in by_employee.items():
+            placeholders=','.join('?' for _ in extra['ids'])
+            cursor.execute(f"UPDATE horas_extras SET nomina_id=?, estado='Incluida en nómina' WHERE id IN ({placeholders}) AND nomina_id IS NULL",
+                (nomina_id,*extra['ids']))
+        conn.commit()
+        return jsonify({"success": True, "mensaje": f"Se incluyeron C$ {sum(x['amount'] for x in by_employee.values()):,.2f} en {len(by_employee)} detalle(s) de nómina.", "empleados":len(by_employee), "nomina_id":nomina_id}), 200
+    except ValueError as exc:
+        conn.rollback()
+        return jsonify({"error": str(exc)}), 409
+    except Exception as exc:
+        conn.rollback()
+        app.logger.exception('Error al incluir horas extras en nómina %s', nomina_id)
+        return jsonify({"error": "No se pudieron incluir las horas extras. No se modificó la nómina."}), 500
+    finally:
+        conn.close()
 
 
 @app.route('/api/nomina/historial', methods=['GET'])
@@ -3176,12 +3324,42 @@ def api_colilla_individual(nomina_id, emp_id):
     return jsonify({"nomina": nomina, "colilla": detalle})
 
 
-@app.route('/api/nomina/<int:nomina_id>', methods=['DELETE'])
+@app.route('/api/nomina/<int:nomina_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def api_nomina_delete(nomina_id):
-    """Elimina una nómina completa y revierte las vacaciones acumuladas."""
+    """Consulta, edición y anulación de nóminas generadas."""
     if session['user']['rol'] not in ROLES_RRHH:
         return jsonify({"error": "No tienes permisos."}), 403
+
+    if request.method == 'GET':
+        query = """
+            SELECT id, periodo_mes, periodo_anio, fecha_generacion,
+                   total_ingresos, total_deducciones, total_neto,
+                   ISNULL(inss_patronal_total, 0) AS inss_patronal_total,
+                   ISNULL(inatec_patronal_total, 0) AS inatec_patronal_total,
+                   ISNULL(provision_vac_total, 0) AS provision_vac_total,
+                   ISNULL(provision_agui_total, 0) AS provision_agui_total,
+                   ISNULL(estado, 'CERRADA') AS estado
+            FROM nomina WHERE id = ?
+        """
+        nom = execute_query(query, (nomina_id,), fetchone=True)
+        if not nom:
+            return jsonify({"error": "Nómina no encontrada."}), 404
+        for k in ['total_ingresos', 'total_deducciones', 'total_neto', 'inss_patronal_total', 'inatec_patronal_total', 'provision_vac_total', 'provision_agui_total']:
+            if k in nom and nom[k] is not None:
+                nom[k] = float(nom[k])
+        if nom.get('fecha_generacion'):
+            nom['fecha_generacion'] = str(nom['fecha_generacion'])
+        return jsonify(nom)
+
+    if request.method == 'PUT':
+        data = request.json or {}
+        nuevo_estado = data.get('estado')
+        if not nuevo_estado:
+            return jsonify({"error": "Debe especificar el nuevo estado."}), 400
+        execute_query("UPDATE nomina SET estado = ? WHERE id = ?", (nuevo_estado, nomina_id), commit=True)
+        return jsonify({"success": True, "mensaje": f"Nómina #{nomina_id} actualizada correctamente al estado {nuevo_estado}."})
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()

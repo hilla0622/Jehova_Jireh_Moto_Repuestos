@@ -65,17 +65,22 @@
 </div></div>
 
 <div class="modal" id="modal-pago-control"><div class="modal-content modal-md">
-    <div class="modal-header"><h3>Registrar pago de nómina</h3><button class="modal-close" onclick="closeModal('modal-pago-control')" aria-label="Cerrar">&times;</button></div>
-    <form id="form-pago-control" onsubmit="guardarPagoControl(event)"><div class="modal-body">
+    <div class="modal-header"><h3 id="modal-pago-control-titulo">Registrar pago de nómina</h3><button class="modal-close" onclick="closeModal('modal-pago-control')" aria-label="Cerrar">&times;</button></div>
+    <form id="form-pago-control" onsubmit="guardarPagoControl(event)">
+        <input type="hidden" name="pago_id" id="pago-id">
+        <div class="modal-body">
         <label class="form-group">Nómina<select name="nomina_id" class="form-control" required onchange="cargarEmpleadosPago()"></select></label>
         <label class="form-group">Trabajador<select name="empleado_id" class="form-control" required onchange="mostrarSaldoPago()"></select></label>
         <p id="pago-saldo" role="status"></p>
         <div class="grid-2col"><label class="form-group">Monto pagado (C$)<input name="monto_pagado" class="form-control" type="number" min="0.01" step="0.01" required></label>
         <label class="form-group">Fecha de pago<input name="fecha_pago" class="form-control" type="date" required></label></div>
-        <label class="form-group">Método<select name="metodo_pago" class="form-control"><option>Transferencia Bancaria</option><option>Efectivo</option><option>Cheque</option></select></label>
+        <div class="grid-2col">
+            <label class="form-group">Método<select name="metodo_pago" class="form-control"><option>Transferencia Bancaria</option><option>Efectivo</option><option>Cheque</option></select></label>
+            <label class="form-group">Estado<select name="estado" id="pago-estado" class="form-control"><option value="Confirmado">Confirmado</option><option value="Pendiente">Pendiente</option><option value="Anulado">Anulado</option></select></label>
+        </div>
         <label class="form-group">Referencia o número de comprobante<input name="numero_referencia" class="form-control" maxlength="100" required></label>
         <p class="rrhh-error" role="alert"></p>
-    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modal-pago-control')">Cancelar</button><button type="submit" class="btn btn-primary">Confirmar pago</button></div></form>
+    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modal-pago-control')">Cancelar</button><button type="submit" id="btn-guardar-pago-control" class="btn btn-primary">Confirmar pago</button></div></form>
 </div></div>
 
 <datalist id="rrhh-equipos"><option value="Guantes de protección mecánica"><option value="Calzado de seguridad"><option value="Gafas de seguridad"><option value="Mascarilla para partículas"><option value="Chaleco reflectante"></datalist>

@@ -56,7 +56,8 @@ class RRHHTest(unittest.TestCase):
         tables = ('empleados', 'nomina', 'detalle_nomina', 'movimientos_laborales',
                   'horas_extras', 'parametros_laborales', 'cuentas_contables',
                   'asientos_contables', 'movimientos_contables', 'colilla_pago', 'pagos_nomina',
-                  'expediente_empleado', 'higiene_epp', 'higiene_riesgos', 'higiene_riesgo_seguimientos', 'rrhh_archivos')
+                  'expediente_empleado', 'higiene_epp', 'higiene_riesgos', 'higiene_riesgo_seguimientos', 'rrhh_archivos',
+                  'asistencia_laboral', 'liquidaciones_laborales')
         for table in tables:
             body = re.search(r'CREATE TABLE \[' + table + r'\] \((.*?)\n\);', source, re.S)[1]
             lines = [line for line in body.splitlines() if 'CONSTRAINT' not in line]
@@ -357,8 +358,146 @@ class RRHHTest(unittest.TestCase):
         row = self.client.get('/api/rrhh/higiene/riesgos').json[0]
         self.assertEqual(row['estado'],'Controlado')
         self.assertEqual(row['fecha_revision'],'2026-02-01')
+    def test_asistencia_crud_y_permisos(self):
+        # 1. Crear asistencia
+        r = self.client.post('/api/rrhh/asistencia', json={
+            'empleado_id': 1, 'fecha': '2026-03-01', 'hora_entrada': '08:00',
+            'hora_salida': '17:00', 'estado': 'Presente', 'minutos_tardanza': 0, 'observaciones': 'Jornada normal'
+        })
+        self.assertEqual(r.status_code, 201, r.json)
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM asistencia_laboral'), 1)
+
+        # 2. Listar asistencia por fecha
+        res_list = self.client.get('/api/rrhh/asistencia?fecha=2026-03-01')
+        self.assertEqual(res_list.status_code, 200)
+        items = res_list.json
+        self.assertEqual(len(items), 1)
+        aid = items[0]['id']
+
+        # 3. Consultar detalle por ID
+        res_det = self.client.get(f'/api/rrhh/asistencia/{aid}')
+        self.assertEqual(res_det.status_code, 200)
+        self.assertEqual(res_det.json['estado'], 'Presente')
+
+        # 4. Editar asistencia (PUT)
+        r_put = self.client.put(f'/api/rrhh/asistencia/{aid}', json={
+            'hora_salida': '17:30', 'estado': 'Llegada Tardía', 'minutos_tardanza': 15, 'observaciones': 'Tráfico matutino'
+        })
+        self.assertEqual(r_put.status_code, 200, r_put.json)
+        actualizado = self.client.get(f'/api/rrhh/asistencia/{aid}').json
+        self.assertEqual(actualizado['estado'], 'Llegada Tardía')
+        self.assertEqual(actualizado['minutos_tardanza'], 15)
+
+        # 5. Marcar salida vía POST con id
+        r_post_out = self.client.post('/api/rrhh/asistencia', json={'id': aid, 'hora_salida': '18:00'})
+        self.assertEqual(r_post_out.status_code, 200)
+        self.assertEqual(self.client.get(f'/api/rrhh/asistencia/{aid}').json['hora_salida'], '18:00')
+
+        # 6. Permisos restringidos para otros roles
         self.login('Vendedor')
-        self.assertEqual(self.client.post(url,json={}).status_code,403)
+        self.assertEqual(self.client.put(f'/api/rrhh/asistencia/{aid}', json={}).status_code, 403)
+        self.assertEqual(self.client.delete(f'/api/rrhh/asistencia/{aid}').status_code, 403)
+
+        # 7. Eliminar asistencia (DELETE) con rol autorizado
+        self.login('Administrador')
+        r_del = self.client.delete(f'/api/rrhh/asistencia/{aid}')
+        self.assertEqual(r_del.status_code, 200)
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM asistencia_laboral'), 0)
+
+    def test_liquidaciones_crud_y_permisos(self):
+        self.login('Administrador')
+        # 1. Crear liquidación
+        r = self.client.post('/api/rrhh/liquidaciones', json={
+            'empleado_id': 1,
+            'fecha_salida': '2026-03-31',
+            'motivo_salida': 'Renuncia Voluntaria',
+            'dias_pendientes_pago': 5,
+            'deducciones_totales': 100
+        })
+        self.assertEqual(r.status_code, 201)
+        lid = r.json['id']
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM liquidaciones_laborales'), 1)
+
+        # 2. Consultar liquidación por ID
+        r_get = self.client.get(f'/api/rrhh/liquidaciones/{lid}')
+        self.assertEqual(r_get.status_code, 200)
+        self.assertEqual(r_get.json['motivo_salida'], 'Renuncia Voluntaria')
+
+        # 3. Editar liquidación (PUT)
+        r_put = self.client.put(f'/api/rrhh/liquidaciones/{lid}', json={
+            'motivo_salida': 'Despido Injustificado (Art. 45)',
+            'estado': 'Aprobado'
+        })
+        self.assertEqual(r_put.status_code, 200)
+        actualizado = self.client.get(f'/api/rrhh/liquidaciones/{lid}').json
+        self.assertEqual(actualizado['estado'], 'Aprobado')
+        self.assertIn('Despido Injustificado', actualizado['motivo_salida'])
+
+        # 4. Validar permisos no autorizados
+        self.login('Vendedor')
+        self.assertEqual(self.client.put(f'/api/rrhh/liquidaciones/{lid}', json={}).status_code, 403)
+        self.assertEqual(self.client.delete(f'/api/rrhh/liquidaciones/{lid}').status_code, 403)
+
+        # 5. Eliminar liquidación (DELETE) con rol autorizado
+        self.login('Administrador')
+        r_del = self.client.delete(f'/api/rrhh/liquidaciones/{lid}')
+        self.assertEqual(r_del.status_code, 200)
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM liquidaciones_laborales'), 0)
+
+    def test_nomina_get_y_put(self):
+        self.login('Administrador')
+        # 1. Generar nómina
+        r_gen = self.generar(1)
+        nid = r_gen.json['nomina_id']
+
+        # 2. Obtener nómina individual (GET /api/nomina/<id>)
+        r_get = self.client.get(f'/api/nomina/{nid}')
+        self.assertEqual(r_get.status_code, 200)
+        self.assertEqual(r_get.json['id'], nid)
+
+        # 3. Actualizar estado de la nómina (PUT /api/nomina/<id>)
+        r_put = self.client.put(f'/api/nomina/{nid}', json={'estado': 'PAGADA'})
+        self.assertEqual(r_put.status_code, 200)
+        self.assertEqual(self.scalar(f'SELECT estado FROM nomina WHERE id={nid}'), 'PAGADA')
+
+        # 4. Validar permisos
+        self.login('Vendedor')
+        self.assertEqual(self.client.put(f'/api/nomina/{nid}', json={'estado': 'CERRADA'}).status_code, 403)
+
+    def test_pagos_nomina_crud_y_permisos(self):
+        self.login('Administrador')
+        self.generar(1)
+        r_post = self.pago(nomina_id=1, monto_pagado='500', numero_referencia='TEST-PAG-001')
+        self.assertEqual(r_post.status_code, 201)
+        pid = self.scalar("SELECT id FROM pagos_nomina WHERE numero_referencia='TEST-PAG-001'")
+
+        # 1. Consultar pago por ID
+        r_get = self.client.get(f'/api/rrhh/pagos-nomina/{pid}')
+        self.assertEqual(r_get.status_code, 200)
+        self.assertEqual(r_get.json['numero_referencia'], 'TEST-PAG-001')
+
+        # 2. Actualizar pago (PUT)
+        r_put = self.client.put(f'/api/rrhh/pagos-nomina/{pid}', json={
+            'metodo_pago': 'Cheque',
+            'numero_referencia': 'CHQ-2026-999',
+            'monto_pagado': 600
+        })
+        self.assertEqual(r_put.status_code, 200)
+        actualizado = self.client.get(f'/api/rrhh/pagos-nomina/{pid}').json
+        self.assertEqual(actualizado['metodo_pago'], 'Cheque')
+        self.assertEqual(actualizado['numero_referencia'], 'CHQ-2026-999')
+        self.assertEqual(actualizado['monto_pagado'], 600.0)
+
+        # 3. Validar permisos
+        self.login('Vendedor')
+        self.assertEqual(self.client.put(f'/api/rrhh/pagos-nomina/{pid}', json={}).status_code, 403)
+        self.assertEqual(self.client.delete(f'/api/rrhh/pagos-nomina/{pid}').status_code, 403)
+
+        # 4. Eliminar pago (DELETE)
+        self.login('Administrador')
+        r_del = self.client.delete(f'/api/rrhh/pagos-nomina/{pid}')
+        self.assertEqual(r_del.status_code, 200)
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM pagos_nomina WHERE id=1'), 0)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,28 @@
+/* Formularios y tablas de seguimiento de Recursos Humanos. */
+.rrhh-control { margin-bottom: 1.5rem; }
+.rrhh-control .card-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+.rrhh-control .card-header h3 { margin:0; }
+.rrhh-filtros { display:flex; flex-wrap:wrap; gap:.75rem; margin:1rem 0; }
+.rrhh-filtros label { flex:1 1 150px; font-size:.85rem; }
+.rrhh-filtros .form-control { margin-top:.35rem; width:100%; }
+.rrhh-acciones { display:flex; flex-wrap:wrap; gap:.35rem; }
+.rrhh-acciones .btn { padding:.35rem .65rem; font-size:.8rem; }
+.rrhh-descripcion { display:block; margin-top:.3rem; color:var(--text-muted); white-space:normal; }
+.rrhh-control td { white-space:normal; overflow-wrap:anywhere; min-width:80px; }
+.rrhh-control .table-responsive { overflow-x:auto; }
+.rrhh-control table { min-width:780px; }
+.rrhh-error { color:var(--accent-red, #b91c1c); white-space:normal; }
+.rrhh-error:empty { display:none; }
+.rrhh-nivel-Bajo { background:#dcfce7; color:#166534; }
+.rrhh-nivel-Medio { background:#fef3c7; color:#92400e; }
+.rrhh-nivel-Alto { background:#fee2e2; color:#991b1b; }
+.rrhh-revision { padding:.75rem 0; border-bottom:1px solid var(--border-color); }
+.rrhh-revision p { white-space:pre-wrap; overflow-wrap:anywhere; margin:.4rem 0; }
+.rrhh-detalle { display:grid; grid-template-columns:1fr 2fr; gap:.5rem 1rem; }
+.rrhh-detalle dd { margin:0; overflow-wrap:anywhere; }
+.rrhh-detalle dt { color:var(--text-muted); }
+[hidden] { display:none !important; }
+@media (max-width: 768px) {
+    #tab-rrhh .rrhh-control table { min-width:0; }
+    #tab-rrhh .rrhh-control td { min-width:0; }
+}

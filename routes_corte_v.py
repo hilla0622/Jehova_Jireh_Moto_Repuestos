@@ -250,51 +250,6 @@ def register_corte_v_routes(app):
     # =========================================================================
     # 3. EXPEDIENTE DIGITAL (RF97)
     # =========================================================================
-    @app.route('/api/rrhh/expedientes/<int:emp_id>', methods=['GET', 'POST'])
-    @login_required
-    def api_expediente_empleado(emp_id):
-        if request.method == 'GET':
-            docs = execute_query("""
-                SELECT id, tipo_documento, nombre_archivo, fecha_registro, usuario_responsable, ISNULL(observaciones, '') AS observaciones
-                FROM expediente_empleado
-                WHERE empleado_id = ?
-                ORDER BY id DESC
-            """, (emp_id,), fetchall=True)
-            for d in docs:
-                d['fecha_registro'] = str(d['fecha_registro'])[:19] if d['fecha_registro'] else ''
-            return jsonify(docs)
-
-        if request.method == 'POST':
-            if session['user']['rol'] not in ROLES_RRHH:
-                return jsonify({"error": "No tienes permisos."}), 403
-
-            data = request.json or {}
-            tipo = data.get('tipo_documento', '').strip()
-            archivo = data.get('nombre_archivo', '').strip()
-            obs = data.get('observaciones', '').strip()
-
-            if not tipo or not archivo:
-                return jsonify({"error": "Tipo de documento y nombre de archivo son obligatorios."}), 400
-
-            usuario = session.get('user', {}).get('username', 'admin')
-            execute_query("""
-                INSERT INTO expediente_empleado (empleado_id, tipo_documento, nombre_archivo, usuario_responsable, observaciones)
-                VALUES (?, ?, ?, ?, ?)
-            """, (emp_id, tipo, archivo, usuario, obs), commit=True)
-
-            return jsonify({"success": True, "mensaje": "Documento agregado al expediente digital."}), 201
-
-    @app.route('/api/rrhh/expedientes/doc/<int:doc_id>', methods=['DELETE'])
-    @login_required
-    def api_expediente_eliminar(doc_id):
-        if session['user']['rol'] not in ROLES_RRHH:
-            return jsonify({"error": "No tienes permisos."}), 403
-        execute_query("DELETE FROM expediente_empleado WHERE id = ?", (doc_id,), commit=True)
-        return jsonify({"success": True, "mensaje": "Documento eliminado."})
-
-    # =========================================================================
-    # 4. HISTORIAL DE MODIFICACIONES LABORALES (RF101)
-    # =========================================================================
     @app.route('/api/rrhh/historial-laboral/<int:emp_id>', methods=['GET', 'POST'])
     @login_required
     def api_historial_laboral(emp_id):
@@ -623,68 +578,9 @@ def register_corte_v_routes(app):
     # =========================================================================
     # 9. PAGOS DE NÓMINA (RF109)
     # =========================================================================
-    @app.route('/api/rrhh/pagos-nomina', methods=['GET', 'POST'])
-    @login_required
-    def api_pagos_nomina():
-        if request.method == 'GET':
-            query = """
-                SELECT p.id, p.nomina_id, p.empleado_id, e.nombre_completo AS empleado,
-                       p.monto_pagado, p.fecha_pago, p.metodo_pago,
-                       ISNULL(p.numero_referencia, '') AS numero_referencia, p.estado
-                FROM pagos_nomina p
-                INNER JOIN empleados e ON p.empleado_id = e.id
-                ORDER BY p.fecha_pago DESC
-            """
-            rows = execute_query(query, fetchall=True)
-            for r in rows:
-                r['monto_pagado'] = float(r['monto_pagado'])
-                r['fecha_pago'] = str(r['fecha_pago'])[:10]
-            return jsonify(rows)
-
-        if request.method == 'POST':
-            if session['user']['rol'] not in ROLES_RRHH:
-                return jsonify({"error": "No tienes permisos."}), 403
-
-            data = request.json or {}
-            nom_id = int(data.get('nomina_id', 0))
-            emp_id = int(data.get('empleado_id', 0))
-            monto = float(data.get('monto_pagado', 0))
-            f_pago = data.get('fecha_pago', str(date.today()))
-            metodo = data.get('metodo_pago', 'Efectivo - Caja POS')
-            ref = data.get('numero_referencia', '').strip()
-            usuario = session.get('user', {}).get('username', 'admin')
-
-            execute_query("""
-                INSERT INTO pagos_nomina
-                (nomina_id, empleado_id, monto_pagado, fecha_pago, metodo_pago, numero_referencia, estado, usuario_responsable)
-                VALUES (?, ?, ?, ?, ?, ?, 'Confirmado', ?)
-            """, (nom_id, emp_id, monto, f_pago, metodo, ref, usuario), commit=True)
-
-            return jsonify({"success": True, "mensaje": "Pago de nómina registrado y confirmado."}), 201
-
     # =========================================================================
     # 10. SEGURIDAD E HIGIENE OCUPACIONAL (LEY 618) (RF110 al RF114)
     # =========================================================================
-    @app.route('/api/rrhh/higiene/riesgos', methods=['GET', 'POST'])
-    @login_required
-    def api_higiene_riesgos():
-        if request.method == 'GET':
-            rows = execute_query("SELECT * FROM higiene_riesgos ORDER BY id ASC", fetchall=True)
-            for r in rows:
-                if 'fecha_registro' in r and r['fecha_registro']:
-                    r['fecha_registro'] = str(r['fecha_registro'])[:10]
-            return jsonify(rows)
-
-        if request.method == 'POST':
-            if session['user']['rol'] not in ROLES_RRHH:
-                return jsonify({"error": "No tienes permisos."}), 403
-            data = request.json or {}
-            execute_query("""
-                INSERT INTO higiene_riesgos (area, tipo_riesgo, descripcion, nivel_riesgo, medidas_preventivas, responsable_seguimiento)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (data.get('area'), data.get('tipo_riesgo'), data.get('descripcion'), data.get('nivel_riesgo', 'Medio'), data.get('medidas_preventivas'), data.get('responsable_seguimiento')), commit=True)
-            return jsonify({"success": True, "mensaje": "Riesgo laboral registrado exitosamente."}), 201
-
     @app.route('/api/rrhh/higiene/inspecciones', methods=['GET', 'POST'])
     @login_required
     def api_higiene_inspecciones():
@@ -832,36 +728,6 @@ def register_corte_v_routes(app):
             conn.close()
 
             return jsonify({"success": True, "mensaje": f"Evento {cod} registrado para seguimiento."}), 201
-
-    @app.route('/api/rrhh/higiene/epp', methods=['GET', 'POST'])
-    @login_required
-    def api_higiene_epp():
-        if request.method == 'GET':
-            query = """
-                SELECT p.*, e.nombre_completo AS empleado
-                FROM higiene_epp p
-                INNER JOIN empleados e ON p.empleado_id = e.id
-                ORDER BY p.fecha_entrega DESC
-            """
-            rows = execute_query(query, fetchall=True)
-            for r in rows:
-                r['fecha_entrega'] = str(r['fecha_entrega'])[:10]
-                r['fecha_reposicion_sugerida'] = str(r['fecha_reposicion_sugerida'])[:10] if r.get('fecha_reposicion_sugerida') else ''
-            return jsonify(rows)
-
-        if request.method == 'POST':
-            if session['user']['rol'] not in ROLES_RRHH:
-                return jsonify({"error": "No tienes permisos."}), 403
-
-            data = request.json or {}
-            execute_query("""
-                INSERT INTO higiene_epp
-                (empleado_id, tipo_equipo, fecha_entrega, cantidad, estado_equipo, fecha_reposicion_sugerida, entregado_por, observaciones)
-                VALUES (?, ?, ?, ?, 'Nuevo', ?, ?, ?)
-            """, (int(data.get('empleado_id')), data.get('tipo_equipo'), data.get('fecha_entrega', str(date.today())),
-                  int(data.get('cantidad', 1)), data.get('fecha_reposicion_sugerida') or None,
-                  session.get('user', {}).get('nombre', 'Administración'), data.get('observaciones', '')), commit=True)
-            return jsonify({"success": True, "mensaje": "Entrega de EPP registrada con éxito."}), 201
 
     @app.route('/api/rrhh/higiene/capacitaciones', methods=['GET', 'POST'])
     @login_required

@@ -2724,7 +2724,7 @@ def api_nomina_generar():
         # Evita que un empleado sea reprocesado o acumule vacaciones más de una vez en el mismo mes.
         if empleado_id_param != 'all':
             cursor.execute("""
-                SELECT id, salario_base, fecha_ingreso, ISNULL(dias_vacaciones_disponibles, 0) FROM empleados 
+                SELECT id, salario_base, fecha_ingreso, ISNULL(dias_vacaciones_disponibles, 0), nombre_completo, identificacion, cargo, num_inss FROM empleados
                 WHERE activo=1 AND id=? 
                 AND id NOT IN (
                     SELECT dn.empleado_id FROM detalle_nomina dn
@@ -2734,7 +2734,7 @@ def api_nomina_generar():
             """, (empleado_id_param, mes, anio))
         else:
             cursor.execute("""
-                SELECT id, salario_base, fecha_ingreso, ISNULL(dias_vacaciones_disponibles, 0) FROM empleados 
+                SELECT id, salario_base, fecha_ingreso, ISNULL(dias_vacaciones_disponibles, 0), nombre_completo, identificacion, cargo, num_inss FROM empleados
                 WHERE activo=1 
                 AND id NOT IN (
                     SELECT dn.empleado_id FROM detalle_nomina dn
@@ -2859,8 +2859,9 @@ def api_nomina_generar():
                     provision_vacaciones, provision_aguinaldo,
                     dias_trabajados, vac_acumulada, vac_mes, vac_saldo_final,
                     dias_falta, monto_falta, dias_permiso_sin_goce, monto_permiso_sin_goce,
-                    dias_septimo_dia, monto_septimo_dia, inatec_patronal)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    dias_septimo_dia, monto_septimo_dia, inatec_patronal,
+                    historico_salario, historico_nombre, historico_identificacion, historico_cargo, historico_inss, historico_ingreso)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (nomina_id, e_id,
                  calc['salario_ordinario'],
                  calc['ingresos_extra'],
@@ -2880,7 +2881,7 @@ def api_nomina_generar():
                  monto_permiso_sin_goce,
                  dias_septimo_dia,
                  monto_septimo_dia,
-                 calc['inatec_patronal'])
+                 calc['inatec_patronal'], salario_base_contrato, emp[4], emp[5], emp[6], emp[7], fecha_ingreso_val)
             )
 
             # Acumular días de vacaciones computables correspondientes a este período
@@ -3052,8 +3053,9 @@ def api_nomina_detalle(nomina_id):
         return jsonify({"error": "Nómina no encontrada."}), 404
 
     detalles = execute_query(
-        """SELECT dn.id, e.id AS empleado_id, e.nombre_completo AS empleado, e.identificacion, e.cargo,
-                  e.salario_base AS salario_contrato,
+        """SELECT dn.id, e.id AS empleado_id, CASE WHEN dn.historico_salario IS NULL THEN e.nombre_completo ELSE dn.historico_nombre END AS empleado, CASE WHEN dn.historico_salario IS NULL THEN e.identificacion ELSE dn.historico_identificacion END AS identificacion, CASE WHEN dn.historico_salario IS NULL THEN e.cargo ELSE dn.historico_cargo END AS cargo,
+                  CASE WHEN dn.historico_salario IS NULL THEN e.salario_base ELSE dn.historico_salario END AS salario_contrato,
+                  CASE WHEN dn.historico_salario IS NULL THEN 1 ELSE 0 END AS historico_incompleto,
                   dn.salario_base AS salario_devengado,
                   dn.salario_base AS salario_base,
                   ISNULL(dn.ingresos_extra,0) AS ingresos_extra,
@@ -3109,9 +3111,10 @@ def api_colilla_individual(nomina_id, emp_id):
         nomina['fecha_generacion'] = str(nomina['fecha_generacion'])
 
     detalle = execute_query(
-        """SELECT e.nombre_completo AS empleado, e.identificacion, e.num_inss, e.cargo,
-                  e.fecha_ingreso,
-                  e.salario_base AS salario_contrato,
+        """SELECT CASE WHEN dn.historico_salario IS NULL THEN e.nombre_completo ELSE dn.historico_nombre END AS empleado, CASE WHEN dn.historico_salario IS NULL THEN e.identificacion ELSE dn.historico_identificacion END AS identificacion, CASE WHEN dn.historico_salario IS NULL THEN e.num_inss ELSE dn.historico_inss END AS num_inss, CASE WHEN dn.historico_salario IS NULL THEN e.cargo ELSE dn.historico_cargo END AS cargo,
+                  CASE WHEN dn.historico_salario IS NULL THEN e.fecha_ingreso ELSE dn.historico_ingreso END AS fecha_ingreso,
+                  CASE WHEN dn.historico_salario IS NULL THEN e.salario_base ELSE dn.historico_salario END AS salario_contrato,
+                  CASE WHEN dn.historico_salario IS NULL THEN 1 ELSE 0 END AS historico_incompleto,
                   dn.salario_base AS salario_devengado,
                   ISNULL(dn.ingresos_extra,0) AS ingresos_extra,
                   dn.inss_laboral, dn.ir,
@@ -3248,15 +3251,16 @@ def api_nomina_delete(nomina_id):
 def ver_colilla(id_detalle):
     query = """
         SELECT
-            e.nombre_completo as empleado,
-            e.identificacion as cedula,
-            e.cargo,
-            e.num_inss as inss,
-            e.salario_base as salario_contrato,
-            e.fecha_ingreso,
+            CASE WHEN d.historico_salario IS NULL THEN e.nombre_completo ELSE d.historico_nombre END as empleado,
+            CASE WHEN d.historico_salario IS NULL THEN e.identificacion ELSE d.historico_identificacion END as cedula,
+            CASE WHEN d.historico_salario IS NULL THEN e.cargo ELSE d.historico_cargo END AS cargo,
+            CASE WHEN d.historico_salario IS NULL THEN e.num_inss ELSE d.historico_inss END as inss,
+            CASE WHEN d.historico_salario IS NULL THEN e.salario_base ELSE d.historico_salario END as salario_contrato,
+            CASE WHEN d.historico_salario IS NULL THEN e.fecha_ingreso ELSE d.historico_ingreso END AS fecha_ingreso,
             n.periodo_mes as periodo_mes,
             n.periodo_anio as periodo_anio,
-            d.salario_base as salario_devengado,
+            CASE WHEN d.historico_salario IS NULL THEN 1 ELSE 0 END AS historico_incompleto,
+                  d.salario_base as salario_devengado,
             ISNULL(d.ingresos_extra,0) as kpi_meta,
             (d.salario_base + ISNULL(d.ingresos_extra,0)) as total_percepciones,
             d.inss_laboral,
@@ -3316,6 +3320,7 @@ def ver_colilla(id_detalle):
     costo_tot_pat = round(tot_percepciones + tot_cargas_pat, 2)
 
     c = {
+        "historico_incompleto": bool(datos.get("historico_incompleto")),
         "empresa": "Jehová Jireh Moto Repuestos",
         "periodo": periodo,
         "empleado": datos['empleado'],
@@ -3326,7 +3331,7 @@ def ver_colilla(id_detalle):
         "salario_contrato": salario_contrato,
         "valor_diario": valor_diario,
         "fecha_ingreso": str(datos.get('fecha_ingreso', ''))[:10] if datos.get('fecha_ingreso') else '—',
-        "dias_trabajados": float(datos.get('dias_trabajados') or 30),
+        "dias_trabajados": float(datos['dias_trabajados'] if datos.get('dias_trabajados') is not None else 30),
         # Ajustes por tiempo no trabajado
         "dias_falta": float(datos.get('dias_falta') or 0),
         "monto_falta": monto_falta,
@@ -3346,7 +3351,7 @@ def ver_colilla(id_detalle):
         "neto_a_recibir": neto_recibir,
         # Vacaciones
         "vac_acumulado": float(datos.get('vac_acumulada') or 0),
-        "vac_mes": float(datos.get('vac_mes') or 2.5),
+        "vac_mes": float(datos['vac_mes'] if datos.get('vac_mes') is not None else 2.5),
         "vac_descansados": float(datos.get('vac_descansados') or 0),
         "vac_saldo": float(datos.get('vac_saldo') or 0),
         # Cargas Patronales
@@ -3366,6 +3371,8 @@ def ver_colilla(id_detalle):
 # ==============================================================================
 from routes_corte_v import register_corte_v_routes
 register_corte_v_routes(app)
+from routes_rrhh_control import register_rrhh_control_routes
+register_rrhh_control_routes(app)
 
 # ==============================================================================
 # RUTAS DE ESTADOS FINANCIEROS: FLUJO DE EFECTIVO Y CONCILIACIÓN (RF96 - RF102)

@@ -16,6 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/rrhh_control.css') }}?v=1.0">
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -1988,6 +1989,7 @@
                                     <i class="ph-bold ph-bank"></i>
                                     <span>Seguimiento de Pagos de Nómina</span>
                                 </div>
+                                <button class="btn btn-primary" onclick="abrirPagoControl()">Registrar pago</button>
                             </div>
                             <div class="card rrhh-panel-card">
                                 <div class="card-body">
@@ -2234,42 +2236,7 @@
                                 </div>
                             </div>
 
-                            <!-- Matriz de Riesgos y Control de EPP -->
-                            <div class="rrhh-safety-grid">
-                                <!-- Riesgos Laborales -->
-                                <div class="card rrhh-panel-card">
-                                    <div class="card-header">
-                                        <h3><i class="ph-bold ph-warning"></i> Matriz de Riesgos Identificados</h3>
-                                    </div>
-                                    <div class="card-body">
-                                        <table class="data-table">
-                                            <thead>
-                                                <tr><th>Área</th><th>Riesgo</th><th>Nivel</th><th>Medida Preventiva</th><th>Seguimiento</th></tr>
-                                            </thead>
-                                            <tbody id="tbody-higiene-riesgos">
-                                                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Cargando riesgos...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <!-- Control de Entrega de EPP -->
-                                <div class="card rrhh-panel-card">
-                                    <div class="card-header">
-                                        <h3><i class="ph-bold ph-t-shirt"></i> Dotación de EPP a Trabajadores</h3>
-                                    </div>
-                                    <div class="card-body">
-                                        <table class="data-table">
-                                            <thead>
-                                                <tr><th>Empleado</th><th>Equipo EPP</th><th>Cant.</th><th>Entrega</th><th>Estado</th></tr>
-                                            </thead>
-                                            <tbody id="tbody-higiene-epp">
-                                                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Cargando EPP...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+                            {% include 'rrhh_seguridad_control.html' %}
 
                             <!-- Incidentes y Capacitaciones -->
                             <div class="rrhh-safety-grid">
@@ -3969,8 +3936,8 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Nombre / Referencia de Archivo:</label>
-                            <input type="text" id="exp-nombre-archivo" class="form-control" placeholder="Ej. Cedula_Frente_Dorso.pdf" required>
+                            <label for="exp-archivo">Archivo PDF, PNG o JPG (máximo 5 MB):</label>
+                            <input type="file" id="exp-archivo" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required>
                         </div>
                     </div>
                     <div class="form-group">
@@ -3978,8 +3945,9 @@
                         <input type="text" id="exp-observaciones" class="form-control" placeholder="Notas sobre el documento anexado">
                     </div>
                     <button type="submit" class="btn btn-secondary" style="font-size:0.8rem; padding:4px 10px;">
-                        <i class="ph-bold ph-upload-simple"></i> Registrar Documento
+                        <i class="ph-bold ph-upload-simple"></i> Guardar documento
                     </button>
+                    <p class="rrhh-error" role="alert"></p>
                 </form>
 
                 <div class="table-responsive">
@@ -5515,10 +5483,13 @@
         </div>
     </div>
 
+    {% include 'rrhh_control_modales.html' %}
+
     <!-- Script Principal SPA del Sistema -->
     <script src="{{ url_for('static', filename='js/main.js') }}?v=5.3"></script>
+    <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.0"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
-    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.4"></script>
+    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.5"></script>
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
     <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=2.0"></script>
     <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>

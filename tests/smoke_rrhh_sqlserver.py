@@ -10,7 +10,8 @@ import app as backend
 
 TABLES = ('empleados', 'nomina', 'detalle_nomina', 'movimientos_laborales',
           'horas_extras', 'parametros_laborales', 'cuentas_contables',
-          'asientos_contables', 'movimientos_contables', 'colilla_pago', 'pagos_nomina')
+          'asientos_contables', 'movimientos_contables', 'colilla_pago', 'pagos_nomina',
+          'expediente_empleado', 'higiene_epp', 'higiene_riesgos', 'higiene_riesgo_seguimientos', 'rrhh_archivos')
 
 
 class CursorTemporal:
@@ -88,7 +89,35 @@ def main():
             assert cur.fetchone()[0] == 1
             r = client.post('/api/nomina/generar',json={'mes':1,'anio':2026})
             assert r.status_code == 201, r.json
-        print('SQL Server OK: parámetros, horas extra, ausencias, cuentas, asiento balanceado, anulación y regeneración. Solo tablas temporales.')
+            nid = r.json['nomina_id']
+            cur.execute("UPDATE empleados SET salario_base=20000,cargo='Otro' WHERE id=1")
+            real.commit()
+            r = client.get(f'/api/nomina/{nid}/empleado/1')
+            assert r.json['colilla']['salario_contrato'] == 10000, r.json
+            pago = dict(nomina_id=nid,empleado_id=1,monto_pagado=100,fecha_pago='2026-01-31',metodo_pago='Efectivo',numero_referencia='SMOKE-001')
+            r = client.post('/api/rrhh/pagos-nomina',json=pago)
+            assert r.status_code == 201, r.json
+            assert client.post('/api/rrhh/pagos-nomina',json=pago).status_code == 409
+            entrega = dict(empleado_id=1,tipo_equipo='Guantes',area='Bodega',cantidad=1,estado_equipo='Nuevo',fecha_entrega='2026-01-01')
+            r = client.post('/api/rrhh/higiene/epp',json=entrega)
+            assert r.status_code == 201, r.json
+            entrega.update(repone_a_id=r.json['id'],motivo_reposicion='Desgaste',fecha_entrega='2026-02-01')
+            r = client.post('/api/rrhh/higiene/epp',json=entrega)
+            assert r.status_code == 201, r.json
+            assert len(client.get('/api/rrhh/higiene/epp').json) == 2
+            riesgo = dict(area='Bodega',tipo_riesgo='Caída de objetos',descripcion='Estantes',nivel_riesgo='Alto',medidas_preventivas='Fijación',responsable_seguimiento='Inventario',estado='Pendiente')
+            r = client.post('/api/rrhh/higiene/riesgos',json=riesgo)
+            assert r.status_code == 201, r.json
+            rid = r.json['id']
+            r = client.post(f'/api/rrhh/higiene/riesgos/{rid}/seguimiento',json=dict(fecha_revision='2026-01-01',observaciones='Revisión',estado='Controlado'))
+            assert r.status_code == 201, r.json
+            from io import BytesIO
+            contenido = b'%PDF-1.4\nTest'
+            r = client.post('/api/rrhh/expedientes/1',data={'tipo_documento':'Contrato','archivo':(BytesIO(contenido),'test.pdf')})
+            assert r.status_code == 201, r.json
+            aid = client.get('/api/rrhh/expedientes/1').json[0]['archivo_id']
+            assert client.get(f'/api/rrhh/archivos/{aid}').data == contenido
+        print('SQL Server OK: nomina, snapshot, pagos, EPP, reposiciones, riesgos, seguimientos y archivos privados. Solo tablas temporales.')
     finally:
         real.rollback()
         real.close()

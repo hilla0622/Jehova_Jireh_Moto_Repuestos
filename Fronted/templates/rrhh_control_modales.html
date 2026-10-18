@@ -1,0 +1,84 @@
+<div class="modal" id="modal-riesgo-control"><div class="modal-content modal-md">
+    <div class="modal-header"><h3 id="riesgo-titulo">Registrar riesgo</h3><button class="modal-close" onclick="closeModal('modal-riesgo-control')" aria-label="Cerrar">&times;</button></div>
+    <form id="form-riesgo-control" onsubmit="guardarRiesgo(event)"><div class="modal-body">
+        <input type="hidden" name="id">
+        <label class="form-group" id="riesgo-propuesta-grupo">Partir de una propuesta para la tienda
+            <select id="riesgo-propuesta" class="form-control" onchange="aplicarPropuestaRiesgo(this.value)">
+                <option value="">Completar manualmente</option><option value="cargas">Manipulación manual de cargas</option>
+                <option value="objetos">Caída de objetos almacenados</option><option value="pasillos">Caídas y tropiezos</option>
+                <option value="posturas">Posturas prolongadas</option><option value="electricidad">Riesgo eléctrico</option>
+                <option value="cables">Tropiezos por cables sueltos</option><option value="pantalla">Fatiga visual y posturas inadecuadas</option>
+            </select>
+            <small>Las propuestas y sus niveles son orientativos. Revise los datos antes de guardarlos.</small>
+        </label>
+        <div class="grid-2col">
+            <label class="form-group">Área<input name="area" class="form-control" list="rrhh-areas" required maxlength="50"></label>
+            <label class="form-group">Tipo de riesgo<input name="tipo_riesgo" class="form-control" list="rrhh-tipos-riesgo" required maxlength="100"></label>
+        </div>
+        <label class="form-group">Descripción del riesgo<textarea name="descripcion" class="form-control" required maxlength="4000" rows="2"></textarea></label>
+        <label class="form-group">Medidas preventivas<textarea name="medidas_preventivas" class="form-control" required maxlength="4000" rows="3"></textarea></label>
+        <label class="form-group">Responsable de seguimiento<input name="responsable_seguimiento" list="rrhh-responsables" class="form-control" required maxlength="100"></label>
+        <div class="grid-2col">
+            <label class="form-group">Nivel registrado<select name="nivel_riesgo" class="form-control"><option>Bajo</option><option selected>Medio</option><option>Alto</option></select></label>
+            <label class="form-group">Estado de las medidas<select name="estado" class="form-control"><option>Pendiente</option><option>En seguimiento</option><option>Controlado</option></select></label>
+        </div>
+        <p class="text-muted">Documente en la descripción el criterio que sustenta el nivel. Si aún no se ha evaluado, indique “Pendiente de evaluación”.</p>
+        <p class="rrhh-error" role="alert"></p>
+    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modal-riesgo-control')">Cancelar</button><button class="btn btn-primary" type="submit">Guardar riesgo</button></div></form>
+</div></div>
+
+<div class="modal" id="modal-seguimiento-riesgo"><div class="modal-content modal-md">
+    <div class="modal-header"><h3>Seguimiento del riesgo</h3><button class="modal-close" onclick="closeModal('modal-seguimiento-riesgo')" aria-label="Cerrar">&times;</button></div>
+    <form id="form-seguimiento-riesgo" onsubmit="guardarSeguimientoRiesgo(event)"><div class="modal-body">
+        <input type="hidden" name="riesgo_id"><p id="seguimiento-riesgo-nombre"></p>
+        <div class="grid-2col"><label class="form-group">Fecha de revisión<input name="fecha_revision" class="form-control" type="date" required></label>
+        <label class="form-group">Estado de las medidas<select name="estado" class="form-control"><option>Pendiente</option><option>En seguimiento</option><option>Controlado</option></select></label></div>
+        <label class="form-group">Observaciones y acciones realizadas<textarea name="observaciones" rows="3" class="form-control" maxlength="4000" required></textarea></label>
+        <p class="rrhh-error" role="alert"></p>
+        <h4>Historial de revisiones</h4><div id="riesgo-historial"></div>
+    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modal-seguimiento-riesgo')">Cerrar</button><button type="submit" class="btn btn-primary">Registrar revisión</button></div></form>
+</div></div>
+
+<div class="modal" id="modal-entrega-epp"><div class="modal-content modal-md">
+    <div class="modal-header"><h3 id="epp-titulo">Registrar entrega de EPP</h3><button class="modal-close" onclick="closeModal('modal-entrega-epp')" aria-label="Cerrar">&times;</button></div>
+    <form id="form-entrega-epp" onsubmit="guardarEntregaEpp(event)"><div class="modal-body">
+        <input name="repone_a_id" type="hidden">
+        <label class="form-group">Trabajador<select name="empleado_id" class="form-control" required></select></label>
+        <div class="grid-2col"><label class="form-group">Tipo de EPP<input name="tipo_equipo" class="form-control" list="rrhh-equipos" required maxlength="100"></label>
+        <label class="form-group">Área de entrega<input name="area" class="form-control" list="rrhh-areas" required maxlength="50"></label></div>
+        <div class="grid-2col"><label class="form-group">Cantidad<input name="cantidad" class="form-control" type="number" min="1" step="1" value="1" required></label>
+        <label class="form-group">Estado del equipo<select name="estado_equipo" class="form-control"><option>Nuevo</option><option>Buen estado</option></select></label></div>
+        <div class="grid-2col"><label class="form-group">Fecha de entrega<input name="fecha_entrega" type="date" class="form-control" required></label>
+        <label class="form-group">Fecha de reposición prevista<input name="fecha_reposicion_sugerida" type="date" class="form-control"></label></div>
+        <label class="form-group" id="epp-motivo-grupo" hidden>Motivo de la reposición<input name="motivo_reposicion" class="form-control" maxlength="255"></label>
+        <p id="epp-reposicion-nota" class="text-muted" hidden>Esta operación repone toda la cantidad de la entrega seleccionada. Se conservará el registro original.</p>
+        <label class="form-group">Observaciones<textarea name="observaciones" class="form-control" maxlength="255" rows="2"></textarea></label>
+        <label class="form-group">Constancia de recepción (opcional)<input name="archivo" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg"><small>Comprobante firmado en PDF, PNG o JPG. Máximo 5 MB.</small></label>
+        <p class="rrhh-error" role="alert"></p>
+    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modal-entrega-epp')">Cancelar</button><button type="submit" class="btn btn-primary">Guardar entrega</button></div></form>
+</div></div>
+
+<div class="modal" id="modal-epp-detalle"><div class="modal-content modal-md">
+    <div class="modal-header"><h3>Detalle de dotación</h3><button class="modal-close" onclick="closeModal('modal-epp-detalle')" aria-label="Cerrar">&times;</button></div>
+    <div class="modal-body" id="epp-detalle-contenido"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-epp-detalle')">Cerrar</button></div>
+</div></div>
+
+<div class="modal" id="modal-pago-control"><div class="modal-content modal-md">
+    <div class="modal-header"><h3>Registrar pago de nómina</h3><button class="modal-close" onclick="closeModal('modal-pago-control')" aria-label="Cerrar">&times;</button></div>
+    <form id="form-pago-control" onsubmit="guardarPagoControl(event)"><div class="modal-body">
+        <label class="form-group">Nómina<select name="nomina_id" class="form-control" required onchange="cargarEmpleadosPago()"></select></label>
+        <label class="form-group">Trabajador<select name="empleado_id" class="form-control" required onchange="mostrarSaldoPago()"></select></label>
+        <p id="pago-saldo" role="status"></p>
+        <div class="grid-2col"><label class="form-group">Monto pagado (C$)<input name="monto_pagado" class="form-control" type="number" min="0.01" step="0.01" required></label>
+        <label class="form-group">Fecha de pago<input name="fecha_pago" class="form-control" type="date" required></label></div>
+        <label class="form-group">Método<select name="metodo_pago" class="form-control"><option>Transferencia Bancaria</option><option>Efectivo</option><option>Cheque</option></select></label>
+        <label class="form-group">Referencia o número de comprobante<input name="numero_referencia" class="form-control" maxlength="100" required></label>
+        <p class="rrhh-error" role="alert"></p>
+    </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modal-pago-control')">Cancelar</button><button type="submit" class="btn btn-primary">Confirmar pago</button></div></form>
+</div></div>
+
+<datalist id="rrhh-equipos"><option value="Guantes de protección mecánica"><option value="Calzado de seguridad"><option value="Gafas de seguridad"><option value="Mascarilla para partículas"><option value="Chaleco reflectante"></datalist>
+<datalist id="rrhh-areas"><option value="Bodega / Almacén"><option value="Ventas / Mostrador"><option value="Caja"><option value="Administración"><option value="Recepción y descarga"></datalist>
+<datalist id="rrhh-tipos-riesgo"><option value="Manipulación manual de cargas"><option value="Caída de objetos almacenados"><option value="Caídas y tropiezos"><option value="Posturas prolongadas y movimientos repetitivos"><option value="Riesgo eléctrico"><option value="Tropiezos por cables sueltos"><option value="Fatiga visual y posturas inadecuadas"></datalist>
+<datalist id="rrhh-responsables"><option value="Encargado de Inventario"><option value="Gerente de Operaciones"><option value="Gerente Administrativo y Financiero"></datalist>

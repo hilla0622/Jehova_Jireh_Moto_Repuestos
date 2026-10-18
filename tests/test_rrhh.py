@@ -48,17 +48,22 @@ class Connection:
 
 class RRHHTest(unittest.TestCase):
     def setUp(self):
+        guard = patch.object(backend.pyodbc, 'connect', side_effect=AssertionError('Las pruebas no pueden abrir SQL Server.'))
+        guard.start()
+        self.addCleanup(guard.stop)
         self.db = sqlite3.connect(':memory:')
         source = (Path(__file__).parents[1] / 'database.sql').read_text(encoding='utf-8')
         tables = ('empleados', 'nomina', 'detalle_nomina', 'movimientos_laborales',
                   'horas_extras', 'parametros_laborales', 'cuentas_contables',
-                  'asientos_contables', 'movimientos_contables', 'colilla_pago', 'pagos_nomina')
+                  'asientos_contables', 'movimientos_contables', 'colilla_pago', 'pagos_nomina',
+                  'expediente_empleado', 'higiene_epp', 'higiene_riesgos', 'higiene_riesgo_seguimientos', 'rrhh_archivos')
         for table in tables:
             body = re.search(r'CREATE TABLE \[' + table + r'\] \((.*?)\n\);', source, re.S)[1]
             lines = [line for line in body.splitlines() if 'CONSTRAINT' not in line]
             body = '\n'.join(lines).rstrip().rstrip(',')
             body = re.sub(r'int IDENTITY\(1,1\) NOT NULL', 'INTEGER PRIMARY KEY AUTOINCREMENT', body)
             body = body.replace('(getdate())', '(CURRENT_TIMESTAMP)')
+            body = re.sub(r'(?:n?varchar|varbinary)\(MAX\)', 'BLOB', body, flags=re.I)
             self.db.execute(f'CREATE TABLE [{table}] ({body})')
         self.db.execute("""INSERT INTO empleados
             (nombre_completo, identificacion, cargo, salario_base, fecha_ingreso, activo, dias_vacaciones_disponibles)
@@ -225,6 +230,135 @@ class RRHHTest(unittest.TestCase):
         r = self.client.post('/api/rrhh/horas-extras',json={'empleado_id':1,'fecha':'2026-01-12','cantidad_horas':2})
         self.assertEqual(r.status_code,201,r.json)
         self.assertEqual(self.scalar('SELECT monto_total FROM horas_extras'),125.01)
+
+    def pago(self, **changes):
+        data = dict(nomina_id=1, empleado_id=1, monto_pagado='100', fecha_pago='2026-01-31',
+                    metodo_pago='Transferencia Bancaria', numero_referencia='TRF-001')
+        data.update(changes)
+        return self.client.post('/api/rrhh/pagos-nomina', json=data)
+
+    def test_pagos_parciales_duplicados_sobrepago_y_anulacion(self):
+        self.generar()
+        neto = self.scalar('SELECT neto_pagar FROM detalle_nomina')
+        r = self.pago()
+        self.assertEqual(r.status_code, 201, r.json)
+        self.assertEqual(self.scalar('SELECT registrado_por FROM pagos_nomina'), 'test')
+        self.assertEqual(self.pago().status_code, 409)
+        self.assertEqual(self.pago(monto_pagado=neto, numero_referencia='TRF-002').status_code, 409)
+        self.assertEqual(self.pago(monto_pagado=neto-100, numero_referencia='TRF-002').status_code, 201)
+        self.assertEqual(self.pago(numero_referencia='TRF-003').status_code, 409)
+        self.assertEqual(self.client.delete('/api/nomina/1').status_code, 409)
+        self.assertEqual(self.scalar('SELECT SUM(monto_pagado) FROM pagos_nomina'), neto)
+
+    def test_pago_invalido_no_se_guarda(self):
+        self.generar()
+        for importe in ('NaN', 'Infinity', '-1', '0', '1.001', '99999999999999999999999999999999999999', None):
+            self.assertEqual(self.pago(monto_pagado=importe).status_code, 400, importe)
+        self.assertEqual(self.pago(empleado_id=987).status_code, 400)
+        self.assertEqual(self.pago(nomina_id=987).status_code, 404)
+        self.assertEqual(self.pago(fecha_pago='incorrecta').status_code, 400)
+        self.assertEqual(self.pago(numero_referencia='').status_code, 400)
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM pagos_nomina'), 0)
+
+    def test_colilla_conserva_snapshot_y_nulos_originales(self):
+        self.generar()
+        self.db.execute("UPDATE empleados SET salario_base=20000,cargo='Gerente',nombre_completo='Otro nombre',num_inss='123'")
+        self.db.commit()
+        r = self.client.get('/api/nomina/1/empleado/1')
+        self.assertEqual(r.status_code, 200, r.json)
+        self.assertEqual(r.json['colilla']['salario_contrato'], 10000)
+        self.assertEqual(r.json['colilla']['cargo'], 'Mecánico')
+        self.assertIsNone(r.json['colilla']['num_inss'])
+        d = self.client.get('/api/nomina/1/detalle').json['detalles'][0]
+        self.assertEqual(d['empleado'], 'Empleado prueba')
+        self.assertEqual(d['historico_incompleto'], 0)
+        html = self.client.get('/rrhh/colilla/1').text
+        self.assertIn('Empleado prueba', html)
+        self.assertNotIn('Otro nombre', html)
+
+    def test_colilla_cero_dias_y_vacaciones_no_usa_predeterminados(self):
+        self.generar()
+        self.db.execute('UPDATE detalle_nomina SET dias_trabajados=0, vac_mes=0')
+        self.db.commit()
+        with patch.object(backend, 'render_template', side_effect=lambda name, **data: data):
+            r = self.client.get('/rrhh/colilla/1')
+            self.assertEqual(r.json['c']['dias_trabajados'], 0)
+            self.assertEqual(r.json['c']['vac_mes'], 0)
+        self.db.execute('UPDATE detalle_nomina SET historico_salario=NULL')
+        self.db.commit()
+        self.assertIn('Registro anterior sin copia', self.client.get('/rrhh/colilla/1').text)
+
+    def test_archivo_real_privado_y_referencia_antigua(self):
+        from io import BytesIO
+        contenido = b'%PDF-1.4\nDocumento de prueba'
+        r = self.client.post('/api/rrhh/expedientes/1', data={
+            'tipo_documento':'Contrato', 'observaciones':'Firmado', 'archivo':(BytesIO(contenido),'contrato.pdf')})
+        self.assertEqual(r.status_code, 201, r.json)
+        rows = self.client.get('/api/rrhh/expedientes/1').json
+        aid = rows[0]['archivo_id']
+        download = self.client.get(f'/api/rrhh/archivos/{aid}')
+        self.assertEqual(download.data, contenido)
+        self.assertEqual(download.headers['Cache-Control'], 'no-store')
+        self.login('Vendedor')
+        self.assertEqual(self.client.get(f'/api/rrhh/archivos/{aid}').status_code, 403)
+        self.login('Administrador')
+        self.db.execute("INSERT INTO expediente_empleado (empleado_id,tipo_documento,nombre_archivo) VALUES (1,'Referencia','viejo.pdf')")
+        self.db.commit()
+        self.assertIsNone(self.client.get('/api/rrhh/expedientes/1').json[0]['archivo_id'])
+        self.assertEqual(self.client.delete(f"/api/rrhh/expedientes/doc/{rows[0]['id']}").status_code, 200)
+        self.assertEqual(self.client.get(f'/api/rrhh/archivos/{aid}').status_code, 404)
+
+    def test_archivo_invalido_o_excesivo_no_crea_documento(self):
+        from io import BytesIO
+        for filename, contenido in [('falso.pdf', b'<script>bad</script>'), ('test.pdf', b'%PDF-'+b'a'*(5*1024*1024))]:
+            r = self.client.post('/api/rrhh/expedientes/1', data={'tipo_documento':'Contrato', 'archivo':(BytesIO(contenido),filename)})
+            self.assertEqual(r.status_code, 400, r.json)
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM expediente_empleado'), 0)
+
+    def entrega(self, **changes):
+        data = dict(empleado_id=1, tipo_equipo='Guantes de protección mecánica', area='Bodega / Almacén',
+                    cantidad=2, estado_equipo='Nuevo', fecha_entrega='2026-01-01', fecha_reposicion_sugerida='2026-06-01')
+        data.update(changes)
+        return self.client.post('/api/rrhh/higiene/epp', json=data)
+
+    def test_reposicion_preserva_entrega_y_evitar_duplicados(self):
+        self.assertEqual(self.entrega().status_code, 201)
+        r = self.entrega(repone_a_id=1, motivo_reposicion='Deterioro', fecha_entrega='2026-02-01')
+        self.assertEqual(r.status_code, 201, r.json)
+        self.assertEqual(self.entrega(repone_a_id=1, motivo_reposicion='Deterioro').status_code, 409)
+        rows = self.client.get('/api/rrhh/higiene/epp').json
+        original = next(r for r in rows if r['id']==1)
+        self.assertEqual(original['reposicion_id'], 2)
+        self.assertEqual(original['fecha_entrega'], '2026-01-01')
+        self.assertEqual(original['estado_equipo'], 'Nuevo')
+        self.assertEqual(self.scalar('SELECT COUNT(*) FROM higiene_epp'), 2)
+
+    def test_validaciones_epp(self):
+        for changes in [dict(cantidad=0),dict(cantidad=1.5),dict(empleado_id=999),dict(estado_equipo='Dañado'),
+                        dict(fecha_reposicion_sugerida='2025-01-01'),dict(tipo_equipo=''),dict(repone_a_id=1)]:
+            self.assertEqual(self.entrega(**changes).status_code, 400, changes)
+        self.entrega()
+        self.assertEqual(self.entrega(repone_a_id=1,motivo_reposicion='Cambio',cantidad=1).status_code,400)
+        self.assertEqual(self.entrega(repone_a_id=1,motivo_reposicion='Cambio',fecha_entrega='2025-12-01').status_code,400)
+
+    def test_riesgos_edicion_seguimiento_y_fechas_atrasadas(self):
+        data = dict(area='Bodega', tipo_riesgo='Caída de objetos', descripcion='Estantería', nivel_riesgo='Alto',
+                    medidas_preventivas='Asegurar estantes', responsable_seguimiento='Inventario', estado='Pendiente')
+        r = self.client.post('/api/rrhh/higiene/riesgos', json=data)
+        self.assertEqual(r.status_code, 201, r.json)
+        rid = r.json['id']
+        data['medidas_preventivas'] = 'Inspección y fijación'
+        self.assertEqual(self.client.put(f'/api/rrhh/higiene/riesgos/{rid}',json=data).status_code,200)
+        url = f'/api/rrhh/higiene/riesgos/{rid}/seguimiento'
+        for dia, estado in [('2026-02-01','Controlado'),('2026-01-01','Pendiente')]:
+            r = self.client.post(url,json=dict(fecha_revision=dia,estado=estado,observaciones='Revisión documentada'))
+            self.assertEqual(r.status_code,201,r.json)
+        self.assertEqual(len(self.client.get(url).json),2)
+        row = self.client.get('/api/rrhh/higiene/riesgos').json[0]
+        self.assertEqual(row['estado'],'Controlado')
+        self.assertEqual(row['fecha_revision'],'2026-02-01')
+        self.login('Vendedor')
+        self.assertEqual(self.client.post(url,json={}).status_code,403)
 
 
 if __name__ == '__main__':

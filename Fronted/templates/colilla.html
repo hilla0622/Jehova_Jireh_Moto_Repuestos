@@ -284,6 +284,9 @@
         </table>
     </div>
 
+    {% if c.historico_incompleto %}
+    <p style="font-size:10px;color:#92400e">Registro anterior sin copia de los datos contractuales: identificación, cargo y salario contractual corresponden al expediente actual. Los importes de nómina son los guardados originalmente.</p>
+    {% endif %}
     <!-- Pie de Firma -->
     <div class="firma-container">
         <div>

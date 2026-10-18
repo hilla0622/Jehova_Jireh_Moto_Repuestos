@@ -1,0 +1,39 @@
+<div class="card rrhh-panel-card rrhh-control">
+    <div class="card-header">
+        <h3>Matriz de Riesgos Identificados</h3>
+        <button class="btn btn-primary" onclick="abrirRiesgo()">Registrar riesgo</button>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Registre los riesgos de las actividades que realmente se realizan en tienda y bodega. El nivel registrado debe sustentarse mediante una evaluación de probabilidad y gravedad.</p>
+        <div class="rrhh-filtros">
+            <label>Área o responsable<input id="riesgo-buscar" class="form-control" placeholder="Buscar…" oninput="renderRiesgos()"></label>
+            <label>Nivel<select id="riesgo-nivel-filtro" class="form-control" onchange="renderRiesgos()"><option value="">Todos</option><option>Bajo</option><option>Medio</option><option>Alto</option></select></label>
+            <label>Estado<select id="riesgo-estado-filtro" class="form-control" onchange="renderRiesgos()"><option value="">Todos</option><option>Pendiente</option><option>En seguimiento</option><option>Controlado</option></select></label>
+        </div>
+        <div class="table-responsive"><table class="data-table">
+            <thead><tr><th>Área y riesgo</th><th>Nivel</th><th>Medidas preventivas</th><th>Responsable</th><th>Seguimiento</th><th>Acciones</th></tr></thead>
+            <tbody id="tbody-higiene-riesgos"><tr><td colspan="6">Cargando riesgos…</td></tr></tbody>
+        </table></div>
+    </div>
+</div>
+<div class="card rrhh-panel-card rrhh-control">
+    <div class="card-header">
+        <h3>Dotación de EPP a Trabajadores</h3>
+        <div class="rrhh-panel-actions"><button class="btn btn-secondary" onclick="exportarEpp()">Exportar historial CSV</button><button class="btn btn-primary" onclick="abrirEntregaEpp()">Registrar entrega</button></div>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Seleccione el equipo según las actividades y riesgos del puesto. Las reposiciones conservan la entrega anterior y su comprobante.</p>
+        <div class="rrhh-filtros">
+            <label>Trabajador<select id="epp-empleado-filtro" class="form-control" onchange="renderEpp()"><option value="">Todos</option></select></label>
+            <label>Área<input id="epp-area-filtro" class="form-control" placeholder="Todas las áreas" oninput="renderEpp()"></label>
+            <label>Desde<input type="date" id="epp-desde" class="form-control" onchange="renderEpp()"></label>
+            <label>Hasta<input type="date" id="epp-hasta" class="form-control" onchange="renderEpp()"></label>
+            <label>Vista<select id="epp-vista" class="form-control" onchange="renderEpp()"><option value="historial">Historial de dotaciones</option><option value="pendientes">Reposiciones pendientes</option><option value="repuestas">Entregas repuestas</option></select></label>
+        </div>
+        <p id="epp-resumen" role="status" class="text-muted"></p>
+        <div class="table-responsive"><table class="data-table">
+            <thead><tr><th>Trabajador / área</th><th>Equipo</th><th>Cantidad</th><th>Entrega</th><th>Estado del equipo</th><th>Reposición</th><th>Acciones</th></tr></thead>
+            <tbody id="tbody-higiene-epp"><tr><td colspan="7">Cargando dotaciones…</td></tr></tbody>
+        </table></div>
+    </div>
+</div>

@@ -1433,67 +1433,6 @@ async function abrirExpedienteDigital(empId, empNombre) {
     cargarDocumentosExpediente(empId);
 }
 
-async function cargarDocumentosExpediente(empId) {
-    const tbody = document.getElementById('tbody-expediente-documentos');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:1rem;">Cargando expediente...</td></tr>';
-
-    try {
-        const res = await fetch(`/api/rrhh/expedientes/${empId}`);
-        const data = await res.json();
-
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:1.5rem;">No hay documentos registrados en el expediente digital.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = data.map(d => `
-            <tr>
-                <td><strong>${d.tipo_documento}</strong></td>
-                <td>${d.nombre_archivo}</td>
-                <td>${d.fecha_subida?.slice(0, 10) || '—'}</td>
-                <td>${d.subido_por || 'Admin'}</td>
-                <td>
-                    <span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e;">Digitalizado</span>
-                </td>
-            </tr>
-        `).join('');
-    } catch (e) {
-        console.error('Error cargando expediente:', e);
-    }
-}
-
-async function guardarDocumentoExpediente(e) {
-    if (e) e.preventDefault();
-    if (!_expedienteEmpActivo) return;
-
-    const data = {
-        tipo_documento: document.getElementById('exp-tipo-doc').value,
-        nombre_archivo: document.getElementById('exp-nombre-archivo').value.trim(),
-        observaciones: document.getElementById('exp-observaciones').value.trim()
-    };
-
-    if (!data.nombre_archivo) {
-        Swal.fire('Atención', 'Ingrese la referencia o nombre del documento digital.', 'warning');
-        return;
-    }
-
-    try {
-        const res = await fetch(`/api/rrhh/expedientes/${_expedienteEmpActivo}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (res.ok) {
-            Swal.fire('Guardado', 'Documento anexado al expediente digital.', 'success');
-            document.getElementById('form-expediente-doc')?.reset();
-            cargarDocumentosExpediente(_expedienteEmpActivo);
-        }
-    } catch (e) {
-        Swal.fire('Error', 'No se pudo guardar el documento.', 'error');
-    }
-}
-
 // -----------------------------------------------------------------------------
 // RF101: HISTORIAL DE MODIFICACIONES LABORALES
 // -----------------------------------------------------------------------------
@@ -1858,24 +1797,6 @@ async function cargarPagosNomina() {
 // -----------------------------------------------------------------------------
 // RF110 - RF114: SEGURIDAD E HIGIENE OCUPACIONAL (LEY 618)
 // -----------------------------------------------------------------------------
-async function cargarRiesgosHigiene() {
-    try {
-        const res = await fetch('/api/rrhh/higiene/riesgos');
-        const data = await res.json();
-        const tbody = document.getElementById('tbody-higiene-riesgos');
-        if (!tbody) return;
-        tbody.innerHTML = data.map(r => `
-            <tr>
-                <td><strong>${r.area}</strong></td>
-                <td>${r.tipo_riesgo}</td>
-                <td><span class="badge" style="background:${r.nivel_riesgo === 'Alto' ? '#ef4444' : r.nivel_riesgo === 'Medio' ? '#f59e0b' : '#22c55e'}; color:#fff;">${r.nivel_riesgo}</span></td>
-                <td>${r.medidas_preventivas}</td>
-                <td><small>${r.responsable_seguimiento}</small></td>
-            </tr>
-        `).join('');
-    } catch (e) {}
-}
-
 async function cargarIncidentesHigiene() {
     try {
         const res = await fetch('/api/rrhh/higiene/incidentes');
@@ -1894,24 +1815,6 @@ async function cargarIncidentesHigiene() {
                 <td>${i.descripcion_suceso}</td>
                 <td>${i.medidas_correctivas}</td>
                 <td><span class="badge" style="background:rgba(34,197,94,0.15); color:#22c55e;">${i.estado_caso}</span></td>
-            </tr>
-        `).join('');
-    } catch (e) {}
-}
-
-async function cargarEppHigiene() {
-    try {
-        const res = await fetch('/api/rrhh/higiene/epp');
-        const data = await res.json();
-        const tbody = document.getElementById('tbody-higiene-epp');
-        if (!tbody) return;
-        tbody.innerHTML = data.map(e => `
-            <tr>
-                <td><strong>${e.empleado}</strong></td>
-                <td>${e.tipo_equipo}</td>
-                <td style="text-align: center;">${e.cantidad}</td>
-                <td>${e.fecha_entrega}</td>
-                <td><span class="badge" style="background:rgba(34,197,94,0.15); color:#22c55e;">${e.estado}</span></td>
             </tr>
         `).join('');
     } catch (e) {}

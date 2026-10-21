@@ -12,18 +12,28 @@ app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_supe
 # CONFIGURACIÓN DE BASE DE DATOS SQL SERVER
 # ==============================================================================
 # Cambia 'LAPTOP-CNR3S3I3' por tu nombre de servidor SQL Server.
-DB_SERVER = os.environ.get('DB_SERVER', r'HILLARY')
+DB_SERVER = os.environ.get('DB_SERVER', r'localhost')
 DB_NAME = 'jehova_jireh_db'
 
 def get_db_connection():
-    conn_str = (
-        r'DRIVER={ODBC Driver 17 for SQL Server};'
-        fr'SERVER={DB_SERVER};'
-        fr'DATABASE={DB_NAME};'
-        r'Trusted_Connection=yes;'
-    )
-    conn = pyodbc.connect(conn_str)
-    return conn
+    servers = [DB_SERVER, 'localhost', r'NELLA', r'.', r'HILLARY']
+    seen = set()
+    unique_servers = [s for s in servers if s and not (s in seen or seen.add(s))]
+    
+    last_err = None
+    for srv in unique_servers:
+        try:
+            conn_str = (
+                r'DRIVER={ODBC Driver 17 for SQL Server};'
+                fr'SERVER={srv};'
+                fr'DATABASE={DB_NAME};'
+                r'Trusted_Connection=yes;'
+            )
+            return pyodbc.connect(conn_str, timeout=3)
+        except Exception as e:
+            last_err = e
+            continue
+    raise last_err
 
 def check_or_update_db_schema():
     """Verifica y actualiza columnas necesarias de forma segura si no existen."""

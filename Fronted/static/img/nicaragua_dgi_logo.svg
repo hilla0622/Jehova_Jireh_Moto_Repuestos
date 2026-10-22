@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 85" width="320" height="85">
+  <defs>
+    <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="25%" stop-color="#f97316"/>
+      <stop offset="50%" stop-color="#eab308"/>
+      <stop offset="75%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <!-- Triangle emblem -->
+  <g transform="translate(10, 5)">
+    <!-- Base triangle -->
+    <polygon points="35,4 66,60 4,60" fill="#ffffff" stroke="#005fa8" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- Inner rainbow arch -->
+    <path d="M 18,52 Q 35,22 52,52" fill="none" stroke="url(#rainbow)" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- Volcanoes -->
+    <polygon points="26,53 35,42 44,53" fill="#0284c7"/>
+    <polygon points="20,53 28,45 36,53" fill="#0369a1"/>
+    <polygon points="34,53 42,44 50,53" fill="#075985"/>
+    <!-- Yellow sun rising -->
+    <circle cx="35" cy="40" r="4.5" fill="#facc15"/>
+    <!-- Cap of liberty / gorro frigio -->
+    <path d="M 33,31 Q 35,28 37,31 Q 38,34 35,34 Q 32,34 33,31" fill="#dc2626"/>
+    <!-- Text banner Nicaragua Triunfa -->
+    <path d="M 4,66 Q 35,62 66,66" fill="none" stroke="#0284c7" stroke-width="1.5"/>
+    <text x="35" y="73" font-family="'Arial Black', Arial, sans-serif" font-size="5.8" font-weight="900" fill="#005fa8" text-anchor="middle" letter-spacing="0.5">NICARAGUA TRIUNFA!</text>
+  </g>
+  <!-- Text Block -->
+  <g transform="translate(85, 22)">
+    <text x="0" y="0" font-family="Arial, 'Helvetica Neue', sans-serif" font-size="11.5" font-weight="bold" fill="#005fa8" letter-spacing="-0.2">Gobierno de Reconciliación</text>
+    <text x="0" y="14" font-family="Arial, 'Helvetica Neue', sans-serif" font-size="11.5" font-weight="bold" fill="#005fa8" letter-spacing="-0.2">y Unidad Nacional</text>
+    <text x="3" y="36" font-family="'Brush Script MT', 'Comic Sans MS', cursive, sans-serif" font-size="20" font-weight="bold" fill="#e11d48" font-style="italic">El Pueblo, Presidente!</text>
+  </g>
+</svg>

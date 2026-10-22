@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from uuid import uuid4
+from conciliacion_service import validar_extracto
 
 from flask import jsonify, request, session, render_template, make_response
 from flujo_service import (ACTIVIDADES, RESULTADOS, TIPOS_PARTIDA, calcular_conciliacion,
@@ -115,13 +116,23 @@ def contexto_conciliacion(cursor, args):
 
     heredadas = [dict(p, heredada=True) for p in partidas_de(anterior) if not p.get('esta_conciliada')]
     partidas = partidas_de(actual) if actual else heredadas
+    snapshot = snapshots.get(str(actual['id']), {}) if actual else {}
+    extracto = snapshot.get('extracto')
+    historico = bool(cabeceras and (cabeceras[0]['anio'], cabeceras[0]['mes']) > (anio, mes))
+    movimientos_mes = [m for m in movs if m['fecha'][:7] == corte[:7]]
+    inicial = saldo - sum((dinero(m['debe']) - dinero(m['haber']) for m in movimientos_mes), dinero(0))
+    if historico and snapshot.get('empresa'):
+        saldo = dinero(snapshot['resumen']['saldo_segun_libros'])
+        inicial = dinero(snapshot['empresa']['saldo_inicial'])
+        movimientos_mes = snapshot['empresa']['movimientos']
     rev = huella({'saldo': saldo, 'movimientos': movs, 'actual': actual, 'partidas': partidas,
-                  'heredadas': heredadas, 'ultima': cabeceras[0] if cabeceras else None})
+                  'extracto': extracto, 'heredadas': heredadas, 'ultima': cabeceras[0] if cabeceras else None})
     return serializable(dict(cuenta=cuenta, cuentas_bancos=cuentas, anio=anio, mes=mes, fecha_corte=corte,
-                             saldo_segun_libros=saldo, movimientos_mes=[m for m in movs if m['fecha'][:7] == corte[:7]],
+                             saldo_segun_libros=saldo, saldo_inicial_libros=inicial, movimientos_mes=movimientos_mes,
+                             extracto=extracto, control_cotejo=snapshot.get('control_cotejo'),
                              conciliacion_guardada=actual, partidas_pendientes=partidas,
                              heredadas=heredadas, revision=rev,
-                             solo_lectura=bool(cabeceras and (cabeceras[0]['anio'], cabeceras[0]['mes']) > (anio, mes))))
+                             solo_lectura=historico))
 
 
 def register_flujo_efectivo_routes(app):
@@ -390,7 +401,7 @@ def register_flujo_efectivo_routes(app):
             uids.add(p['uid'])
             anterior = originales.get(p['uid'])
             if anterior and anterior.get('heredada'):
-                for campo in ('tipo_partida', 'fecha', 'numero_documento_referencia', 'descripcion', 'monto', 'efecto_en_saldo'):
+                for campo in ('tipo_partida', 'fecha', 'numero_documento_referencia', 'descripcion', 'monto', 'efecto_en_saldo', 'origen', 'origen_id', 'periodo_origen'):
                     if p.get(campo) != anterior.get(campo):
                         raise ValueError('Una partida heredada no puede cambiar de importe o identidad; registre su resolución.')
                 p['heredada'] = True
@@ -405,6 +416,12 @@ def register_flujo_efectivo_routes(app):
         if any(p['uid'] not in uids for p in ctx['partidas_pendientes'] if p.get('heredada')):
             raise ValueError('No elimine partidas heredadas; márquelas resueltas con su referencia.')
         resumen = calcular_conciliacion(ctx['saldo_segun_libros'], data['saldo_segun_banco'], partidas, ctx['fecha_corte'])
+        if ctx['extracto'] is not None and data.get('extracto') is None:
+            raise ValueError('Conserve el extracto y sus vínculos al actualizar esta conciliación.')
+        extracto, control = validar_extracto(data.get('extracto'), ctx['movimientos_mes'], partidas,
+                                             ctx['fecha_corte'], data['saldo_segun_banco'])
+        if extracto is not None and not control['completo']:
+            resumen['estado'] = 'Borrador'
         cid = ctx['conciliacion_guardada']['id'] if ctx['conciliacion_guardada'] else None
         params = (ctx['fecha_corte'], dinero(resumen['saldo_segun_libros']), dinero(resumen['saldo_segun_banco']),
                   dinero(resumen['diferencia']), resumen['estado'], str(data.get('observaciones', '')), session['user']['id'])
@@ -423,9 +440,12 @@ def register_flujo_efectivo_routes(app):
                 numero_documento_referencia, descripcion, monto, efecto_en_saldo, esta_conciliada, movimiento_contable_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (cid, p['tipo_partida'], p['fecha'], p['numero_documento_referencia'],
                 p['descripcion'], dinero(p['monto']), signo, int(bool(p.get('esta_conciliada'))), p.get('movimiento_contable_id') or None))
-        evento(cursor, 'conciliacion', cid, {'resumen': resumen, 'partidas': partidas, 'fecha_corte': ctx['fecha_corte']},
+        evento(cursor, 'conciliacion', cid, {'resumen': resumen, 'partidas': partidas, 'fecha_corte': ctx['fecha_corte'],
+               'extracto': extracto, 'control_cotejo': control,
+               'empresa': {'saldo_inicial': ctx['saldo_inicial_libros'], 'movimientos': ctx['movimientos_mes']}},
                'Conciliación recalculada contra el mayor; versión completa conservada.')
-        return jsonify(success=True, conciliacion_id=cid, resumen=resumen, message=f"Conciliación guardada: {resumen['estado']}.")
+        return jsonify(success=True, conciliacion_id=cid, resumen=resumen, control_cotejo=control,
+                       message=f"Conciliación guardada: {resumen['estado']}.")
 
     @app.route('/api/finanzas/conciliaciones', methods=['GET'])
     @api

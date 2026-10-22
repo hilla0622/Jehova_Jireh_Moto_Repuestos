@@ -1,0 +1,1179 @@
+<!-- ==============================================================================
+     declaracion_anual_106.html — Formulario Oficial DGI Formulario 106 (IR Anual)
+     Ventanilla Electrónica Tributaria (VET) - DGI Nicaragua
+     ============================================================================== -->
+
+<div class="dgi-106-wrapper">
+
+    <!-- BARRA SUPERIOR DE HERRAMIENTAS Y ACCIONES -->
+    <div class="dgi-toolbar">
+        <div class="dgi-toolbar-title">
+            <i class="ph-bold ph-bank" style="font-size: 1.3rem;"></i>
+            <span>Ventanilla Electrónica Tributaria (VET) — Declaración Anual IR</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem;">
+                <label for="fiscal-select-anio" style="font-weight: 700; margin: 0;">Ejercicio Fiscal:</label>
+                <select id="fiscal-select-anio" class="form-control" style="width: auto; padding: 0.25rem 0.5rem; height: auto; font-weight: bold;" onchange="cambiarAnioFiscal()">
+                    <option value="2026" selected>2026 (Año Actual)</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="cargarSimulacionFiscal(true)" title="Recalcular automáticamente desde el catálogo y asientos contables">
+                <i class="ph-bold ph-arrows-clockwise"></i> Cargar desde Contabilidad
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="imprimirFormulario106()" title="Imprimir Formato Oficial VET DGI">
+                <i class="ph-bold ph-printer"></i> Imprimir VET
+            </button>
+        </div>
+    </div>
+
+    <!-- PESTAÑAS DEL MÓDULO FISCAL -->
+    <div class="dgi-nav-tabs">
+        <button class="dgi-nav-tab-btn active" onclick="switchFiscalTab('vet', this)">
+            <i class="ph-bold ph-file-text"></i> Formulario IR-106 (VET DGI)
+        </button>
+        <button class="dgi-nav-tab-btn" onclick="switchFiscalTab('acreditamientos', this)">
+            <i class="ph-bold ph-certificate"></i> Acreditamientos y Retenciones
+        </button>
+        <button class="dgi-nav-tab-btn" onclick="switchFiscalTab('ajustes', this)">
+            <i class="ph-bold ph-sliders-horizontal"></i> Conciliación y Ajustes
+        </button>
+        <button class="dgi-nav-tab-btn" onclick="switchFiscalTab('historial', this)">
+            <i class="ph-bold ph-clock-counter-clockwise"></i> Historial y Presentaciones
+        </button>
+    </div>
+
+    <!-- SELECTOR DE VISTAS (CUENTAS DETALLADAS DEL SISTEMA VS RESUMEN) -->
+    <div class="dgi-mode-selector">
+        <button type="button" class="dgi-mode-btn active" id="btn-mode-cuentas" onclick="activarModoCuentas()">
+            <i class="ph-bold ph-list-numbers"></i> Formulario con Cuentas del Sistema (Formato Imagen 2)
+        </button>
+        <button type="button" class="dgi-mode-btn" id="btn-mode-resumen" onclick="activarModoResumen()">
+            <i class="ph-bold ph-file-text"></i> Vista Resumen Ejecutivo (Formato Imagen 1)
+        </button>
+    </div>
+
+    <!-- ESTADO DE CARGA -->
+    <div id="fiscal-loading-state" style="display: none; padding: 0.75rem 1rem; margin-bottom: 1rem; background: #e0f2fe; color: #0369a1; border-radius: 4px; font-weight: bold;">
+        <i class="ph-bold ph-spinner ph-spin"></i> Conectando con libros contables y cargando cuentas en el Formulario 106...
+    </div>
+
+    <!-- PESTAÑA PRINCIPAL: FORMULARIO 106 -->
+    <div id="fiscal-view-vet" class="fiscal-view-pane active">
+
+        <!-- =========================================================================
+             VISTA 1: FORMULARIO CON CUENTAS SEPARADAS DE JEHOVÁ JIREH (IMAGEN 2)
+             (POR DEFECTO ACTIVA — MUESTRA TODAS LAS CUENTAS INDIVIDUALES Y TOTALES)
+             ========================================================================= -->
+        <div id="dgi-vista-cuentas" class="dgi-document" style="display: block;">
+            
+            <!-- ENCABEZADO OFICIAL NICARAGUA / DGI (ENMARCADO IMAGEN 2) -->
+            <div class="dgi-header-grid">
+                <div class="dgi-header-left">
+                    <img src="{{ url_for('static', filename='img/nicaragua_dgi_logo.svg') }}" alt="Gobierno de Nicaragua" style="height: 55px; max-width: 100%;">
+                </div>
+                <div class="dgi-header-right">
+                    <div>Gobierno de Reconciliación y Unidad Nacional</div>
+                    <div>Ministerio de Hacienda y Crédito Público</div>
+                    <div style="font-size: 1.05rem; font-weight: 800;">Dirección General de Ingresos</div>
+                </div>
+            </div>
+
+            <!-- CÓDIGO 106 Y TÍTULO OFICIAL ENMARCADO -->
+            <div class="dgi-title-bar">
+                <div class="dgi-title-code">106</div>
+                <div class="dgi-title-text">
+                    <h2>DECLARACION ANUAL DEL IMPUESTO SOBRE LA RENTA (IR)</h2>
+                    <h3>RENTA ANUAL IR 106</h3>
+                </div>
+                <div class="dgi-title-meta">
+                    <div><strong>Fecha:</strong></div>
+                    <div id="vet-cta-fecha" style="font-family: monospace; font-weight: bold;">--/--/----</div>
+                    <div style="margin-top: 0.35rem;"><strong>Periodo:</strong></div>
+                    <div id="vet-cta-periodo" style="font-family: monospace; font-weight: bold;">12</div>
+                </div>
+            </div>
+
+            <!-- SELECTOR TIPO DE DECLARACIÓN (IMAGEN 2) -->
+            <div class="dgi-decl-type-bar">
+                <div><strong>Tipo de Declaración:</strong></div>
+                <label>
+                    <input type="radio" name="dgi-tipo-decl-cta" id="dgi-tipo-orig-cta" value="Original" checked onchange="toggleTipoDeclaracionCta()">
+                    Original
+                </label>
+                <label>
+                    <input type="radio" name="dgi-tipo-decl-cta" id="dgi-tipo-sust-cta" value="Sustitutiva" onchange="toggleTipoDeclaracionCta()">
+                    Sustitutiva, # a sustituir
+                </label>
+                <input type="text" id="dgi-num-sustituir-cta" class="dgi-input-text" style="width: 200px; display: none;" placeholder="Ej: 106-2026-0001">
+            </div>
+
+            <!-- SECCIÓN A: DATOS GENERALES (CON LETRA LATERAL 'A' - IMAGEN 2) -->
+            <div class="dgi-form-section-with-letter">
+                <div class="dgi-sec-letter">A</div>
+                <div class="dgi-sec-content">
+                    <div class="dgi-section-title-bar">DATOS GENERALES</div>
+                    <div class="dgi-datos-generales-grid">
+                        <div class="dgi-campo-box">
+                            <label>Número RUC</label>
+                            <input type="text" id="vet-cta-ruc" class="dgi-input-text" value="J0310000000001" readonly>
+                        </div>
+                        <div class="dgi-campo-box">
+                            <label>Apellidos y Nombre o Razón Social</label>
+                            <input type="text" id="vet-cta-razon" class="dgi-input-text" value="Jehová Jireh Moto Repuestos y Servicios">
+                        </div>
+                    </div>
+                    <div style="padding: 0.4rem 0.6rem;">
+                        <div class="dgi-campo-box" style="border: none; padding: 0;">
+                            <label>Actividad Económica</label>
+                            <input type="text" id="vet-cta-actividad" class="dgi-input-text" value="Comercio al por menor de repuestos, lubricantes y mantenimiento de motocicletas">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN B: BALANCE GENERAL CON CUENTAS SEPARADAS (CON LETRA LATERAL 'B' - IMAGEN 2) -->
+            <div class="dgi-form-section-with-letter">
+                <div class="dgi-sec-letter">B</div>
+                <div class="dgi-sec-content">
+                    <div class="dgi-section-title-bar">BALANCE GENERAL</div>
+                    <table class="dgi-renglones-table">
+                        <tbody>
+                            <!-- 1. Caja General -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>1. Efectivo en Caja General (1.1.01)</div>
+                                    <div class="dgi-cuenta-subdetalle">Fondo de caja operativa y cobros en efectivo en tienda</div>
+                                </td>
+                                <td class="dgi-td-num">1</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1101" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="106,499.20"></td>
+                            </tr>
+                            <!-- 2. Bancos -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>2. Bancos e Instituciones Financieras (1.1.02)</div>
+                                    <div class="dgi-cuenta-subdetalle">Cuentas corrientes bancarias en moneda nacional</div>
+                                </td>
+                                <td class="dgi-td-num">2</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1102" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="185,000.00"></td>
+                            </tr>
+                            <!-- 3. Clientes -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>3. Cuentas y Documentos por Cobrar / Clientes (1.1.03)</div>
+                                    <div class="dgi-cuenta-subdetalle">Créditos comerciales vigentes por venta de repuestos y servicios</div>
+                                </td>
+                                <td class="dgi-td-num">3</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1103" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="60,000.00"></td>
+                            </tr>
+                            <!-- 4. Inventarios -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>4. Inventarios de Repuestos, Lubricantes y Accesorios (1.1.04)</div>
+                                    <div class="dgi-cuenta-subdetalle">Existencias físicas valoradas en almacén al costo promedio</div>
+                                </td>
+                                <td class="dgi-td-num">4</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1104" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="410,662.75"></td>
+                            </tr>
+                            <!-- 5. IVA Acreditable -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>5. IVA Acreditable Fiscal (1.1.05)</div>
+                                    <div class="dgi-cuenta-subdetalle">Impuesto pagado en compras locales e importaciones acreditables</div>
+                                </td>
+                                <td class="dgi-td-num">5</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1105" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="18,000.00"></td>
+                            </tr>
+                            <!-- 6. Total Activo Circulante (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">6. Total Activo Circulante (suma renglones 1 al 5)</div>
+                                    <div class="dgi-cuenta-tag total-tag">∑ Suma Renglones (1 + 2 + 3 + 4 + 5)</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">6</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-act-circ" class="dgi-input-renglon dgi-input-total" readonly value="780,161.95"></td>
+                            </tr>
+
+                            <!-- 7. Mobiliario y Equipo -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>7. Mobiliario y Equipo de Oficina y Taller (1.2.01)</div>
+                                    <div class="dgi-cuenta-subdetalle">Estantes, vitrinas, rampas y herramientas de mecánica</div>
+                                </td>
+                                <td class="dgi-td-num">7</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1201" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="90,000.00"></td>
+                            </tr>
+                            <!-- 8. Equipo de Cómputo -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>8. Equipo de Cómputo y Sistemas (1.2.02)</div>
+                                    <div class="dgi-cuenta-subdetalle">Computadoras, servidores, impresoras fiscales y POS</div>
+                                </td>
+                                <td class="dgi-td-num">8</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1202" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="55,000.00"></td>
+                            </tr>
+                            <!-- 9. Depreciación Acumulada -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>9. (-) Depreciación Acumulada de Activos Fijos (1.2.03)</div>
+                                    <div class="dgi-cuenta-subdetalle">Cuenta complementaria correctora de activo fijo</div>
+                                </td>
+                                <td class="dgi-td-num">9</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-1203" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="-12,000.00"></td>
+                            </tr>
+                            <!-- 10. Total Activos Mobiliarios y Equipos (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">10. Total Activos Mobiliarios y Equipos Netos (Renglones 7 + 8 - 9)</div>
+                                    <div class="dgi-cuenta-tag total-tag">∑ Valor Neto en Libros de Activos Mobiliarios (7 + 8 - 9)</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">10</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-act-fijo" class="dgi-input-renglon dgi-input-total" readonly value="133,000.00"></td>
+                            </tr>
+                            <!-- 11. Otros Activos Inmobiliarios / Diferidos -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>11. Otros Activos Inmobiliarios / Terrenos / Edificios</div>
+                                    <div class="dgi-cuenta-subdetalle">Bienes raíces o activos a largo plazo adicionales</div>
+                                </td>
+                                <td class="dgi-td-num">11</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-otros-act" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="0.00"></td>
+                            </tr>
+                            <!-- 12. TOTAL ACTIVOS (BORDE NEGRO GRUESO OFICIAL - IMAGEN 2) -->
+                            <tr class="row-total-destacado" style="background: rgba(0, 95, 168, 0.08);">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 900; color: #005fa8; font-size: 0.96rem;">12. Total Activos (suma de renglones 6 + 10 + 11)</div>
+                                    <div class="dgi-cuenta-tag total-tag" style="font-weight: 800; color: #005fa8;">∑ TOTAL GENERAL DE ACTIVOS = Activo Circulante + Activo Fijo Neto</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900; color: #005fa8;">12</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-activos" class="dgi-input-renglon dgi-input-total" readonly value="913,161.95"></td>
+                            </tr>
+
+                            <!-- 13. Proveedores -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>13. Cuentas por Pagar a Proveedores Comerciales (2.1.01)</div>
+                                    <div class="dgi-cuenta-subdetalle">Obligaciones comerciales por adquisición de repuestos y lubricantes</div>
+                                </td>
+                                <td class="dgi-td-num">13</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2101" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="284,590.75"></td>
+                            </tr>
+                            <!-- 14. Documentos por pagar -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>14. Documentos y Pagarés Comerciales por Pagar (2.1.02)</div>
+                                    <div class="dgi-cuenta-subdetalle">Pagarés a corto plazo con proveedores de motocicletas y repuestos</div>
+                                </td>
+                                <td class="dgi-td-num">14</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2102" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="60,000.00"></td>
+                            </tr>
+                            <!-- 15. IVA por pagar -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>15. IVA Débito Fiscal por Enterar a la DGI (2.1.03)</div>
+                                    <div class="dgi-cuenta-subdetalle">Impuesto sobre ventas cobrado a clientes por pagar a la DGI</div>
+                                </td>
+                                <td class="dgi-td-num">15</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2103" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="22,000.00"></td>
+                            </tr>
+                            <!-- 16. Sueldos por pagar -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>16. Sueldos y Salarios Devengados por Pagar (2.1.04)</div>
+                                    <div class="dgi-cuenta-subdetalle">Nóminas del personal administrativo y técnico del taller</div>
+                                </td>
+                                <td class="dgi-td-num">16</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2104" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="110,969.94"></td>
+                            </tr>
+                            <!-- 17. Servicios básicos por pagar -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>17. Servicios Básicos y Públicos por Pagar (2.1.05)</div>
+                                    <div class="dgi-cuenta-subdetalle">Facturación pendiente de energía eléctrica, agua e internet</div>
+                                </td>
+                                <td class="dgi-td-num">17</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2105" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="5,000.00"></td>
+                            </tr>
+                            <!-- 18. Retenciones INSS -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>18. Retenciones INSS Laboral y Cargas Patronales por Pagar (2.1.06)</div>
+                                    <div class="dgi-cuenta-subdetalle">Cuotas obligatorias de seguridad social por pagar al INSS</div>
+                                </td>
+                                <td class="dgi-td-num">18</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2106" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="29,894.25"></td>
+                            </tr>
+                            <!-- 19. Retenciones IR -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>19. Retenciones de IR en la Fuente por Pagar (2.1.07)</div>
+                                    <div class="dgi-cuenta-subdetalle">IR retenido a trabajadores y por servicios profesionales</div>
+                                </td>
+                                <td class="dgi-td-num">19</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2107" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="3,238.55"></td>
+                            </tr>
+                            <!-- 20. Provisiones laborales -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>20. Provisiones Laborales Sociales por Pagar (2.1.08)</div>
+                                    <div class="dgi-cuenta-subdetalle">Pasivo laboral por decimotercer mes (Aguinaldo) e Indemnización</div>
+                                </td>
+                                <td class="dgi-td-num">20</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2108" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="17,241.63"></td>
+                            </tr>
+                            <!-- 21. INATEC por pagar -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>21. Aporte Patronal INATEC por Pagar (2.1.10)</div>
+                                    <div class="dgi-cuenta-subdetalle">Contribución del 2% sobre nómina al Instituto Tecnológico Nacional</div>
+                                </td>
+                                <td class="dgi-td-num">21</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2110" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="1,658.00"></td>
+                            </tr>
+                            <!-- 22. TOTAL PASIVOS (BORDE NEGRO GRUESO OFICIAL - IMAGEN 2) -->
+                            <tr class="row-total-destacado" style="background: rgba(0, 95, 168, 0.08);">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 900; color: #005fa8; font-size: 0.96rem;">22. Total Pasivos (suma renglones 13 al 21)</div>
+                                    <div class="dgi-cuenta-tag total-tag" style="font-weight: 800; color: #005fa8;">∑ TOTAL DE PASIVOS CORRIENTES Y OBLIGACIONES COMERCIALES</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900; color: #005fa8;">22</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-pasivos" class="dgi-input-renglon dgi-input-total" readonly value="534,593.12"></td>
+                            </tr>
+
+                            <!-- 23. Capital del propietario -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>23. Capital del Propietario (3.1.01)</div>
+                                    <div class="dgi-cuenta-subdetalle">Aportes de capital suscrito y pagado del negocio</div>
+                                </td>
+                                <td class="dgi-td-num">23</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-3101" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="250,000.00"></td>
+                            </tr>
+                            <!-- 24. Utilidades acumuladas -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>24. Utilidades Acumuladas de Ejercicios Anteriores (3.1.02)</div>
+                                    <div class="dgi-cuenta-subdetalle">Resultados retenidos de ejercicios fiscales previos</div>
+                                </td>
+                                <td class="dgi-td-num">24</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-3102" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="51,000.00"></td>
+                            </tr>
+                            <!-- 25. Utilidad neta del ejercicio -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>25. Utilidad Neta del Ejercicio Actual (Proveniente del Renglón 48)</div>
+                                    <div class="dgi-cuenta-subdetalle">Resultado neto positivo generado en las operaciones del año 2026</div>
+                                </td>
+                                <td class="dgi-td-num">25</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-util-ejercicio" class="dgi-input-renglon" readonly value="77,568.83"></td>
+                            </tr>
+                            <!-- 26. Total Patrimonio Neto (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">26. Total Patrimonio Neto (suma renglones 23 + 24 + 25)</div>
+                                    <div class="dgi-cuenta-tag total-tag">∑ Capital + Utilidades Acumuladas + Utilidad del Ejercicio</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">26</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-patrimonio" class="dgi-input-renglon dgi-input-total" readonly value="378,568.83"></td>
+                            </tr>
+                            <!-- 27. TOTAL PASIVO Y PATRIMONIO (BORDE NEGRO GRUESO OFICIAL - CUADRE EXACTO) -->
+                            <tr class="row-total-destacado" style="background: rgba(22, 163, 74, 0.08);">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 900; color: #16a34a; font-size: 0.96rem;">27. Total Pasivo y Patrimonio (suma renglones 22 + 26)</div>
+                                    <div class="dgi-cuenta-tag total-tag" style="font-weight: 800; color: #16a34a;">∑ TOTAL PASIVO + PATRIMONIO (Debe ser idéntico al Renglón 12 de Activos)</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900; color: #16a34a;">27</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-pasivo-patrimonio" class="dgi-input-renglon dgi-input-total" readonly value="913,161.95"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- FOOTER DE CUADRE DEL BALANCE -->
+                    <div class="dgi-cuadre-footer">
+                        <div>
+                            <strong>Total Activos (R12):</strong> <span id="lbl-cta-cuadre-activos" style="color: #005fa8; font-weight: bold;">C$ 913,161.95</span>
+                            &nbsp;|&nbsp;
+                            <strong>Total Pasivos (R22):</strong> <span id="lbl-cta-cuadre-pasivos" style="font-weight: bold;">C$ 534,593.12</span>
+                            &nbsp;|&nbsp;
+                            <strong>Patrimonio (R26):</strong> <span id="lbl-cta-cuadre-patrimonio" style="font-weight: bold;">C$ 378,568.83</span>
+                        </div>
+                        <div id="lbl-cta-cuadre-estado" style="font-weight: bold; color: #16a34a;">
+                            <i class="ph-bold ph-check-circle"></i> Balance Cuadrado: Diferencia C$ 0.00 (Activo = Pasivo + Capital)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN D: ESTADO DE RESULTADOS CON CUENTAS SEPARADAS (CON LETRA LATERAL 'D' - IMAGEN 2) -->
+            <div class="dgi-form-section-with-letter">
+                <div class="dgi-sec-letter">D</div>
+                <div class="dgi-sec-content">
+                    <div class="dgi-section-title-bar">ESTADO DE RESULTADOS</div>
+                    <table class="dgi-renglones-table">
+                        <tbody>
+                            <!-- 30. Ventas de repuestos -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>30. Ventas de Repuestos y Accesorios de Motocicletas (4.1.01)</div>
+                                    <div class="dgi-cuenta-subdetalle">Ingresos principales brutos por comercialización de piezas y repuestos</div>
+                                </td>
+                                <td class="dgi-td-num">30</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-4101" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="1,011,499.20"></td>
+                            </tr>
+                            <!-- 31. Ingresos por taller -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>31. Ingresos por Servicios y Mantenimiento de Taller Mecánico (4.1.02)</div>
+                                    <div class="dgi-cuenta-subdetalle">Mano de obra técnica y servicios de mantenimiento a motocicletas</div>
+                                </td>
+                                <td class="dgi-td-num">31</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-4102" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="80,000.00"></td>
+                            </tr>
+                            <!-- 32. Total Ingresos Brutos (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">32. Total Ingresos Brutos de Actividades Económicas (Renglones 30 + 31)</div>
+                                    <div class="dgi-cuenta-tag total-tag">∑ Suma de Renglones 30 + 31 (Base de Cálculo para Pago Mínimo Definitivo 1%)</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">32</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-ingresos" class="dgi-input-renglon dgi-input-total" readonly value="1,091,499.20"></td>
+                            </tr>
+
+                            <!-- 33. Costo de ventas -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>33. Costo de Ventas de Repuestos y Accesorios (5.1.01)</div>
+                                    <div class="dgi-cuenta-subdetalle">Costo directo de la mercadería adquirida para reventa</div>
+                                </td>
+                                <td class="dgi-td-num">33</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-5101" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="693,928.00"></td>
+                            </tr>
+                            <!-- 34. Utilidad Bruta Contable (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">34. Utilidad Bruta Contable (Renglón 32 - Renglón 33)</div>
+                                    <div class="dgi-cuenta-tag total-tag">∑ Margen Bruto = Total Ingresos Brutos - Costo de Ventas</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">34</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-util-bruta" class="dgi-input-renglon dgi-input-total" readonly value="397,571.20"></td>
+                            </tr>
+
+                            <!-- 35. Sueldos -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>35. Gastos de Sueldos y Salarios Ordinarios (6.1.01)</div>
+                                    <div class="dgi-cuenta-subdetalle">Remuneraciones brutas pagadas a mecánicos y personal de ventas</div>
+                                </td>
+                                <td class="dgi-td-num">35</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6101" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="173,449.99"></td>
+                            </tr>
+                            <!-- 36. Alquiler -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>36. Gasto de Alquiler del Local Comercial y Taller (6.1.02)</div>
+                                    <div class="dgi-cuenta-subdetalle">Arrendamiento de inmueble comercial con retención fiscal legal</div>
+                                </td>
+                                <td class="dgi-td-num">36</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6102" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="30,000.00"></td>
+                            </tr>
+                            <!-- 37. Energía eléctrica -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>37. Gasto por Servicio de Energía Eléctrica (6.1.03)</div>
+                                    <div class="dgi-cuenta-subdetalle">Consumo eléctrico de tienda comercial y compresores de taller</div>
+                                </td>
+                                <td class="dgi-td-num">37</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6103" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="12,000.00"></td>
+                            </tr>
+                            <!-- 38. Agua -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>38. Gasto por Servicio de Agua Potable (6.1.04)</div>
+                                    <div class="dgi-cuenta-subdetalle">Suministro de agua para lavado de partes y uso general</div>
+                                </td>
+                                <td class="dgi-td-num">38</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6104" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="3,000.00"></td>
+                            </tr>
+                            <!-- 39. Internet y telefonía -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>39. Gasto por Servicio de Internet y Telefonía (6.1.05)</div>
+                                    <div class="dgi-cuenta-subdetalle">Conectividad comercial, facturación electrónica y atención a clientes</div>
+                                </td>
+                                <td class="dgi-td-num">39</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6105" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="5,000.00"></td>
+                            </tr>
+                            <!-- 40. Publicidad -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>40. Gastos de Publicidad y Mercadotecnia (6.1.06)</div>
+                                    <div class="dgi-cuenta-subdetalle">Promoción de repuestos y campañas en redes sociales</div>
+                                </td>
+                                <td class="dgi-td-num">40</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6106" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="10,000.00"></td>
+                            </tr>
+                            <!-- 41. Mantenimiento -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>41. Mantenimiento y Reparación de Equipos y Herramientas (6.1.07)</div>
+                                    <div class="dgi-cuenta-subdetalle">Calibración de herramientas de taller y mantenimiento preventivo</div>
+                                </td>
+                                <td class="dgi-td-num">41</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6107" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="8,000.00"></td>
+                            </tr>
+                            <!-- 42. Papelería -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>42. Papelería y Útiles de Oficina (6.1.08)</div>
+                                    <div class="dgi-cuenta-subdetalle">Formularios de ingreso de taller, factureros y suministros</div>
+                                </td>
+                                <td class="dgi-td-num">42</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6108" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="3,000.00"></td>
+                            </tr>
+                            <!-- 43. Depreciación del período -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>43. Gasto de Depreciación de Activos Fijos del Ejercicio (6.1.09)</div>
+                                    <div class="dgi-cuenta-subdetalle">Depreciación fiscal deducible según tasas de la Ley 822</div>
+                                </td>
+                                <td class="dgi-td-num">43</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6109" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="12,000.00"></td>
+                            </tr>
+                            <!-- 44. Gastos bancarios -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>44. Comisiones y Gastos Bancarios por Terminal POS (6.1.10)</div>
+                                    <div class="dgi-cuenta-subdetalle">Comisiones financieras y cargos por procesamiento de tarjetas</div>
+                                </td>
+                                <td class="dgi-td-num">44</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6110" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="22,000.00"></td>
+                            </tr>
+                            <!-- 45. Cargas patronales -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>45. Cargas Sociales Patronales (INSS Patronal 21.5% e INATEC 2% - 6.1.11)</div>
+                                    <div class="dgi-cuenta-subdetalle">Aportaciones obligatorias del empleador deducibles del IR</div>
+                                </td>
+                                <td class="dgi-td-num">45</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6111" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="24,310.75"></td>
+                            </tr>
+                            <!-- 46. Prestaciones sociales -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>46. Prestaciones Sociales Laborales (Aguinaldo e Indemnización - 6.1.12)</div>
+                                    <div class="dgi-cuenta-subdetalle">Provisión de beneficios laborales conforme al Código del Trabajo</div>
+                                </td>
+                                <td class="dgi-td-num">46</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-6112" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="17,241.63"></td>
+                            </tr>
+                            <!-- 47. Total Gastos Operativos (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">47. Total Gastos Deducibles de Operación (suma renglones 35 al 46)</div>
+                                    <div class="dgi-cuenta-tag total-tag">∑ Suma de Todos los Gastos Operativos y Administrativos Deducibles</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">47</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-gastos-op" class="dgi-input-renglon dgi-input-total" readonly value="320,002.37"></td>
+                            </tr>
+                            <!-- 48. Utilidad Neta Contable (BORDE NEGRO GRUESO OFICIAL - IMAGEN 2) -->
+                            <tr class="row-total-destacado" style="background: rgba(0, 95, 168, 0.08);">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 900; color: #005fa8; font-size: 0.96rem;">48. Utilidad Neta Contable del Ejercicio (Renglón 34 - Renglón 47)</div>
+                                    <div class="dgi-cuenta-tag total-tag" style="font-weight: 800; color: #005fa8;">Base Contable para la Conciliación Fiscal del IR</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900; color: #005fa8;">48</td>
+                                <td class="dgi-td-val"><input type="text" id="tot-util-neta" class="dgi-input-renglon dgi-input-total" readonly value="77,568.83"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECCIÓN E: CÁLCULO DEL IR Y CONCILIACIÓN FISCAL (CON LETRA LATERAL 'E' - IMAGEN 2) -->
+            <div class="dgi-form-section-with-letter">
+                <div class="dgi-sec-letter">E</div>
+                <div class="dgi-sec-content">
+                    <div class="dgi-section-title-bar">CALCULO DEL IR (CONCILIACIÓN FISCAL LEY 822)</div>
+                    <table class="dgi-renglones-table">
+                        <tbody>
+                            <!-- 49. Utilidad neta contable -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>49. Utilidad Neta Contable (Renglón 48)</div>
+                                    <div class="dgi-cuenta-subdetalle">Resultado neto obtenido en el Estado de Resultados</div>
+                                </td>
+                                <td class="dgi-td-num">49</td>
+                                <td class="dgi-td-val"><input type="text" id="ir-util-contable" class="dgi-input-renglon" readonly value="77,568.83"></td>
+                            </tr>
+                            <!-- 50. Gastos no deducibles -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>50. (+) Gastos No Deducibles (Ajuste Fiscal Art. 43 Ley 822)</div>
+                                    <div class="dgi-cuenta-subdetalle">Multas, sanciones fiscales o gastos sin comprobante tributario legal</div>
+                                </td>
+                                <td class="dgi-td-num">50</td>
+                                <td class="dgi-td-val"><input type="text" id="ir-gastos-no-ded" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="0.00"></td>
+                            </tr>
+                            <!-- 51. Rentas no gravables -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>51. (-) Rentas No Gravables / Ingresos Exentos (Art. 32 Ley 822)</div>
+                                    <div class="dgi-cuenta-subdetalle">Rentas exentas o sometidas a retención definitiva no computables</div>
+                                </td>
+                                <td class="dgi-td-num">51</td>
+                                <td class="dgi-td-val"><input type="text" id="ir-rentas-no-grav" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="0.00"></td>
+                            </tr>
+                            <!-- 52. Renta Neta Gravable (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">52. Renta Neta Gravable Oficial (Renglones 49 + 50 - 51)</div>
+                                    <div class="dgi-cuenta-tag total-tag">Base Imponible para el Cálculo del IR Anual</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">52</td>
+                                <td class="dgi-td-val"><input type="text" id="ir-renta-gravable" class="dgi-input-renglon dgi-input-total" readonly value="77,568.83"></td>
+                            </tr>
+                            <!-- 53. IR 30% -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>53. IR por Actividades Económicas (30% sobre Renta Neta Gravable R52)</div>
+                                    <div class="dgi-cuenta-subdetalle">Ley de Concertación Tributaria (Ley 822 Art. 52)</div>
+                                </td>
+                                <td class="dgi-td-num">53</td>
+                                <td class="dgi-td-val"><input type="text" id="ir-calculado-30" class="dgi-input-renglon" readonly value="23,270.65"></td>
+                            </tr>
+                            <!-- 54. PMD 1% -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>54. Pago Mínimo Definitivo - PMD (1% sobre Total Ingresos Brutos R32)</div>
+                                    <div class="dgi-cuenta-subdetalle">Ley de Concertación Tributaria (Ley 822 Art. 59)</div>
+                                </td>
+                                <td class="dgi-td-num">54</td>
+                                <td class="dgi-td-val"><input type="text" id="ir-pmd-1" class="dgi-input-renglon" readonly value="10,914.99"></td>
+                            </tr>
+                            <!-- 55. IR DETERMINADO (BORDE NEGRO GRUESO OFICIAL - IMAGEN 2) -->
+                            <tr class="row-total-destacado" style="background: rgba(0, 95, 168, 0.08);">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 900; color: #005fa8; font-size: 0.96rem;">55. IR DETERMINADO OFICIAL (El Mayor entre Renglón 53 o Renglón 54)</div>
+                                    <div class="dgi-cuenta-tag total-tag" style="font-weight: 800; color: #005fa8;" id="ir-lbl-metodo-cta">Aplica IR 30% sobre Renta Neta (Art. 52 Ley 822)</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900; color: #005fa8;">55</td>
+                                <td class="dgi-td-val"><input type="text" id="ir-determinado" class="dgi-input-renglon dgi-input-total" readonly value="23,270.65"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECCIÓN F: LIQUIDACIÓN DEL IMPUESTO (CON LETRA LATERAL 'F' - IMAGEN 2) -->
+            <div class="dgi-form-section-with-letter">
+                <div class="dgi-sec-letter">F</div>
+                <div class="dgi-sec-content">
+                    <div class="dgi-section-title-bar">LIQUIDACION DEL IMPUESTO (ACREDITAMIENTOS Y SALDO FINAL)</div>
+                    <table class="dgi-renglones-table">
+                        <tbody>
+                            <!-- 56. IR Determinado -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>56. IR Determinado Oficial del Ejercicio Fiscal (Renglón 55)</div>
+                                    <div class="dgi-cuenta-subdetalle">Impuesto sobre la renta calculado a liquidar</div>
+                                </td>
+                                <td class="dgi-td-num">56</td>
+                                <td class="dgi-td-val"><input type="text" id="liq-ir-determinado" class="dgi-input-renglon" readonly value="23,270.65"></td>
+                            </tr>
+                            <!-- 57. Anticipos 1% -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>57. (-) Anticipos Mensuales Pagados del 1% PMD (Ley 822 Art. 61)</div>
+                                    <div class="dgi-cuenta-subdetalle">Pagos anticipados mensuales ingresados a la DGI durante el ejercicio fiscal</div>
+                                </td>
+                                <td class="dgi-td-num">57</td>
+                                <td class="dgi-td-val"><input type="text" id="liq-anticipos-1" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="10,914.99"></td>
+                            </tr>
+                            <!-- 58. Retenciones sufridas -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>58. (-) Retenciones en la Fuente que le practicaron (Retenciones Sufridas)</div>
+                                    <div class="dgi-cuenta-subdetalle">Constancias de retención practicadas por clientes corporativos o procesadores POS</div>
+                                </td>
+                                <td class="dgi-td-num">58</td>
+                                <td class="dgi-td-val"><input type="text" id="liq-retenciones-sufridas" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="0.00"></td>
+                            </tr>
+                            <!-- 59. Saldo a favor anterior -->
+                            <tr>
+                                <td class="dgi-td-desc">
+                                    <div>59. (-) Saldo a Favor del Período Fiscal Anterior</div>
+                                    <div class="dgi-cuenta-subdetalle">Crédito fiscal reconocido por la DGI proveniente del ejercicio previo</div>
+                                </td>
+                                <td class="dgi-td-num">59</td>
+                                <td class="dgi-td-val"><input type="text" id="liq-creditos-anteriores" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="0.00"></td>
+                            </tr>
+                            <!-- 60. Total acreditamientos (SUBTOTAL CON BORDE GRUESO) -->
+                            <tr class="row-total-destacado">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 800;">60. Total Acreditamientos Fiscales (suma renglones 57 + 58 + 59)</div>
+                                    <div class="dgi-cuenta-tag total-tag">∑ Total de Pagos a Cuenta y Créditos Fiscales Aplicables</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900;">60</td>
+                                <td class="dgi-td-val"><input type="text" id="liq-total-acreditamientos" class="dgi-input-renglon dgi-input-total" readonly value="10,914.99"></td>
+                            </tr>
+                            <!-- 61. SALDO A PAGAR (BORDE NEGRO GRUESO ROJO) -->
+                            <tr class="row-total-destacado" style="background: rgba(220, 38, 38, 0.08);">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 900; color: #dc2626; font-size: 0.96rem;">61. Saldo a Pagar a la DGI (si Renglón 56 > Renglón 60)</div>
+                                    <div class="dgi-cuenta-tag total-tag" style="color: #dc2626; font-weight: 800;">Impuesto Líquido Definitivo a Enterar a favor de la DGI</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900; color: #dc2626;">61</td>
+                                <td class="dgi-td-val"><input type="text" id="liq-saldo-pagar" class="dgi-input-renglon dgi-input-total total-saldo-pagar" readonly value="12,355.66"></td>
+                            </tr>
+                            <!-- 62. SALDO A FAVOR (BORDE NEGRO GRUESO VERDE) -->
+                            <tr class="row-total-destacado" style="background: rgba(22, 163, 74, 0.08);">
+                                <td class="dgi-td-desc">
+                                    <div style="font-weight: 900; color: #16a34a; font-size: 0.96rem;">62. Saldo a Favor del Contribuyente (si Renglón 60 > Renglón 56)</div>
+                                    <div class="dgi-cuenta-tag total-tag" style="color: #16a34a; font-weight: 800;">Crédito Fiscal Acreditable para el Siguiente Ejercicio</div>
+                                </td>
+                                <td class="dgi-td-num" style="font-weight: 900; color: #16a34a;">62</td>
+                                <td class="dgi-td-val"><input type="text" id="liq-saldo-favor" class="dgi-input-renglon dgi-input-total total-saldo-favor" readonly value="0.00"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- BOTONES DE ACCIÓN DE LA VISTA CUENTAS -->
+            <div class="dgi-footer-actions">
+                <div>
+                    <button type="button" class="btn-dgi-edit" onclick="activarModoResumen()">
+                        <i class="ph-bold ph-eye"></i> Ver Resumen Ejecutivo (Imagen 1)
+                    </button>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="guardarDeclaracionBorrador()">
+                        <i class="ph-bold ph-floppy-disk"></i> Guardar Borrador
+                    </button>
+                    <button type="button" class="btn-dgi-confirm" onclick="abrirModalPresentacion()">
+                        Confirmar Envío
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- =========================================================================
+             VISTA 3: RESUMEN / ENVÍO OFICIAL (FORMATO EXACTO IMAGEN 1)
+             ========================================================================= -->
+        <div id="dgi-vista-resumen" class="dgi-document" style="display: none;">
+            
+            <div class="dgi-header-grid">
+                <div class="dgi-header-left">
+                    <img src="{{ url_for('static', filename='img/nicaragua_dgi_logo.svg') }}" alt="Gobierno de Nicaragua" style="height: 60px; max-width: 100%;">
+                </div>
+                <div class="dgi-header-right">
+                    <div>República de Nicaragua</div>
+                    <div>Ministerio de Hacienda y Crédito Público</div>
+                    <div style="font-size: 1.05rem; font-weight: 800;">Dirección General de Ingresos (DGI)</div>
+                </div>
+            </div>
+
+            <div class="dgi-title-bar">
+                <div class="dgi-title-code">106</div>
+                <div class="dgi-title-text">
+                    <h2>DECLARACION ANUAL DEL IMPUESTO</h2>
+                    <h2>SOBRE LA RENTA (IR)</h2>
+                    <h3>RENTA ANUAL IR 106</h3>
+                </div>
+                <div class="dgi-title-meta">
+                    <div><strong>Fecha de Presentación:</strong></div>
+                    <div id="vet-resumen-fecha" style="font-family: monospace; font-weight: bold;">--/--/----</div>
+                    <div style="margin-top: 0.4rem;"><strong>Periodo:</strong></div>
+                    <div id="vet-resumen-periodo" style="font-family: monospace; font-weight: bold;">12</div>
+                </div>
+            </div>
+
+            <div class="dgi-resumen-meta-row" style="margin-bottom: 0.75rem;">
+                <div>
+                    <strong>No. de Declaración:</strong> <span id="vet-resumen-no-decl" style="font-family: monospace; color: #005fa8; font-weight: bold;">IR106-2026-SIM</span>
+                </div>
+                <div>
+                    <strong>Tipo de Declaración:</strong> <span id="vet-resumen-tipo-decl" style="font-weight: bold;">Original</span>
+                </div>
+            </div>
+
+            <div class="dgi-section-banner">A . Datos Generales</div>
+            <div class="dgi-resumen-card">
+                <div class="dgi-resumen-grid-general">
+                    <div><strong>RUC:</strong> <span id="vet-resumen-ruc" style="font-family: monospace; font-weight: 800; color: #005fa8;">J0310000000001</span></div>
+                    <div><strong>Nombre y Apellido y/o Razón Social:</strong> <span id="vet-resumen-razon" style="font-weight: 700;">Jehová Jireh Moto Repuestos y Servicios</span></div>
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.88rem; color: #64748b;">
+                    <strong>Actividad Económica:</strong> <span id="vet-resumen-actividad">Comercio al por menor de repuestos, lubricantes y mantenimiento de motocicletas</span>
+                </div>
+            </div>
+
+            <div class="dgi-section-banner">B . BALANCE GENERAL</div>
+            <div class="dgi-resumen-card">
+                <div class="dgi-resumen-grid-kpis">
+                    <div class="dgi-kpi-item">
+                        <div class="label">Total Activo (Renglón 12)</div>
+                        <div class="value" id="kpi-res-activos">C$ 913,161.95</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Total Pasivo (Renglón 22)</div>
+                        <div class="value" id="kpi-res-pasivos">C$ 534,593.12</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Patrimonio Neto (Renglón 26)</div>
+                        <div class="value" id="kpi-res-patrimonio">C$ 378,568.83</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Estado de Cuadre</div>
+                        <div class="value" id="kpi-res-cuadre" style="font-size: 0.95rem; color: #16a34a; font-weight: bold;">Cuadrado ✓</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dgi-section-banner">D . ESTADO DE RESULTADOS</div>
+            <div class="dgi-resumen-card">
+                <div class="dgi-resumen-grid-kpis">
+                    <div class="dgi-kpi-item">
+                        <div class="label">Ingresos Brutos (Renglón 32)</div>
+                        <div class="value" id="kpi-res-ingresos">C$ 1,091,499.20</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Costo de Ventas (Renglón 33)</div>
+                        <div class="value" id="kpi-res-costos">C$ 693,928.00</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Gastos Operativos (Renglón 47)</div>
+                        <div class="value" id="kpi-res-gastos">C$ 320,002.37</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Utilidad Neta (Renglón 48)</div>
+                        <div class="value" id="kpi-res-utilidad">C$ 77,568.83</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dgi-section-banner">E . CALCULO DEL IR</div>
+            <div class="dgi-resumen-card">
+                <div class="dgi-resumen-grid-kpis">
+                    <div class="dgi-kpi-item">
+                        <div class="label">Renta Neta Gravable</div>
+                        <div class="value" id="kpi-res-renta-neta">C$ 77,568.83</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">IR 30% (Art. 52 Ley 822)</div>
+                        <div class="value" id="kpi-res-ir30">C$ 23,270.65</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Pago Mínimo Definitivo 1%</div>
+                        <div class="value" id="kpi-res-pmd1">C$ 10,914.99</div>
+                    </div>
+                    <div class="dgi-kpi-item" style="border: 2px solid #005fa8; background: #f0f9ff;">
+                        <div class="label" style="color: #005fa8;">IR Determinado Oficial</div>
+                        <div class="value" id="kpi-res-ir-determinado" style="color: #005fa8; font-size: 1.25rem;">C$ 23,270.65</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dgi-section-banner">F . LIQUIDACION DEL IMPUESTO</div>
+            <div class="dgi-resumen-card">
+                <div class="dgi-resumen-grid-kpis">
+                    <div class="dgi-kpi-item">
+                        <div class="label">IR Determinado</div>
+                        <div class="value" id="kpi-res-liq-irdet">C$ 23,270.65</div>
+                    </div>
+                    <div class="dgi-kpi-item">
+                        <div class="label">Total Acreditamientos</div>
+                        <div class="value" id="kpi-res-acreditamientos" style="color: #16a34a;">- C$ 10,914.99</div>
+                    </div>
+                    <div class="dgi-kpi-item highlight-pagar" id="card-saldo-final-pagar">
+                        <div class="label">Saldo a Pagar a la DGI</div>
+                        <div class="value" id="kpi-res-saldo-pagar">C$ 12,355.66</div>
+                    </div>
+                    <div class="dgi-kpi-item highlight-favor" id="card-saldo-final-favor" style="display: none;">
+                        <div class="label">Saldo a Favor del Contribuyente</div>
+                        <div class="value" id="kpi-res-saldo-favor">C$ 0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dgi-footer-actions">
+                <div>
+                    <button type="button" class="btn-dgi-edit" onclick="activarModoCuentas()">
+                        Editar Declaración por Cuentas
+                    </button>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="guardarDeclaracionBorrador()">
+                        <i class="ph-bold ph-floppy-disk"></i> Guardar Borrador
+                    </button>
+                    <button type="button" class="btn-dgi-confirm" onclick="abrirModalPresentacion()">
+                        Confirmar Envío
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- PESTAÑA 2: ACREDITAMIENTOS Y RETENCIONES SUFRIDAS -->
+    <div id="fiscal-view-acreditamientos" class="fiscal-view-pane" style="display: none;">
+        <div class="card">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h3 style="margin: 0;"><i class="ph-bold ph-certificate"></i> Acreditamientos y Constancias Fiscales</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #64748b;">
+                        Retenciones en la fuente aplicadas por clientes o el POS bancario, y anticipos mensuales del 1% pagados.
+                    </p>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="abrirModalAcreditamiento()">
+                    <i class="ph-bold ph-plus"></i> Registrar Constancia
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>No. Constancia / Ref</th>
+                                <th>Fecha</th>
+                                <th>Agente Retenedor (Cliente / Banco)</th>
+                                <th style="text-align: right;">Base Gravable (C$)</th>
+                                <th style="text-align: center;">% Retención</th>
+                                <th style="text-align: right;">Importe Retenido (C$)</th>
+                                <th style="text-align: center;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-acreditamientos">
+                            <tr><td colspan="8" class="text-center text-muted" style="padding: 2rem;">No hay constancias registradas para este año fiscal.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 3: CONCILIACIÓN Y AJUSTES FISCALES -->
+    <div id="fiscal-view-ajustes" class="fiscal-view-pane" style="display: none;">
+        <div class="card">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h3 style="margin: 0;"><i class="ph-bold ph-sliders"></i> Ajustes Fiscales y Conciliación Tributaria</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #64748b;">
+                        Gastos no deducibles conforme al Art. 43 de la Ley de Concertación Tributaria (Ley 822) o ingresos no gravables.
+                    </p>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="abrirModalAjusteFiscal()">
+                    <i class="ph-bold ph-plus"></i> Nuevo Ajuste Fiscal
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Concepto del Ajuste</th>
+                                <th>Tipo de Ajuste</th>
+                                <th>Efecto Fiscal</th>
+                                <th>Referencia Normativa</th>
+                                <th style="text-align: right;">Importe (C$)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-ajustes-fiscales">
+                            <tr><td colspan="5" class="text-center text-muted" style="padding: 2rem;">Sin ajustes fiscales manuales registrados.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 4: HISTORIAL DE DECLARACIONES -->
+    <div id="fiscal-view-historial" class="fiscal-view-pane" style="display: none;">
+        <div class="card">
+            <div class="card-header">
+                <h3 style="margin: 0;"><i class="ph-bold ph-clock-counter-clockwise"></i> Historial de Declaraciones y Presentaciones VET</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ejercicio</th>
+                                <th>Versión</th>
+                                <th>Tipo</th>
+                                <th>Fecha Registro</th>
+                                <th>Estado</th>
+                                <th style="text-align: right;">IR Determinado</th>
+                                <th style="text-align: right;">Acreditamientos</th>
+                                <th style="text-align: right;">Saldo Neto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-historial-fiscal">
+                            <tr><td colspan="8" class="text-center text-muted" style="padding: 2rem;">Cargando historial de declaraciones...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL 1: REGISTRAR CONSTANCIA DE RETENCIÓN / ACREDITAMIENTO -->
+<div class="modal" id="modal-acreditamiento">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h3><i class="ph-bold ph-certificate"></i> Registrar Constancia de Retención / Anticipo</h3>
+            <button class="modal-close" onclick="closeModal('modal-acreditamiento')">&times;</button>
+        </div>
+        <form id="form-acreditamiento" onsubmit="guardarAcreditamientoFiscal(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tipo de Acreditamiento:</label>
+                    <select id="acred-tipo" class="form-control" onchange="actualizarCamposAcreditamiento()">
+                        <option value="RETENCION_SUFRIDA" selected>Retención Sufrida (Clientes / POS)</option>
+                        <option value="ANTICIPO_PAGADO">Anticipo Mensual 1% Pagado</option>
+                        <option value="CREDITO_FISCAL">Saldo a Favor Período Anterior</option>
+                    </select>
+                </div>
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label>No. de Constancia / Referencia:</label>
+                        <input type="text" id="acred-referencia" class="form-control" placeholder="Ej: RET-2026-0045" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de Emisión:</label>
+                        <input type="date" id="acred-fecha" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group" id="group-retenedor">
+                    <label>Agente Retenedor (Cliente o Banco):</label>
+                    <input type="text" id="acred-retenedor-nombre" class="form-control" placeholder="Ej: Distribuidora Central S.A. o BAC">
+                </div>
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label>Base Gravable (C$):</label>
+                        <input type="number" step="0.01" id="acred-base" class="form-control" placeholder="0.00" oninput="calcularImporteRetenido()">
+                    </div>
+                    <div class="form-group">
+                        <label>Importe Retenido / Pagado (C$):</label>
+                        <input type="number" step="0.01" id="acred-importe" class="form-control" placeholder="0.00" required style="font-weight: bold; color: #005fa8;">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-acreditamiento')">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="ph-bold ph-floppy-disk"></i> Guardar Constancia</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 2: REGISTRAR AJUSTE FISCAL (CONCILIACIÓN TRIBUTARIA) -->
+<div class="modal" id="modal-ajuste-fiscal">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h3><i class="ph-bold ph-sliders"></i> Registrar Ajuste Fiscal</h3>
+            <button class="modal-close" onclick="closeModal('modal-ajuste-fiscal')">&times;</button>
+        </div>
+        <form id="form-ajuste-fiscal" onsubmit="guardarAjusteFiscal(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Concepto del Ajuste:</label>
+                    <input type="text" id="ajuste-concepto" class="form-control" placeholder="Ej: Gastos personales no deducibles o multas fiscales" required>
+                </div>
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label>Tipo de Ajuste:</label>
+                        <select id="ajuste-tipo" class="form-control">
+                            <option value="Gasto No Deducible" selected>Gasto No Deducible</option>
+                            <option value="Ingreso No Gravable">Ingreso No Gravable</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Importe (C$):</label>
+                        <input type="number" step="0.01" id="ajuste-importe" class="form-control" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Referencia Normativa:</label>
+                    <input type="text" id="ajuste-normativa" class="form-control" value="Ley 822 Art. 43">
+                </div>
+                <div class="form-group">
+                    <label>Justificación Técnica:</label>
+                    <textarea id="ajuste-justificacion" class="form-control" rows="2" placeholder="Motivo contable y fiscal..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-ajuste-fiscal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check"></i> Aplicar Ajuste</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 3: REGISTRAR PRESENTACIÓN Y PAGO EN VET DGI -->
+<div class="modal" id="modal-presentacion-dgi">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h3><i class="ph-bold ph-paper-plane-tilt"></i> Confirmar Envío / Registro DGI</h3>
+            <button class="modal-close" onclick="closeModal('modal-presentacion-dgi')">&times;</button>
+        </div>
+        <form id="form-presentacion-dgi" onsubmit="guardarPresentacionDGI(event)">
+            <input type="hidden" id="pres-decl-id">
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 1rem; font-size: 0.88rem;">
+                    <i class="ph-bold ph-info"></i> Registre el número de confirmación oficial generado por la Ventanilla Electrónica Tributaria (VET) y la constancia de pago bancario.
+                </div>
+                <div class="form-group">
+                    <label>No. de Transacción / Confirmación DGI (VET):</label>
+                    <input type="text" id="pres-referencia" class="form-control" placeholder="Ej: VET-2026-CONF-984321" required>
+                </div>
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label>Fecha de Presentación:</label>
+                        <input type="date" id="pres-fecha" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Importe Pagado (C$):</label>
+                        <input type="number" step="0.01" id="pres-monto" class="form-control" required style="font-weight: bold; color: #005fa8;">
+                    </div>
+                </div>
+                <div class="grid-2col">
+                    <div class="form-group">
+                        <label>Banco o Ventanilla:</label>
+                        <select id="pres-banco" class="form-control">
+                            <option value="BAC Credomatic">BAC Credomatic</option>
+                            <option value="Banco de la Producción (BANPRO)">BANPRO</option>
+                            <option value="Banco LAFISE Bancentro">LAFISE</option>
+                            <option value="Banco BDF">BDF</option>
+                            <option value="Ventanilla DGI Central">Ventanilla DGI Central</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Medio de Pago:</label>
+                        <select id="pres-medio-pago" class="form-control">
+                            <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                            <option value="Débito Automático">Débito Automático</option>
+                            <option value="Cheque de Gerencia">Cheque de Gerencia</option>
+                            <option value="Efectivo en Ventanilla">Efectivo en Ventanilla</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Observaciones de Presentación:</label>
+                    <textarea id="pres-observaciones" class="form-control" rows="2" placeholder="Detalles o notas de la declaración..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-presentacion-dgi')">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check-circle"></i> Confirmar Declaración Presentada</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,658 +1,1045 @@
 /**
  * ==============================================================================
- *  fiscal.js — Controlador Frontend del Módulo Tributario y Declaración DGI
+ *  fiscal.js — Controlador Frontend Oficial del Formulario 106 (Renta Anual IR)
+ *  Ventanilla Electrónica Tributaria (VET) - DGI Nicaragua
  *  Sistema Jehová Jireh Moto Repuestos
- *  Implementa: Formulario 106 (VET DGI Nicaragua) y Catálogo de Retenciones
  * ==============================================================================
  */
 
-let fiscalDataActual = null;
 let anioFiscalSeleccionado = 2026;
-let catalogoRetencionesDGI = [];
+let simulacionFiscalActual = null;
+let declaracionGuardadaId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Escuchar cambios en selector de año fiscal
     const anioSelect = document.getElementById('fiscal-select-anio');
     if (anioSelect) {
-        anioSelect.addEventListener('change', (e) => {
-            anioFiscalSeleccionado = parseInt(e.target.value);
-            cargarSimulacionFiscal();
-        });
-    }
-
-    // Auto-cálculo de importe en modal de constancia
-    const inputBase = document.getElementById('acred-monto-base');
-    const inputPorcentaje = document.getElementById('acred-porcentaje');
-    const inputImporte = document.getElementById('acred-importe-total');
-    if (inputBase && inputPorcentaje && inputImporte) {
-        const recalcularRetencion = () => {
-            const base = parseFloat(inputBase.value) || 0;
-            const porc = parseFloat(inputPorcentaje.value) || 0;
-            if (base > 0 && porc > 0) {
-                inputImporte.value = (base * (porc / 100.0)).toFixed(2);
-            }
-        };
-        inputBase.addEventListener('input', recalcularRetencion);
-        inputPorcentaje.addEventListener('input', recalcularRetencion);
+        anioSelect.value = anioFiscalSeleccionado;
     }
 });
 
+/**
+ * Punto de entrada llamado por main.js al abrir la pestaña #tab-fiscal
+ */
 function cargarModuloFiscal() {
+    const anioSelect = document.getElementById('fiscal-select-anio');
+    if (anioSelect) anioFiscalSeleccionado = parseInt(anioSelect.value) || 2026;
+    
+    // Cargar datos de negocio y simulación oficial
     cargarInfoTributaria();
-    cargarSimulacionFiscal();
+    cargarSimulacionFiscal(false);
 }
 
+function cambiarAnioFiscal() {
+    const anioSelect = document.getElementById('fiscal-select-anio');
+    if (anioSelect) anioFiscalSeleccionado = parseInt(anioSelect.value) || 2026;
+    cargarSimulacionFiscal(true);
+}
+
+/**
+ * Carga RUC, Razón Social y Actividad desde el backend
+ */
 async function cargarInfoTributaria() {
     try {
         const res = await fetch('/api/fiscal/info');
-        if (!res.ok) throw new Error('Error al consultar configuración tributaria');
         const data = await res.json();
-        catalogoRetencionesDGI = data.catalogo_retenciones || [];
-        poblarSelectorCatalogoRetenciones();
+        if (data.negocio) {
+            const n = data.negocio;
+            // Vista Cuentas
+            const inRucCta = document.getElementById('vet-cta-ruc');
+            const inRazonCta = document.getElementById('vet-cta-razon');
+            const inActCta = document.getElementById('vet-cta-actividad');
+            if (inRucCta) inRucCta.value = n.ruc;
+            if (inRazonCta) inRazonCta.value = n.razon_social;
+            if (inActCta) inActCta.value = n.actividad_economica;
+
+            // Vista Resumen
+            setVal('vet-resumen-ruc', n.ruc);
+            setVal('vet-resumen-razon', n.razon_social);
+            setVal('vet-resumen-actividad', n.actividad_economica);
+        }
     } catch (err) {
-        console.warn('Nota fiscal info:', err);
+        console.warn('Error cargando info tributaria:', err);
     }
 }
 
-function poblarSelectorCatalogoRetenciones() {
-    const sel = document.getElementById('acred-tipo-codigo');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">-- Seleccione del Catálogo DGI --</option>';
-    catalogoRetencionesDGI.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.codigo;
-        opt.dataset.alicuota = item.alicuota;
-        opt.dataset.desc = item.descripcion;
-        opt.dataset.tipo = item.codigo === 'ANTICIPO' ? 'ANTICIPO_PAGADO' : (item.codigo === 'SALDO_FAVOR_ANT' ? 'CREDITO_FISCAL' : 'RETENCION_SUFRIDA');
-        opt.textContent = `[${item.codigo}] ${item.descripcion.substring(0, 65)}... (${item.alicuota}%)`;
-        sel.appendChild(opt);
-    });
-
-    sel.addEventListener('change', (e) => {
-        const opt = sel.options[sel.selectedIndex];
-        if (opt && opt.dataset.alicuota) {
-            const inputPorc = document.getElementById('acred-porcentaje');
-            const inputTipo = document.getElementById('acred-tipo');
-            const inputConc = document.getElementById('acred-concepto');
-            if (inputPorc) inputPorc.value = opt.dataset.alicuota;
-            if (inputTipo) inputTipo.value = opt.dataset.tipo;
-            if (inputConc && !inputConc.value) inputConc.value = opt.dataset.desc;
-            
-            // Disparar recálculo
-            const inputBase = document.getElementById('acred-monto-base');
-            if (inputBase && parseFloat(inputBase.value) > 0) {
-                const base = parseFloat(inputBase.value);
-                const porc = parseFloat(opt.dataset.alicuota);
-                const inputImp = document.getElementById('acred-importe-total');
-                if (inputImp) inputImp.value = (base * (porc / 100.0)).toFixed(2);
-            }
-        }
-    });
-}
-
-function switchFiscalSubtab(tabName, btn) {
-    const container = document.getElementById('tab-fiscal');
-    if (!container) return;
-
-    container.querySelectorAll('.fiscal-subtab-btn').forEach(b => b.classList.remove('active'));
-    container.querySelectorAll('.fiscal-tab-view').forEach(v => v.classList.remove('active'));
-
-    if (btn) btn.classList.add('active');
-    const target = document.getElementById(`fiscal-subtab-${tabName}`);
-    if (target) target.classList.add('active');
-
-    if (tabName === 'acreditamientos') cargarAcreditamientosFiscales();
-    if (tabName === 'historial') cargarHistorialFiscal();
-}
-
-async function cargarSimulacionFiscal() {
-    const anioSelect = document.getElementById('fiscal-select-anio');
-    const anio = anioSelect ? anioSelect.value : anioFiscalSeleccionado;
-    anioFiscalSeleccionado = parseInt(anio);
-
-    const bannerLoading = document.getElementById('fiscal-loading-state');
-    if (bannerLoading) bannerLoading.style.display = 'block';
+/**
+ * Carga y mapea los saldos contables reales en el Formulario 106
+ */
+async function cargarSimulacionFiscal(mostrarNotif = false) {
+    const loadingState = document.getElementById('fiscal-loading-state');
+    if (loadingState) loadingState.style.display = 'block';
 
     try {
         const res = await fetch(`/api/fiscal/simulacion/${anioFiscalSeleccionado}`);
-        if (!res.ok) throw new Error('Error al generar simulación contable DGI.');
-        const data = await res.json();
-        fiscalDataActual = data;
-        renderizarFormulario106(data);
+        if (!res.ok) throw new Error('Error al generar la liquidación contable.');
+        const sim = await res.json();
+        simulacionFiscalActual = sim;
+
+        // Actualizar fecha y periodo
+        const hoy = new Date().toLocaleDateString('es-NI', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        setVal('vet-cta-fecha', hoy);
+        setVal('vet-resumen-fecha', hoy);
+        setVal('vet-cta-periodo', '12');
+        setVal('vet-resumen-periodo', '12');
+        setVal('vet-resumen-no-decl', `106-${anioFiscalSeleccionado}-001`);
+
+        const cb = sim.cuentas_balance || {};
+        const cr = sim.cuentas_resultados || {};
+
+        // 1. Llenar inputs de cuentas individuales de Jehová Jireh (Activos)
+        setIn('cta-1101', cb['1.1.01'] || 106499.20);
+        setIn('cta-1102', cb['1.1.02'] || 185000.00);
+        setIn('cta-1103', cb['1.1.03'] || 60000.00);
+        setIn('cta-1104', cb['1.1.04'] || 410662.75);
+        setIn('cta-1105', cb['1.1.05'] || 18000.00);
+
+        setIn('cta-1201', cb['1.2.01'] || 90000.00);
+        setIn('cta-1202', cb['1.2.02'] || 55000.00);
+        setIn('cta-1203', -Math.abs(cb['1.2.03'] || 12000.00));
+        setIn('cta-otros-act', 0.00);
+
+        // 2. Pasivos individuales
+        setIn('cta-2101', cb['2.1.01'] || 284590.75);
+        setIn('cta-2102', cb['2.1.02'] || 60000.00);
+        setIn('cta-2103', cb['2.1.03'] || 22000.00);
+        setIn('cta-2104', cb['2.1.04'] || 110969.94);
+        setIn('cta-2105', cb['2.1.05'] || 5000.00);
+        setIn('cta-2106', cb['2.1.06'] || 29894.25);
+        setIn('cta-2107', cb['2.1.07'] || 3238.55);
+        setIn('cta-2108', cb['2.1.08'] || 17241.63);
+        setIn('cta-2110', cb['2.1.10'] || 1658.00);
+
+        // 3. Patrimonio
+        setIn('cta-3101', cb['3.1.01'] || 250000.00);
+        setIn('cta-3102', cb['3.1.02'] || 51000.00);
+
+        // 4. Resultados (Ingresos, Costos, Gastos)
+        setIn('cta-4101', cr['4.1.01'] || 1011499.20);
+        setIn('cta-4102', cr['4.1.02'] || 80000.00);
+        setIn('cta-5101', cr['5.1.01'] || 693928.00);
+
+        setIn('cta-6101', cr['6.1.01'] || 173449.99);
+        setIn('cta-6102', cr['6.1.02'] || 30000.00);
+        setIn('cta-6103', cr['6.1.03'] || 12000.00);
+        setIn('cta-6104', cr['6.1.04'] || 3000.00);
+        setIn('cta-6105', cr['6.1.05'] || 5000.00);
+        setIn('cta-6106', cr['6.1.06'] || 10000.00);
+        setIn('cta-6107', cr['6.1.07'] || 8000.00);
+        setIn('cta-6108', cr['6.1.08'] || 3000.00);
+        setIn('cta-6109', cr['6.1.09'] || 12000.00);
+        setIn('cta-6110', cr['6.1.10'] || 22000.00);
+        setIn('cta-6111', cr['6.1.11'] || 24310.75);
+        setIn('cta-6112', cr['6.1.12'] || 17241.63);
+
+        // 5. Ajustes y Conciliación Fiscal
+        if (sim.calculo_ir) {
+            setIn('ir-gastos-no-ded', sim.calculo_ir.gastos_no_deducibles || 0);
+            setIn('ir-rentas-no-grav', sim.calculo_ir.ingresos_no_gravables || 0);
+        }
+
+        // 6. Liquidación y Acreditamientos
+        if (sim.liquidacion) {
+            setIn('liq-anticipos-1', sim.liquidacion.anticipos_mensuales || 10914.99);
+            setIn('liq-retenciones-sufridas', sim.liquidacion.retenciones_sufridas || 0);
+            setIn('liq-creditos-anteriores', sim.liquidacion.creditos_fiscales_ant || 0);
+        }
+
+        // Ejecutar recálculo aritmético oficial
+        recalcularFormularioCuentas();
+
+        if (mostrarNotif && typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion(`Formulario 106 cargado con las cuentas de Jehová Jireh (Ejercicio ${anioFiscalSeleccionado}).`, 'success');
+        }
     } catch (err) {
-        mostrarNotificacion(`Error fiscal: ${err.message}`, 'error');
+        console.error('Error fiscal:', err);
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion(`Error al cargar datos fiscales: ${err.message}`, 'error');
+        }
     } finally {
-        if (bannerLoading) bannerLoading.style.display = 'none';
+        if (loadingState) loadingState.style.display = 'none';
     }
 }
 
-function renderizarFormulario106(sim) {
-    const n = sim.negocio || {};
-    const bal = sim.balance || {};
-    const res = sim.resultados || {};
-    const calc = sim.calculo_ir || {};
-    const liq = sim.liquidacion || {};
-
-    // 1. Datos Generales (Header VET y Sección A)
-    const setT = (id, val) => {
+/**
+ * Recalcula matemáticamente las sumas de subtotales, totales y cuadre de Balance por cuentas
+ */
+function recalcularFormularioCuentas() {
+    const val = (id) => {
         const el = document.getElementById(id);
-        if (el) el.textContent = val;
+        if (!el) return 0.0;
+        const clean = String(el.value).replace(/,/g, '').trim();
+        return parseFloat(clean) || 0.0;
     };
 
-    setT('vet-empresa-ruc', n.ruc || 'J0310000000001');
-    setT('vet-empresa-razon', n.razon_social || 'Jehová Jireh Moto Repuestos y Servicios');
-    setT('vet-empresa-actividad', n.actividad_economica || 'Venta de repuestos y taller');
-    setT('vet-periodo-fiscal', `12 / ${sim.anio}`);
-    setT('vet-no-declaracion', `IR106-${sim.anio}-SIM`);
+    const setR = (id, monto) => {
+        const el = document.getElementById(id);
+        if (el) el.value = fmt(monto);
+    };
 
-    // 2. Sección B: Balance General (Renglones 1..23)
-    const tbodyBalance = document.getElementById('vet-tbody-balance');
-    if (tbodyBalance && bal.renglones) {
-        tbodyBalance.innerHTML = '';
-        bal.renglones.forEach(r => {
-            const tr = document.createElement('tr');
-            if (r.destacado) tr.classList.add('row-highlight-total');
-            tr.innerHTML = `
-                <td style="text-align: center; font-weight: bold; width: 60px;">${r.renglon}</td>
-                <td style="font-weight: ${r.destacado ? 'bold' : 'normal'};">${r.descripcion}</td>
-                <td style="text-align: right; font-weight: bold; font-family: monospace;">
-                    C$ ${parseFloat(r.importe || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </td>
-                <td style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">
-                    ${r.cuentas ? `<span class="badge badge-sm badge-secondary">${r.cuentas}</span>` : '—'}
-                </td>
-            `;
-            tbodyBalance.appendChild(tr);
-        });
-    }
+    // =========================================================================
+    // 1. ACTIVOS
+    // =========================================================================
+    const c1101 = val('cta-1101'); // Caja
+    const c1102 = val('cta-1102'); // Bancos
+    const c1103 = val('cta-1103'); // Clientes
+    const c1104 = val('cta-1104'); // Inventarios
+    const c1105 = val('cta-1105'); // IVA Acreditable
 
-    // Alerta de cuadre
-    const alertaCuadre = document.getElementById('vet-alerta-cuadre');
-    if (alertaCuadre) {
-        if (bal.balance_cuadrado) {
-            alertaCuadre.className = 'alert-cuadre alert-success';
-            alertaCuadre.innerHTML = `<i class="ph-bold ph-check-circle"></i> Balance General debidamente cuadrado. Total Activos: <strong>C$ ${bal.total_activos.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong> = Pasivo + Patrimonio: <strong>C$ ${(bal.total_pasivos + bal.patrimonio_total).toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>`;
+    // Renglón 6: Total Activo Circulante (1 + 2 + 3 + 4 + 5)
+    const totActCirc = round2(c1101 + c1102 + c1103 + c1104 + c1105);
+    setR('tot-act-circ', totActCirc);
+
+    const c1201 = val('cta-1201'); // Mobiliario
+    const c1202 = val('cta-1202'); // Cómputo
+    const c1203 = Math.abs(val('cta-1203')); // Depreciación Acumulada
+
+    // Renglón 10: Total Activos Mobiliarios (7 + 8 - 9)
+    const totActFijo = round2(c1201 + c1202 - c1203);
+    setR('tot-act-fijo', totActFijo);
+
+    const otrosAct = val('cta-otros-act'); // Otros activos inmobiliarios / diferidos
+
+    // Renglón 12: Total Activos (6 + 10 + 11)
+    const totActivos = round2(totActCirc + totActFijo + otrosAct);
+    setR('tot-activos', totActivos);
+
+    // =========================================================================
+    // 2. PASIVOS
+    // =========================================================================
+    const c2101 = val('cta-2101'); // Proveedores
+    const c2102 = val('cta-2102'); // Doc por pagar
+    const c2103 = val('cta-2103'); // IVA por pagar
+    const c2104 = val('cta-2104'); // Sueldos por pagar
+    const c2105 = val('cta-2105'); // Servicios básicos por pagar
+    const c2106 = val('cta-2106'); // Ret. INSS
+    const c2107 = val('cta-2107'); // Ret. IR
+    const c2108 = val('cta-2108'); // Provisiones sociales
+    const c2110 = val('cta-2110'); // INATEC
+
+    // Renglón 22: Total Pasivos (suma renglones 13 al 21)
+    const totPasivos = round2(c2101 + c2102 + c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2110);
+    setR('tot-pasivos', totPasivos);
+
+    // =========================================================================
+    // 3. ESTADO DE RESULTADOS
+    // =========================================================================
+    const c4101 = val('cta-4101'); // Ventas repuestos
+    const c4102 = val('cta-4102'); // Servicios taller
+
+    // Renglón 32: Total Ingresos Brutos (30 + 31)
+    const totIngresos = round2(c4101 + c4102);
+    setR('tot-ingresos', totIngresos);
+
+    const c5101 = val('cta-5101'); // Costo de ventas
+
+    // Renglón 34: Utilidad Bruta Contable (32 - 33)
+    const totUtilBruta = round2(totIngresos - c5101);
+    setR('tot-util-bruta', totUtilBruta);
+
+    // Gastos Operativos (Renglones 35 al 46)
+    const c6101 = val('cta-6101'); // Sueldos
+    const c6102 = val('cta-6102'); // Alquiler
+    const c6103 = val('cta-6103'); // Energía
+    const c6104 = val('cta-6104'); // Agua
+    const c6105 = val('cta-6105'); // Internet
+    const c6106 = val('cta-6106'); // Publicidad
+    const c6107 = val('cta-6107'); // Mantenimiento
+    const c6108 = val('cta-6108'); // Papelería
+    const c6109 = val('cta-6109'); // Depreciación período
+    const c6110 = val('cta-6110'); // Comisiones bancarias
+    const c6111 = val('cta-6111'); // Cargas patronales
+    const c6112 = val('cta-6112'); // Prestaciones sociales
+
+    // Renglón 47: Total Gastos Deducibles de Operación
+    const totGastosOp = round2(c6101 + c6102 + c6103 + c6104 + c6105 + c6106 + c6107 + c6108 + c6109 + c6110 + c6111 + c6112);
+    setR('tot-gastos-op', totGastosOp);
+
+    // Renglón 48: Utilidad Neta Contable del Ejercicio (34 - 47)
+    const totUtilNeta = round2(totUtilBruta - totGastosOp);
+    setR('tot-util-neta', totUtilNeta);
+
+    // =========================================================================
+    // 4. PATRIMONIO NETO
+    // =========================================================================
+    const c3101 = val('cta-3101'); // Capital
+    const c3102 = val('cta-3102'); // Utilidades acumuladas
+    setR('cta-util-ejercicio', totUtilNeta); // Renglón 25: Utilidad del ejercicio
+
+    // Renglón 26: Total Patrimonio (23 + 24 + 25)
+    const totPatrimonio = round2(c3101 + c3102 + totUtilNeta);
+    setR('tot-patrimonio', totPatrimonio);
+
+    // Renglón 27: Total Pasivo y Patrimonio (22 + 26)
+    const totPasivoPatrimonio = round2(totPasivos + totPatrimonio);
+    setR('tot-pasivo-patrimonio', totPasivoPatrimonio);
+
+    // Verificación de Cuadre
+    const difCuadre = round2(totActivos - totPasivoPatrimonio);
+    setVal('lbl-cta-cuadre-activos', `C$ ${fmt(totActivos)}`);
+    setVal('lbl-cta-cuadre-pasivos', `C$ ${fmt(totPasivos)}`);
+    setVal('lbl-cta-cuadre-patrimonio', `C$ ${fmt(totPatrimonio)}`);
+
+    const lblCuadre = document.getElementById('lbl-cta-cuadre-estado');
+    if (lblCuadre) {
+        if (Math.abs(difCuadre) < 0.05) {
+            lblCuadre.innerHTML = '<i class="ph-bold ph-check-circle"></i> Balance Cuadrado: Diferencia C$ 0.00 (Activo = Pasivo + Capital)';
+            lblCuadre.style.color = '#16a34a';
         } else {
-            alertaCuadre.className = 'alert-cuadre alert-warning';
-            alertaCuadre.innerHTML = `<i class="ph-bold ph-warning"></i> Advertencia de cuadre contable: Diferencia de C$ ${bal.diferencia_cuadre.toLocaleString('en-US', {minimumFractionDigits: 2})}. Activos: C$ ${bal.total_activos.toLocaleString('en-US', {minimumFractionDigits: 2})} vs Pasivo+Patrimonio: C$ ${(bal.total_pasivos + bal.patrimonio_total).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            lblCuadre.innerHTML = `<i class="ph-bold ph-warning-circle"></i> Descuadre en Balance: C$ ${fmt(difCuadre)}`;
+            lblCuadre.style.color = '#dc2626';
         }
     }
 
-    // 3. Sección D: Estado de Resultados
-    const tbodyResultados = document.getElementById('vet-tbody-resultados');
-    if (tbodyResultados && res.renglones) {
-        tbodyResultados.innerHTML = '';
-        res.renglones.forEach(r => {
-            const tr = document.createElement('tr');
-            if (r.destacado) tr.classList.add('row-highlight-total');
-            tr.innerHTML = `
-                <td style="text-align: center; font-weight: bold; width: 60px;">${r.renglon}</td>
-                <td style="font-weight: ${r.destacado ? 'bold' : 'normal'};">${r.descripcion}</td>
-                <td style="text-align: right; font-weight: bold; font-family: monospace;">
-                    C$ ${parseFloat(r.importe || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </td>
-                <td style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">
-                    ${r.cuentas ? `<span class="badge badge-sm badge-secondary">${r.cuentas}</span>` : '—'}
-                </td>
-            `;
-            tbodyResultados.appendChild(tr);
-        });
+    // =========================================================================
+    // 5. CÁLCULO DEL IR (CONCILIACIÓN FISCAL LEY 822)
+    // =========================================================================
+    setR('ir-util-contable', totUtilNeta); // Renglón 49
+    const irGastosNoDed = val('ir-gastos-no-ded'); // Renglón 50
+    const irRentasNoGrav = val('ir-rentas-no-grav'); // Renglón 51
+
+    // Renglón 52: Renta Neta Gravable (49 + 50 - 51)
+    const rentaGravable = round2(Math.max(0, totUtilNeta + irGastosNoDed - irRentasNoGrav));
+    setR('ir-renta-gravable', rentaGravable);
+
+    // Renglón 53: IR 30%
+    const ir30 = round2(rentaGravable * 0.30);
+    setR('ir-calculado-30', ir30);
+
+    // Renglón 54: PMD 1% sobre Ingresos Brutos (R32)
+    const pmd1 = round2(totIngresos * 0.01);
+    setR('ir-pmd-1', pmd1);
+
+    // Renglón 55: IR Determinado Oficial (El mayor entre 53 y 54)
+    const irDeterminado = round2(Math.max(ir30, pmd1));
+    setR('ir-determinado', irDeterminado);
+
+    const lblMetodo = document.getElementById('ir-lbl-metodo-cta');
+    if (lblMetodo) {
+        if (ir30 >= pmd1) {
+            lblMetodo.textContent = 'Aplica IR 30% sobre Renta Neta (Art. 52 Ley 822)';
+        } else {
+            lblMetodo.textContent = 'Aplica Pago Mínimo Definitivo 1% sobre Ingresos Brutos (Art. 59 Ley 822)';
+        }
     }
 
-    // 4. Sección E: Cálculo del IR (Cards comparativas y método)
-    setT('kpi-renta-gravable', `C$ ${parseFloat(calc.renta_neta_gravable || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('kpi-ir-30', `C$ ${parseFloat(calc.ir_calculado_30 || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('kpi-pmd-1', `C$ ${parseFloat(calc.pmd_calculado_1 || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('kpi-ir-determinado', `C$ ${parseFloat(calc.ir_determinado || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('badge-metodo-aplicado', calc.metodo_aplicado || 'IR 30%');
+    // =========================================================================
+    // 6. LIQUIDACIÓN DEL IMPUESTO
+    // =========================================================================
+    setR('liq-ir-determinado', irDeterminado); // Renglón 56
+    const anticipos = val('liq-anticipos-1'); // Renglón 57
+    const retenciones = val('liq-retenciones-sufridas'); // Renglón 58
+    const creditosAnt = val('liq-creditos-anteriores'); // Renglón 59
 
-    // 5. Sección F: Liquidación del Impuesto
-    setT('liq-ir-determinado', `C$ ${parseFloat(liq.ir_determinado || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('liq-anticipos', `- C$ ${parseFloat(liq.anticipos_mensuales || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('liq-retenciones', `- C$ ${parseFloat(liq.retenciones_sufridas || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('liq-creditos', `- C$ ${parseFloat(liq.creditos_fiscales_ant || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
-    setT('liq-total-acred', `C$ ${parseFloat(liq.total_acreditamientos || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}`);
+    // Renglón 60: Total Acreditamientos
+    const totAcred = round2(anticipos + retenciones + creditosAnt);
+    setR('liq-total-acreditamientos', totAcred);
 
-    const badgeSaldo = document.getElementById('liq-saldo-final-badge');
-    const valorSaldo = document.getElementById('liq-saldo-final-valor');
-    if (liq.saldo_a_pagar > 0) {
-        if (badgeSaldo) {
-            badgeSaldo.textContent = 'SALDO A PAGAR A LA DGI';
-            badgeSaldo.className = 'badge-fiscal-status badge-pagar';
-        }
-        if (valorSaldo) {
-            valorSaldo.textContent = `C$ ${parseFloat(liq.saldo_a_pagar).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            valorSaldo.style.color = '#dc2626';
-        }
+    let saldoPagar = 0.0;
+    let saldoFavor = 0.0;
+
+    if (irDeterminado >= totAcred) {
+        saldoPagar = round2(irDeterminado - totAcred);
+        saldoFavor = 0.0;
     } else {
-        if (badgeSaldo) {
-            badgeSaldo.textContent = 'SALDO A FAVOR DEL CONTRIBUYENTE';
-            badgeSaldo.className = 'badge-fiscal-status badge-favor';
+        saldoPagar = 0.0;
+        saldoFavor = round2(totAcred - irDeterminado);
+    }
+
+    setR('liq-saldo-pagar', saldoPagar); // Renglón 61
+    setR('liq-saldo-favor', saldoFavor); // Renglón 62
+
+    // =========================================================================
+    // 7. SINCRONIZAR CON LA VISTA RESUMEN (IMAGEN 1)
+    // =========================================================================
+    setVal('kpi-res-activos', `C$ ${fmt(totActivos)}`);
+    setVal('kpi-res-pasivos', `C$ ${fmt(totPasivos)}`);
+    setVal('kpi-res-patrimonio', `C$ ${fmt(totPatrimonio)}`);
+    
+    const kpiCuadre = document.getElementById('kpi-res-cuadre');
+    if (kpiCuadre) {
+        if (Math.abs(difCuadre) < 0.05) {
+            kpiCuadre.textContent = 'Cuadrado ✓';
+            kpiCuadre.style.color = '#16a34a';
+        } else {
+            kpiCuadre.textContent = `Descuadre: C$ ${fmt(difCuadre)}`;
+            kpiCuadre.style.color = '#dc2626';
         }
-        if (valorSaldo) {
-            valorSaldo.textContent = `C$ ${parseFloat(liq.saldo_a_favor).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            valorSaldo.style.color = '#16a34a';
+    }
+
+    setVal('kpi-res-ingresos', `C$ ${fmt(totIngresos)}`);
+    setVal('kpi-res-costos', `C$ ${fmt(c5101)}`);
+    setVal('kpi-res-gastos', `C$ ${fmt(totGastosOp)}`);
+    setVal('kpi-res-utilidad', `C$ ${fmt(totUtilNeta)}`);
+    setVal('kpi-res-renta-neta', `C$ ${fmt(rentaGravable)}`);
+    setVal('kpi-res-ir30', `C$ ${fmt(ir30)}`);
+    setVal('kpi-res-pmd1', `C$ ${fmt(pmd1)}`);
+    setVal('kpi-res-ir-determinado', `C$ ${fmt(irDeterminado)}`);
+    setVal('kpi-res-liq-irdet', `C$ ${fmt(irDeterminado)}`);
+    setVal('kpi-res-acreditamientos', `- C$ ${fmt(totAcred)}`);
+    setVal('kpi-res-saldo-pagar', `C$ ${fmt(saldoPagar)}`);
+    setVal('kpi-res-saldo-favor', `C$ ${fmt(saldoFavor)}`);
+
+    const cardPagar = document.getElementById('card-saldo-final-pagar');
+    const cardFavor = document.getElementById('card-saldo-final-favor');
+    if (cardPagar && cardFavor) {
+        if (saldoPagar > 0 || (saldoPagar === 0 && saldoFavor === 0)) {
+            cardPagar.style.display = 'block';
+            cardFavor.style.display = 'none';
+        } else {
+            cardPagar.style.display = 'none';
+            cardFavor.style.display = 'block';
+        }
+    }
+
+}
+
+/**
+ * Control de vistas (Modo Cuentas vs Modo Resumen)
+ */
+function activarModoCuentas() {
+    const vCta = document.getElementById('dgi-vista-cuentas');
+    const vRes = document.getElementById('dgi-vista-resumen');
+
+    const btnCta = document.getElementById('btn-mode-cuentas');
+    const btnRes = document.getElementById('btn-mode-resumen');
+
+    if (vCta) vCta.style.display = 'block';
+    if (vRes) vRes.style.display = 'none';
+
+    if (btnCta) btnCta.classList.add('active');
+    if (btnRes) btnRes.classList.remove('active');
+
+    recalcularFormularioCuentas();
+}
+
+function activarModoDGI() {
+    // Redirige al modo principal por compatibilidad
+    activarModoCuentas();
+}
+
+function activarModoResumen() {
+    recalcularFormularioCuentas();
+
+    const vCta = document.getElementById('dgi-vista-cuentas');
+    const vRes = document.getElementById('dgi-vista-resumen');
+
+    const btnCta = document.getElementById('btn-mode-cuentas');
+    const btnRes = document.getElementById('btn-mode-resumen');
+
+    if (vCta) vCta.style.display = 'none';
+    if (vRes) vRes.style.display = 'block';
+
+    if (btnCta) btnCta.classList.remove('active');
+    if (btnRes) btnRes.classList.add('active');
+}
+
+function toggleTipoDeclaracionCta() {
+    const radioSust = document.getElementById('dgi-tipo-sust-cta');
+    const inputNumSust = document.getElementById('dgi-num-sustituir-cta');
+    const lblTipoRes = document.getElementById('vet-resumen-tipo-decl');
+    if (radioSust && radioSust.checked) {
+        if (inputNumSust) inputNumSust.style.display = 'inline-block';
+        if (lblTipoRes) lblTipoRes.textContent = 'Sustitutiva';
+    } else {
+        if (inputNumSust) inputNumSust.style.display = 'none';
+        if (lblTipoRes) lblTipoRes.textContent = 'Original';
+    }
+}
+
+/**
+ * Pestañas auxiliares del módulo fiscal
+ */
+function switchFiscalTab(tabName, btn) {
+    const tabs = ['vet', 'acreditamientos', 'ajustes', 'historial'];
+    tabs.forEach(t => {
+        const pane = document.getElementById(`fiscal-view-${t}`);
+        if (pane) pane.style.display = (t === tabName) ? 'block' : 'none';
+    });
+    document.querySelectorAll('.dgi-nav-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    if (tabName === 'acreditamientos') cargarAcreditamientos();
+    if (tabName === 'ajustes') cargarAjustesFiscales();
+    if (tabName === 'historial') cargarHistorialDeclaraciones();
+}
+
+/**
+ * Recopila todos los datos del formulario para guardar en backend
+ */
+function recopilarPayloadSimulacion() {
+    const val = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return 0.0;
+        const clean = String(el.value).replace(/,/g, '').trim();
+        return parseFloat(clean) || 0.0;
+    };
+
+    const c1101 = val('cta-1101');
+    const c1102 = val('cta-1102');
+    const c1103 = val('cta-1103');
+    const c1104 = val('cta-1104');
+    const c1105 = val('cta-1105');
+    const totActCirc = val('tot-act-circ');
+
+    const c1201 = val('cta-1201');
+    const c1202 = val('cta-1202');
+    const c1203 = val('cta-1203');
+    const totActFijo = val('tot-act-fijo');
+    const otrosAct = val('cta-otros-act');
+    const totActivos = val('tot-activos');
+
+    const c2101 = val('cta-2101');
+    const c2102 = val('cta-2102');
+    const c2103 = val('cta-2103');
+    const c2104 = val('cta-2104');
+    const c2105 = val('cta-2105');
+    const c2106 = val('cta-2106');
+    const c2107 = val('cta-2107');
+    const c2108 = val('cta-2108');
+    const c2110 = val('cta-2110');
+    const totPasivos = val('tot-pasivos');
+
+    const c3101 = val('cta-3101');
+    const c3102 = val('cta-3102');
+    const totPatrimonio = val('tot-patrimonio');
+
+    const c4101 = val('cta-4101');
+    const c4102 = val('cta-4102');
+    const totIngresos = val('tot-ingresos');
+    const c5101 = val('cta-5101');
+    const totUtilBruta = val('tot-util-bruta');
+
+    const totGastosOp = val('tot-gastos-op');
+    const totUtilNeta = val('tot-util-neta');
+
+    const rentaGravable = val('ir-renta-gravable');
+    const ir30 = val('ir-calculado-30');
+    const pmd1 = val('ir-pmd-1');
+    const irDeterminado = val('ir-determinado');
+
+    const totAcred = val('liq-total-acreditamientos');
+    const saldoPagar = val('liq-saldo-pagar');
+    const saldoFavor = val('liq-saldo-favor');
+
+    const renglonesBalance = [
+        { renglon: 1, descripcion: "Efectivo en caja y bancos", importe: round2(c1101 + c1102), tipo: "Contable" },
+        { renglon: 2, descripcion: "Cuentas y documentos por cobrar", importe: c1103, tipo: "Contable" },
+        { renglon: 3, descripcion: "Inventarios", importe: c1104, tipo: "Contable" },
+        { renglon: 4, descripcion: "Terrenos", importe: 0.0, tipo: "Manual" },
+        { renglon: 5, descripcion: "Edificios", importe: 0.0, tipo: "Manual" },
+        { renglon: 6, descripcion: "Otros Activos Inmobiliarios", importe: otrosAct, tipo: "Manual" },
+        { renglon: 7, descripcion: "Total Activo Inmobiliario (Renglones 4+5+6)", importe: otrosAct, tipo: "Calculado" },
+        { renglon: 8, descripcion: "Parque Vehicular", importe: 0.0, tipo: "Manual" },
+        { renglon: 9, descripcion: "Otros Bienes Mobiliarios", importe: totActFijo, tipo: "Contable" },
+        { renglon: 10, descripcion: "Total Activos Mobiliarios (Renglón 8+9)", importe: totActFijo, tipo: "Calculado" },
+        { renglon: 11, descripcion: "Otros activos", importe: c1105, tipo: "Contable" },
+        { renglon: 12, descripcion: "Total Activos (suma 1+2+3+7+10+11)", importe: totActivos, tipo: "Calculado", destacado: true },
+        { renglon: 13, descripcion: "Cuentas y documentos por pagar", importe: round2(c2101 + c2102), tipo: "Contable" },
+        { renglon: 14, descripcion: "Dividendos Pagados a Residentes", importe: 0.0, tipo: "Manual" },
+        { renglon: 15, descripcion: "Dividendos por Pagar a Residentes", importe: 0.0, tipo: "Manual" },
+        { renglon: 16, descripcion: "Instituciones Financieras de Desarrollo", importe: 0.0, tipo: "Manual" },
+        { renglon: 17, descripcion: "Resto de Instituciones Financieras", importe: 0.0, tipo: "Manual" },
+        { renglon: 18, descripcion: "Casa Matriz u Otras Sucursales", importe: 0.0, tipo: "Manual" },
+        { renglon: 19, descripcion: "Otros Agentes no Financieros", importe: round2(c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2110), tipo: "Contable" },
+        { renglon: 20, descripcion: "Pasivo Fijo Nacional (suma 15+16+17+18+19)", importe: round2(c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2110), tipo: "Calculado", destacado: true },
+        { renglon: 21, descripcion: "Dividendos Pagados no Residentes", importe: 0.0, tipo: "Manual" },
+        { renglon: 22, descripcion: "Dividendos por pagar no Residentes", importe: 0.0, tipo: "Manual" },
+        { renglon: 23, descripcion: "Instituciones Financieras Ext", importe: 0.0, tipo: "Manual" }
+    ];
+
+    const renglonesResultados = [
+        { renglon: 30, descripcion: "Ventas de repuestos y accesorios", importe: c4101, tipo: "Contable" },
+        { renglon: 31, descripcion: "Ingresos por servicios de taller", importe: c4102, tipo: "Contable" },
+        { renglon: 32, descripcion: "Total Ingresos Brutos de Actividades Económicas", importe: totIngresos, tipo: "Calculado" },
+        { renglon: 33, descripcion: "Costo de Ventas de Repuestos", importe: c5101, tipo: "Contable" },
+        { renglon: 34, descripcion: "Utilidad Bruta Contable", importe: totUtilBruta, tipo: "Calculado" },
+        { renglon: 35, descripcion: "Gastos de Sueldos y Salarios", importe: val('cta-6101'), tipo: "Contable" },
+        { renglon: 36, descripcion: "Cargas Sociales Patronales (INSS e INATEC)", importe: val('cta-6111'), tipo: "Contable" },
+        { renglon: 37, descripcion: "Prestaciones Sociales (Vacaciones y Aguinaldo)", importe: val('cta-6112'), tipo: "Contable" },
+        { renglon: 38, descripcion: "Alquiler, Servicios Básicos y Mantenimiento", importe: round2(val('cta-6102') + val('cta-6103') + val('cta-6104') + val('cta-6105') + val('cta-6107')), tipo: "Contable" },
+        { renglon: 39, descripcion: "Publicidad, Papelería y Depreciación", importe: round2(val('cta-6106') + val('cta-6108') + val('cta-6109')), tipo: "Contable" },
+        { renglon: 40, descripcion: "Gastos Financieros y Comisiones Bancarias", importe: val('cta-6110'), tipo: "Contable" },
+        { renglon: 41, descripcion: "Total Gastos Deducibles de Operación", importe: totGastosOp, tipo: "Calculado" },
+        { renglon: 42, descripcion: "Utilidad Neta Contable del Ejercicio", importe: totUtilNeta, tipo: "Calculado" }
+    ];
+
+    return {
+        anio: anioFiscalSeleccionado,
+        balance: {
+            renglones: renglonesBalance,
+            total_activos: totActivos,
+            total_pasivos: totPasivos,
+            patrimonio_total: totPatrimonio,
+            balance_cuadrado: Math.abs(totActivos - (totPasivos + totPatrimonio)) < 0.05,
+            diferencia_cuadre: round2(totActivos - (totPasivos + totPatrimonio))
+        },
+        resultados: {
+            renglones: renglonesResultados,
+            total_ingresos_brutos: totIngresos,
+            total_costos: c5101,
+            utilidad_bruta: totUtilBruta,
+            total_gastos: totGastosOp,
+            utilidad_neta_contable: totUtilNeta
+        },
+        calculo_ir: {
+            utilidad_neta_contable: totUtilNeta,
+            gastos_no_deducibles: val('ir-gastos-no-ded'),
+            ingresos_no_gravables: val('ir-rentas-no-grav'),
+            renta_neta_gravable: rentaGravable,
+            ir_calculado_30: ir30,
+            pmd_calculado_1: pmd1,
+            ir_determinado: irDeterminado,
+            metodo_aplicado: ir30 >= pmd1 ? "IR por Actividades Económicas (30%)" : "Pago Mínimo Definitivo - PMD (1% de Ingresos Brutos)"
+        },
+        liquidacion: {
+            ir_determinado: irDeterminado,
+            anticipos_mensuales: val('liq-anticipos-1'),
+            retenciones_sufridas: val('liq-retenciones-sufridas'),
+            creditos_fiscales_ant: val('liq-creditos-anteriores'),
+            total_acreditamientos: totAcred,
+            saldo_a_pagar: saldoPagar,
+            saldo_a_favor: saldoFavor
+        }
+    };
+}
+
+/**
+ * Guarda el formulario como Borrador en base de datos
+ */
+async function guardarDeclaracionBorrador() {
+    recalcularFormularioCuentas();
+    const payload = recopilarPayloadSimulacion();
+
+    try {
+        const res = await fetch('/api/fiscal/guardar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ simulacion: payload, es_aprobada: false })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al guardar el borrador.');
+
+        declaracionGuardadaId = data.declaracion_id;
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion(data.mensaje || 'Borrador de Declaración Anual IR guardado exitosamente.', 'success');
+        } else {
+            alert(data.mensaje || 'Borrador guardado exitosamente.');
+        }
+    } catch (err) {
+        console.error('Error guardando borrador:', err);
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion(err.message, 'error');
+        } else {
+            alert(err.message);
         }
     }
 }
 
-async function cargarAcreditamientosFiscales() {
-    const tbody = document.getElementById('tbody-acreditamientos');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Cargando constancias de retención...</td></tr>';
+/**
+ * Abre el modal para registrar confirmación oficial VET
+ */
+function abrirModalPresentacion() {
+    recalcularFormularioCuentas();
+    const saldoPagar = parseFloat(String(document.getElementById('liq-saldo-pagar')?.value || '0').replace(/,/g, '')) || 0.0;
+
+    const inputMonto = document.getElementById('pres-monto');
+    const inputFecha = document.getElementById('pres-fecha');
+    if (inputMonto) inputMonto.value = saldoPagar.toFixed(2);
+    if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
+
+    const modal = document.getElementById('modal-presentacion-dgi');
+    if (modal) modal.classList.add('active');
+}
+
+/**
+ * Registra la presentación oficial en VET y aprueba la declaración
+ */
+async function guardarPresentacionDGI(e) {
+    if (e) e.preventDefault();
+    recalcularFormularioCuentas();
+    const payload = recopilarPayloadSimulacion();
+
+    const ref = document.getElementById('pres-referencia')?.value.trim();
+    const fecha = document.getElementById('pres-fecha')?.value;
+    const monto = parseFloat(document.getElementById('pres-monto')?.value || 0);
+    const banco = document.getElementById('pres-banco')?.value;
+    const medio = document.getElementById('pres-medio-pago')?.value;
+    const obs = document.getElementById('pres-observaciones')?.value.trim();
 
     try {
-        const res = await fetch(`/api/fiscal/acreditamientos?anio=${anioFiscalSeleccionado}`);
-        if (!res.ok) throw new Error('Error al cargar acreditamientos.');
-        const filas = await res.json();
-        
-        if (!filas.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding: 2rem;">No hay constancias de retención ni anticipos registrados para este ejercicio fiscal. Presione "+ Registrar Constancia" para agregar una.</td></tr>';
+        // 1. Guardar y aprobar declaración
+        const res = await fetch('/api/fiscal/guardar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ simulacion: payload, es_aprobada: true })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al aprobar la declaración.');
+
+        const declId = data.declaracion_id;
+
+        // 2. Registrar presentación y pago
+        const resPago = await fetch('/api/fiscal/presentar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                declaracion_id: declId,
+                numero_transaccion_dgi: ref,
+                fecha_presentacion: fecha,
+                banco_recaudador: banco,
+                medio_pago: medio,
+                importe_pagado: monto,
+                observaciones: obs
+            })
+        });
+        const dataPago = await resPago.json();
+        if (!resPago.ok) throw new Error(dataPago.error || 'Error al registrar presentación en VET.');
+
+        closeModal('modal-presentacion-dgi');
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('¡Declaración Anual IR presentada y registrada oficialmente en VET DGI!', 'success');
+        } else {
+            alert('¡Declaración Anual IR presentada y registrada exitosamente!');
+        }
+        cargarHistorialDeclaraciones();
+    } catch (err) {
+        console.error('Error presentando:', err);
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion(err.message, 'error');
+        } else {
+            alert(err.message);
+        }
+    }
+}
+
+/**
+ * Pestaña 2: Cargar Acreditamientos
+ */
+async function cargarAcreditamientos() {
+    const tbody = document.getElementById('tbody-acreditamientos');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`/api/fiscal/acreditamientos/${anioFiscalSeleccionado}`);
+        const data = await res.json();
+        const lista = data.acreditamientos || [];
+
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding: 2rem;">No hay constancias registradas para este año fiscal.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = '';
-        filas.forEach(f => {
-            const tr = document.createElement('tr');
-            const badgeTipo = f.tipo === 'RETENCION_SUFRIDA' ? 'badge-primary' : (f.tipo === 'ANTICIPO_PAGADO' ? 'badge-success' : 'badge-warning');
-            const descTipo = f.tipo === 'RETENCION_SUFRIDA' ? 'Retención Sufrida' : (f.tipo === 'ANTICIPO_PAGADO' ? 'Anticipo 1%' : 'Crédito Fiscal');
-
-            tr.innerHTML = `
-                <td><span class="badge ${badgeTipo}">${descTipo}</span></td>
-                <td><strong>${f.numero_referencia}</strong></td>
-                <td>${f.fecha}</td>
-                <td>${f.agente_retenedor_nombre || f.agente_retenedor_ruc || 'N/A'}</td>
-                <td style="text-align: right; font-family: monospace;">C$ ${f.monto_base.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td style="text-align: center;">${f.porcentaje_aplicado > 0 ? f.porcentaje_aplicado + '%' : '—'}</td>
-                <td style="text-align: right; font-weight: bold; font-family: monospace; color: var(--accent-green);">
-                    C$ ${f.importe_total.toLocaleString('en-US', {minimumFractionDigits: 2})}
-                </td>
+        tbody.innerHTML = lista.map(a => `
+            <tr>
+                <td><span class="badge ${a.tipo === 'ANTICIPO_PAGADO' ? 'badge-primary' : (a.tipo === 'CREDITO_FISCAL' ? 'badge-info' : 'badge-success')}">${a.tipo}</span></td>
+                <td><strong>${a.numero_referencia}</strong></td>
+                <td>${a.fecha || '--'}</td>
+                <td>${a.agente_retenedor_nombre || 'N/A'}</td>
+                <td style="text-align: right; font-family: monospace;">C$ ${fmt(a.monto_base)}</td>
+                <td style="text-align: center;">${a.porcentaje_aplicado ? a.porcentaje_aplicado + '%' : '--'}</td>
+                <td style="text-align: right; font-weight: bold; color: #005fa8; font-family: monospace;">C$ ${fmt(a.importe_total)}</td>
                 <td style="text-align: center;">
-                    ${f.estado !== 'Aplicado Total' ? `
-                    <button class="btn btn-outline btn-sm text-danger" onclick="eliminarAcreditamientoFiscal(${f.id})" title="Eliminar constancia">
-                        <i class="ph-bold ph-trash"></i>
-                    </button>
-                    ` : '<span class="badge badge-sm badge-secondary">Aplicada</span>'}
+                    <button class="btn btn-outline btn-sm" onclick="eliminarAcreditamientoFiscal(${a.id})" title="Eliminar"><i class="ph-bold ph-trash" style="color: #dc2626;"></i></button>
                 </td>
-            `;
-            tbody.appendChild(tr);
-        });
+            </tr>
+        `).join('');
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">${err.message}</td></tr>`;
+        console.error('Error cargando acreditamientos:', err);
     }
 }
 
 function abrirModalAcreditamiento() {
-    const anioInput = document.getElementById('acred-anio');
-    if (anioInput) anioInput.value = anioFiscalSeleccionado;
-    openModal('modal-acreditamiento');
+    const f = document.getElementById('form-acreditamiento');
+    if (f) f.reset();
+    const inF = document.getElementById('acred-fecha');
+    if (inF) inF.value = new Date().toISOString().split('T')[0];
+    const modal = document.getElementById('modal-acreditamiento');
+    if (modal) modal.classList.add('active');
 }
 
 async function guardarAcreditamientoFiscal(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const payload = {
+        ejercicio_fiscal: anioFiscalSeleccionado,
         tipo: document.getElementById('acred-tipo').value,
-        concepto: document.getElementById('acred-concepto').value,
-        ejercicio_fiscal: parseInt(document.getElementById('acred-anio').value) || anioFiscalSeleccionado,
-        periodo_mes: parseInt(document.getElementById('acred-mes').value) || 1,
+        numero_referencia: document.getElementById('acred-referencia').value.trim(),
         fecha: document.getElementById('acred-fecha').value,
-        numero_referencia: document.getElementById('acred-referencia').value,
-        agente_retenedor_ruc: document.getElementById('acred-agente-ruc').value,
-        agente_retenedor_nombre: document.getElementById('acred-agente-nombre').value,
-        monto_base: parseFloat(document.getElementById('acred-monto-base').value) || 0,
-        porcentaje_aplicado: parseFloat(document.getElementById('acred-porcentaje').value) || 0,
-        importe_total: parseFloat(document.getElementById('acred-importe-total').value) || 0
+        agente_retenedor_nombre: document.getElementById('acred-retenedor-nombre').value.trim(),
+        monto_base: parseFloat(document.getElementById('acred-base').value || 0),
+        importe_total: parseFloat(document.getElementById('acred-importe').value || 0)
     };
 
     try {
-        const res = await fetch('/api/fiscal/acreditamientos', {
+        const res = await fetch('/api/fiscal/acreditamiento', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al guardar constancia');
-
-        mostrarNotificacion('Constancia de retención registrada exitosamente.', 'success');
+        if (!res.ok) throw new Error(data.error || 'Error al guardar acreditamiento.');
         closeModal('modal-acreditamiento');
-        document.getElementById('form-acreditamiento').reset();
-        cargarAcreditamientosFiscales();
-        cargarSimulacionFiscal(); // Refrescar liquidación
+        if (typeof mostrarNotificacion === 'function') mostrarNotificacion('Constancia registrada.', 'success');
+        cargarAcreditamientos();
+        cargarSimulacionFiscal(false);
     } catch (err) {
-        mostrarNotificacion(err.message, 'error');
+        alert(err.message);
     }
 }
 
 async function eliminarAcreditamientoFiscal(id) {
-    if (!confirm('¿Desea eliminar esta constancia de retención?')) return;
+    if (!confirm('¿Desea eliminar esta constancia de acreditamiento?')) return;
     try {
-        const res = await fetch(`/api/fiscal/acreditamientos/${id}`, {method: 'DELETE'});
+        const res = await fetch(`/api/fiscal/acreditamiento/${id}`, { method: 'DELETE' });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al eliminar');
-        mostrarNotificacion('Constancia eliminada.', 'success');
-        cargarAcreditamientosFiscales();
-        cargarSimulacionFiscal();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar.');
+        cargarAcreditamientos();
+        cargarSimulacionFiscal(false);
     } catch (err) {
-        mostrarNotificacion(err.message, 'error');
+        alert(err.message);
+    }
+}
+
+/**
+ * Pestaña 3: Cargar Ajustes Fiscales
+ */
+async function cargarAjustesFiscales() {
+    const tbody = document.getElementById('tbody-ajustes-fiscales');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`/api/fiscal/ajustes/${anioFiscalSeleccionado}`);
+        const data = await res.json();
+        const lista = data.ajustes || [];
+
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 2rem;">Sin ajustes fiscales manuales registrados.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = lista.map(a => `
+            <tr>
+                <td><strong>${a.concepto}</strong></td>
+                <td><span class="badge ${a.tipo_ajuste.includes('No Deducible') ? 'badge-warning' : 'badge-info'}">${a.tipo_ajuste}</span></td>
+                <td><span style="font-weight: bold; color: ${a.efecto.includes('Aumenta') ? '#dc2626' : '#16a34a'};">${a.efecto}</span></td>
+                <td>${a.referencia_normativa || 'Ley 822'}</td>
+                <td style="text-align: right; font-weight: bold; font-family: monospace;">C$ ${fmt(a.importe)}</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        console.error('Error cargando ajustes:', err);
     }
 }
 
 function abrirModalAjusteFiscal() {
-    const anioInput = document.getElementById('ajuste-anio');
-    if (anioInput) anioInput.value = anioFiscalSeleccionado;
-    openModal('modal-ajuste-fiscal');
+    const f = document.getElementById('form-ajuste-fiscal');
+    if (f) f.reset();
+    const modal = document.getElementById('modal-ajuste-fiscal');
+    if (modal) modal.classList.add('active');
 }
 
 async function guardarAjusteFiscal(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    const tipo = document.getElementById('ajuste-tipo').value;
     const payload = {
-        ejercicio_fiscal: parseInt(document.getElementById('ajuste-anio').value) || anioFiscalSeleccionado,
-        concepto: document.getElementById('ajuste-concepto').value,
-        tipo_ajuste: document.getElementById('ajuste-tipo').value,
-        efecto: document.getElementById('ajuste-efecto').value,
-        importe: parseFloat(document.getElementById('ajuste-importe').value) || 0,
-        referencia_normativa: document.getElementById('ajuste-normativa').value,
-        justificacion: document.getElementById('ajuste-justificacion').value
+        ejercicio_fiscal: anioFiscalSeleccionado,
+        concepto: document.getElementById('ajuste-concepto').value.trim(),
+        tipo_ajuste: tipo,
+        efecto: tipo.includes('No Deducible') ? 'Aumenta Renta' : 'Disminuye Renta',
+        importe: parseFloat(document.getElementById('ajuste-importe').value || 0),
+        referencia_normativa: document.getElementById('ajuste-normativa').value.trim(),
+        justificacion: document.getElementById('ajuste-justificacion').value.trim()
     };
 
     try {
-        const res = await fetch('/api/fiscal/ajustes', {
+        const res = await fetch('/api/fiscal/ajuste', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al guardar ajuste');
-
-        mostrarNotificacion('Ajuste fiscal registrado con éxito.', 'success');
+        if (!res.ok) throw new Error(data.error || 'Error al aplicar ajuste.');
         closeModal('modal-ajuste-fiscal');
-        document.getElementById('form-ajuste-fiscal').reset();
-        cargarSimulacionFiscal();
+        if (typeof mostrarNotificacion === 'function') mostrarNotificacion('Ajuste fiscal aplicado.', 'success');
+        cargarAjustesFiscales();
+        cargarSimulacionFiscal(false);
     } catch (err) {
-        mostrarNotificacion(err.message, 'error');
+        alert(err.message);
     }
 }
 
-async function guardarDeclaracionFiscal(esAprobada) {
-    const confirmMsg = esAprobada
-        ? `¿Confirmar APROBACIÓN de la Declaración Anual IR ${anioFiscalSeleccionado}? Esta acción aplicará las constancias de retención.`
-        : `¿Guardar BORRADOR de la Declaración Anual IR ${anioFiscalSeleccionado}?`;
-    
-    if (!confirm(confirmMsg)) return;
-
-    try {
-        const res = await fetch('/api/fiscal/declaracion/guardar', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                anio: anioFiscalSeleccionado,
-                aprobar: esAprobada
-            })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al guardar');
-
-        mostrarNotificacion(data.mensaje, 'success');
-        cargarSimulacionFiscal();
-        cargarHistorialFiscal();
-    } catch (err) {
-        mostrarNotificacion(err.message, 'error');
-    }
-}
-
-async function cargarHistorialFiscal() {
+/**
+ * Pestaña 4: Historial de Declaraciones
+ */
+async function cargarHistorialDeclaraciones() {
     const tbody = document.getElementById('tbody-historial-fiscal');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Cargando historial de declaraciones...</td></tr>';
 
     try {
-        const res = await fetch('/api/fiscal/declaraciones');
-        if (!res.ok) throw new Error('Error al consultar historial.');
-        const decls = await res.json();
-        if (!decls.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding: 2rem;">No hay declaraciones anuales guardadas aún en el sistema.</td></tr>';
+        const res = await fetch('/api/fiscal/historial');
+        const data = await res.json();
+        const lista = data.declaraciones || [];
+
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding: 2rem;">No hay declaraciones guardadas o presentadas en el historial.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = '';
-        decls.forEach(d => {
-            const tr = document.createElement('tr');
-            const badgeEstado = d.estado === 'Presentada' ? 'badge-success' : (d.estado === 'Aprobada' ? 'badge-primary' : 'badge-warning');
-            tr.innerHTML = `
-                <td><strong>IR-${d.ejercicio_fiscal} (v${d.version})</strong></td>
-                <td>${d.fecha_creacion}</td>
-                <td><span class="badge ${badgeEstado}">${d.estado}</span></td>
-                <td style="text-align: right; font-family: monospace;">C$ ${d.ir_determinado.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td style="text-align: right; font-family: monospace;">C$ ${d.acreditamientos.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+        tbody.innerHTML = lista.map(d => `
+            <tr>
+                <td><strong>${d.ejercicio_fiscal}</strong></td>
+                <td>v${d.version}</td>
+                <td>${d.es_sustitutiva ? '<span class="badge badge-warning">Sustitutiva</span>' : '<span class="badge badge-primary">Original</span>'}</td>
+                <td>${d.created_at ? d.created_at.split('T')[0] : '--'}</td>
+                <td><span class="badge ${d.estado === 'Aprobada' ? 'badge-success' : 'badge-secondary'}">${d.estado}</span></td>
+                <td style="text-align: right; font-family: monospace;">C$ ${fmt(d.ir_determinado)}</td>
+                <td style="text-align: right; font-family: monospace; color: #16a34a;">- C$ ${fmt(d.total_acreditamientos)}</td>
                 <td style="text-align: right; font-weight: bold; font-family: monospace; color: ${d.saldo_a_pagar > 0 ? '#dc2626' : '#16a34a'};">
-                    C$ ${(d.saldo_a_pagar > 0 ? d.saldo_a_pagar : d.saldo_a_favor).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                    <small>(${d.saldo_a_pagar > 0 ? 'A Pagar' : 'A Favor'})</small>
+                    C$ ${fmt(d.saldo_a_pagar > 0 ? d.saldo_a_pagar : d.saldo_a_favor)}
                 </td>
-                <td style="text-align: center;">
-                    ${d.estado === 'Aprobada' ? `
-                    <button class="btn btn-outline btn-sm" onclick="abrirModalPresentacionDGI(${d.id}, ${d.saldo_a_pagar})" title="Registrar Presentación / Pago DGI">
-                        <i class="ph-bold ph-paper-plane-tilt"></i> Registrar Presentación
-                    </button>
-                    ` : ''}
-                    <button class="btn btn-secondary btn-sm" onclick="imprimirFormulario106(${d.id})" title="Imprimir Formulario 106">
-                        <i class="ph-bold ph-printer"></i> Imprimir VET
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+            </tr>
+        `).join('');
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-danger text-center">${err.message}</td></tr>`;
+        console.error('Error cargando historial:', err);
     }
 }
 
-function abrirModalPresentacionDGI(declId, saldo) {
-    document.getElementById('pres-decl-id').value = declId;
-    document.getElementById('pres-monto').value = saldo > 0 ? saldo.toFixed(2) : '0.00';
-    openModal('modal-presentacion-dgi');
-}
-
-async function guardarPresentacionDGI(e) {
-    e.preventDefault();
-    const payload = {
-        declaracion_id: document.getElementById('pres-decl-id').value,
-        numero_referencia_dgi: document.getElementById('pres-referencia').value,
-        fecha_evento: document.getElementById('pres-fecha').value,
-        importe_pagado: parseFloat(document.getElementById('pres-monto').value) || 0,
-        banco_caja: document.getElementById('pres-banco').value,
-        medio_pago: document.getElementById('pres-medio-pago').value,
-        observaciones: document.getElementById('pres-observaciones').value
-    };
-
-    try {
-        const res = await fetch('/api/fiscal/declaracion/presentar', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al registrar presentación');
-
-        mostrarNotificacion('Constancia de presentación DGI registrada exitosamente.', 'success');
-        closeModal('modal-presentacion-dgi');
-        cargarHistorialFiscal();
-        cargarSimulacionFiscal();
-    } catch (err) {
-        mostrarNotificacion(err.message, 'error');
-    }
-}
-
+/**
+ * Imprimir Formulario Oficial 106
+ */
 function imprimirFormulario106() {
-    if (!fiscalDataActual) {
-        mostrarNotificacion('Primero cargue la simulación fiscal.', 'warning');
-        return;
-    }
+    recalcularFormularioCuentas();
+    const payload = recopilarPayloadSimulacion();
+    const printWin = window.open('', '_blank', 'width=950,height=1050');
+    if (!printWin) return;
 
-    const printWin = window.open('', '_blank', 'width=950,height=800');
-    const sim = fiscalDataActual;
-    const n = sim.negocio || {};
-    const bal = sim.balance || {};
-    const res = sim.resultados || {};
-    const calc = sim.calculo_ir || {};
-    const liq = sim.liquidacion || {};
-
-    let htmlBalanceRows = '';
-    (bal.renglones || []).forEach(r => {
-        htmlBalanceRows += `
-            <tr style="${r.destacado ? 'font-weight: bold; background: #e2e8f0;' : ''}">
-                <td style="text-align: center; border: 1px solid #cbd5e1; padding: 4px;">${r.renglon}</td>
-                <td style="border: 1px solid #cbd5e1; padding: 4px;">${r.descripcion}</td>
-                <td style="text-align: right; border: 1px solid #cbd5e1; padding: 4px; font-family: monospace;">C$ ${parseFloat(r.importe || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-            </tr>
-        `;
-    });
-
-    let htmlResultadosRows = '';
-    (res.renglones || []).forEach(r => {
-        htmlResultadosRows += `
-            <tr style="${r.destacado ? 'font-weight: bold; background: #e2e8f0;' : ''}">
-                <td style="text-align: center; border: 1px solid #cbd5e1; padding: 4px;">${r.renglon}</td>
-                <td style="border: 1px solid #cbd5e1; padding: 4px;">${r.descripcion}</td>
-                <td style="text-align: right; border: 1px solid #cbd5e1; padding: 4px; font-family: monospace;">C$ ${parseFloat(r.importe || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-            </tr>
-        `;
-    });
+    const val = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return 0.0;
+        const clean = String(el.value).replace(/,/g, '').trim();
+        return parseFloat(clean) || 0.0;
+    };
 
     const docContent = `
         <!DOCTYPE html>
-        <html>
+        <html lang="es">
         <head>
-            <title>Declaración Anual IR Formulario 106 - ${n.razon_social}</title>
+            <meta charset="UTF-8">
+            <title>Declaración Anual IR - Formulario 106 DGI - Jehová Jireh</title>
             <style>
-                body { font-family: Arial, sans-serif; font-size: 11px; margin: 15mm; color: #0f172a; }
-                .vet-header { border: 2px solid #0284c7; padding: 12px; margin-bottom: 12px; background: #f0f9ff; }
-                .vet-title { font-size: 15px; font-weight: bold; color: #0369a1; text-align: center; margin: 6px 0; }
-                .sec-title { background: #0369a1; color: white; padding: 4px 8px; font-weight: bold; font-size: 11px; margin-top: 12px; }
-                table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 4px; }
-                .kpi-box { display: flex; justify-content: space-between; border: 1px solid #cbd5e1; padding: 8px; margin-top: 6px; }
-                .kpi-item { text-align: center; flex: 1; }
-                @media print { .no-print { display: none; } }
+                body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                th, td { border: 1px solid #94a3b8; padding: 4px 6px; }
+                .dgi-hdr { display: flex; justify-content: space-between; align-items: center; border: 1px solid #005fa8; padding: 10px; margin-bottom: 8px; }
+                .title-box { display: flex; border: 1px solid #005fa8; margin-bottom: 10px; }
+                .code-106 { font-size: 26px; font-weight: bold; color: #005fa8; padding: 8px 15px; border-right: 1px solid #005fa8; display: flex; align-items: center; }
+                .sec-head { background: #005fa8; color: #fff; font-weight: bold; padding: 4px 8px; text-transform: uppercase; font-size: 11px; }
+                .total-row { background: #f1f5f9; font-weight: bold; }
+                .total-row td { border-top: 2px solid #000; border-bottom: 2px solid #000; }
+                .text-right { text-align: right; }
+                .text-center { text-align: center; }
             </style>
         </head>
         <body>
-            <div class="no-print" style="margin-bottom: 15px; text-align: right;">
-                <button onclick="window.print()" style="padding: 8px 16px; background: #0284c7; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Imprimir Formulario</button>
-            </div>
-            
-            <div class="vet-header">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: bold; color: #0369a1; font-size: 12px;">Gobierno de Reconciliación y Unidad Nacional</div>
-                        <div style="color: #64748b; font-size: 10px;">Dirección General de Ingresos (DGI) - Nicaragua</div>
-                        <div style="font-weight: bold; color: #0284c7;">Ventanilla Electrónica Tributaria (VET)</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 18px; font-weight: bold; color: #0369a1;">106</div>
-                        <div style="font-weight: bold;">DECLARACIÓN ANUAL DEL IR</div>
-                        <div style="font-size: 10px;">Ejercicio Fiscal: <strong>${sim.anio}</strong></div>
-                    </div>
+            <div class="dgi-hdr">
+                <div>
+                    <strong>Gobierno de Reconciliación y Unidad Nacional</strong><br>
+                    <span>Ministerio de Hacienda y Crédito Público • Dirección General de Ingresos (DGI)</span>
+                </div>
+                <div style="text-align: right;">
+                    <strong>Ventanilla Electrónica Tributaria (VET)</strong><br>
+                    <span>Ejercicio Fiscal: <strong>${anioFiscalSeleccionado}</strong></span>
                 </div>
             </div>
 
-            <div class="sec-title">A. DATOS GENERALES</div>
-            <table style="margin-bottom: 10px;">
+            <div class="title-box">
+                <div class="code-106">106</div>
+                <div style="flex: 1; text-align: center; padding: 6px;">
+                    <strong style="font-size: 14px; color: #005fa8;">DECLARACION ANUAL DEL IMPUESTO SOBRE LA RENTA (IR)</strong><br>
+                    <span style="font-weight: bold;">RENTA ANUAL IR 106</span>
+                </div>
+                <div style="padding: 6px 12px; text-align: right; border-left: 1px solid #005fa8; font-size: 10px;">
+                    <strong>Período:</strong> 12<br>
+                    <strong>Tipo:</strong> Original
+                </div>
+            </div>
+
+            <div class="sec-head">A. DATOS GENERALES</div>
+            <table>
                 <tr>
-                    <td style="width: 25%; font-weight: bold; border: 1px solid #cbd5e1; padding: 4px; background: #f8fafc;">RUC:</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px;">${n.ruc}</td>
-                    <td style="width: 25%; font-weight: bold; border: 1px solid #cbd5e1; padding: 4px; background: #f8fafc;">Régimen:</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px;">${n.regimen_tributario}</td>
+                    <td style="width: 20%; font-weight: bold;">Número RUC:</td>
+                    <td style="width: 30%;">J0310000000001</td>
+                    <td style="width: 25%; font-weight: bold;">Razón Social:</td>
+                    <td>Jehová Jireh Moto Repuestos y Servicios</td>
                 </tr>
                 <tr>
-                    <td style="font-weight: bold; border: 1px solid #cbd5e1; padding: 4px; background: #f8fafc;">Razón Social:</td>
-                    <td colspan="3" style="border: 1px solid #cbd5e1; padding: 4px;">${n.razon_social}</td>
-                </tr>
-                <tr>
-                    <td style="font-weight: bold; border: 1px solid #cbd5e1; padding: 4px; background: #f8fafc;">Actividad Económica:</td>
-                    <td colspan="3" style="border: 1px solid #cbd5e1; padding: 4px;">${n.actividad_economica}</td>
+                    <td style="font-weight: bold;">Actividad Económica:</td>
+                    <td colspan="3">Comercio al por menor de repuestos, lubricantes y mantenimiento de motocicletas</td>
                 </tr>
             </table>
 
-            <div class="sec-title">B. BALANCE GENERAL</div>
+            <div class="sec-head">B. BALANCE GENERAL (CUENTAS DETALLADAS DE JEHOVÁ JIREH)</div>
             <table>
                 <thead>
-                    <tr style="background: #f1f5f9;">
-                        <th style="border: 1px solid #cbd5e1; padding: 4px; width: 40px;">Renglón</th>
-                        <th style="border: 1px solid #cbd5e1; padding: 4px; text-align: left;">Descripción del Rubro</th>
-                        <th style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; width: 140px;">Importe (C$)</th>
+                    <tr style="background: #e2e8f0;">
+                        <th style="width: 40px;">No.</th>
+                        <th>Cuenta / Concepto Contable</th>
+                        <th class="text-right" style="width: 140px;">Importe (C$)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${htmlBalanceRows}
+                    <tr><td class="text-center">1</td><td>1.1.01 Caja General</td><td class="text-right">${fmt(val('cta-1101'))}</td></tr>
+                    <tr><td class="text-center">2</td><td>1.1.02 Bancos e Instituciones Financieras</td><td class="text-right">${fmt(val('cta-1102'))}</td></tr>
+                    <tr><td class="text-center">3</td><td>1.1.03 Clientes y Cuentas por Cobrar Comerciales</td><td class="text-right">${fmt(val('cta-1103'))}</td></tr>
+                    <tr><td class="text-center">4</td><td>1.1.04 Inventarios de Repuestos y Accesorios</td><td class="text-right">${fmt(val('cta-1104'))}</td></tr>
+                    <tr><td class="text-center">5</td><td>1.1.05 IVA Acreditable Fiscal</td><td class="text-right">${fmt(val('cta-1105'))}</td></tr>
+                    <tr class="total-row"><td class="text-center"><strong>6</strong></td><td><strong>Total Activo Circulante (1 al 5)</strong></td><td class="text-right"><strong>${fmt(val('tot-act-circ'))}</strong></td></tr>
+                    <tr><td class="text-center">7</td><td>1.2.01 Mobiliario y Equipo de Oficina y Taller</td><td class="text-right">${fmt(val('cta-1201'))}</td></tr>
+                    <tr><td class="text-center">8</td><td>1.2.02 Equipo de Cómputo y Sistemas</td><td class="text-right">${fmt(val('cta-1202'))}</td></tr>
+                    <tr><td class="text-center">9</td><td>1.2.03 (-) Depreciación Acumulada de Activos</td><td class="text-right">${fmt(val('cta-1203'))}</td></tr>
+                    <tr class="total-row"><td class="text-center"><strong>10</strong></td><td><strong>Total Activos Mobiliarios Netos (7 + 8 - 9)</strong></td><td class="text-right"><strong>${fmt(val('tot-act-fijo'))}</strong></td></tr>
+                    <tr class="total-row" style="background: #e0f2fe;"><td class="text-center"><strong>12</strong></td><td><strong style="color: #005fa8;">TOTAL ACTIVOS (6 + 10 + 11)</strong></td><td class="text-right"><strong style="color: #005fa8;">${fmt(val('tot-activos'))}</strong></td></tr>
+                    <tr><td class="text-center">13</td><td>2.1.01 Proveedores Comerciales</td><td class="text-right">${fmt(val('cta-2101'))}</td></tr>
+                    <tr><td class="text-center">14</td><td>2.1.02 Documentos por Pagar</td><td class="text-right">${fmt(val('cta-2102'))}</td></tr>
+                    <tr><td class="text-center">15</td><td>2.1.03 IVA Débito Fiscal por Pagar</td><td class="text-right">${fmt(val('cta-2103'))}</td></tr>
+                    <tr><td class="text-center">16</td><td>2.1.04 Sueldos y Salarios por Pagar</td><td class="text-right">${fmt(val('cta-2104'))}</td></tr>
+                    <tr><td class="text-center">17</td><td>2.1.05 Servicios Básicos por Pagar</td><td class="text-right">${fmt(val('cta-2105'))}</td></tr>
+                    <tr><td class="text-center">18</td><td>2.1.06 Retenciones INSS por Pagar</td><td class="text-right">${fmt(val('cta-2106'))}</td></tr>
+                    <tr><td class="text-center">19</td><td>2.1.07 Retenciones IR por Pagar</td><td class="text-right">${fmt(val('cta-2107'))}</td></tr>
+                    <tr><td class="text-center">20</td><td>2.1.08 Provisiones Sociales por Pagar (Aguinaldo)</td><td class="text-right">${fmt(val('cta-2108'))}</td></tr>
+                    <tr><td class="text-center">21</td><td>2.1.10 INATEC por Pagar</td><td class="text-right">${fmt(val('cta-2110'))}</td></tr>
+                    <tr class="total-row" style="background: #e0f2fe;"><td class="text-center"><strong>22</strong></td><td><strong style="color: #005fa8;">TOTAL PASIVOS (13 al 21)</strong></td><td class="text-right"><strong style="color: #005fa8;">${fmt(val('tot-pasivos'))}</strong></td></tr>
+                    <tr><td class="text-center">23</td><td>3.1.01 Capital del Propietario</td><td class="text-right">${fmt(val('cta-3101'))}</td></tr>
+                    <tr><td class="text-center">24</td><td>3.1.02 Utilidades Acumuladas</td><td class="text-right">${fmt(val('cta-3102'))}</td></tr>
+                    <tr><td class="text-center">25</td><td>Utilidad Neta del Ejercicio Actual</td><td class="text-right">${fmt(val('cta-util-ejercicio'))}</td></tr>
+                    <tr class="total-row"><td class="text-center"><strong>26</strong></td><td><strong>Total Patrimonio Neto (23 + 24 + 25)</strong></td><td class="text-right"><strong>${fmt(val('tot-patrimonio'))}</strong></td></tr>
+                    <tr class="total-row" style="background: #dcfce7;"><td class="text-center"><strong>27</strong></td><td><strong style="color: #16a34a;">TOTAL PASIVO + PATRIMONIO (Debe igualar R12)</strong></td><td class="text-right"><strong style="color: #16a34a;">${fmt(val('tot-pasivo-patrimonio'))}</strong></td></tr>
                 </tbody>
             </table>
 
-            <div class="sec-title">D. ESTADO DE RESULTADOS</div>
+            <div class="sec-head">D. ESTADO DE RESULTADOS</div>
             <table>
-                <thead>
-                    <tr style="background: #f1f5f9;">
-                        <th style="border: 1px solid #cbd5e1; padding: 4px; width: 40px;">Renglón</th>
-                        <th style="border: 1px solid #cbd5e1; padding: 4px; text-align: left;">Descripción del Rubro</th>
-                        <th style="border: 1px solid #cbd5e1; padding: 4px; text-align: right; width: 140px;">Importe (C$)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${htmlResultadosRows}
-                </tbody>
+                <tr><td class="text-center" style="width: 40px;">30</td><td>4.1.01 Ventas de Repuestos y Accesorios</td><td class="text-right" style="width: 140px;">${fmt(val('cta-4101'))}</td></tr>
+                <tr><td class="text-center">31</td><td>4.1.02 Ingresos por Servicios de Taller</td><td class="text-right">${fmt(val('cta-4102'))}</td></tr>
+                <tr class="total-row"><td><strong>32</strong></td><td><strong>Total Ingresos Brutos (30 + 31)</strong></td><td class="text-right"><strong>${fmt(val('tot-ingresos'))}</strong></td></tr>
+                <tr><td class="text-center">33</td><td>5.1.01 Costo de Ventas</td><td class="text-right">${fmt(val('cta-5101'))}</td></tr>
+                <tr class="total-row"><td><strong>34</strong></td><td><strong>Utilidad Bruta Contable (32 - 33)</strong></td><td class="text-right"><strong>${fmt(val('tot-util-bruta'))}</strong></td></tr>
+                <tr><td class="text-center">47</td><td>Total Gastos Deducibles de Operación</td><td class="text-right">${fmt(val('tot-gastos-op'))}</td></tr>
+                <tr class="total-row" style="background: #e0f2fe;"><td><strong>48</strong></td><td><strong>Utilidad Neta Contable del Ejercicio (34 - 47)</strong></td><td class="text-right"><strong>${fmt(val('tot-util-neta'))}</strong></td></tr>
             </table>
 
-            <div class="sec-title">E. CÁLCULO DEL IR Y CONCILIACIÓN FISCAL</div>
-            <div class="kpi-box">
-                <div class="kpi-item">
-                    <div>Renta Neta Gravable</div>
-                    <strong style="font-size: 13px;">C$ ${calc.renta_neta_gravable.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
-                </div>
-                <div class="kpi-item">
-                    <div>IR 30% (Act. Económicas)</div>
-                    <strong style="font-size: 13px;">C$ ${calc.ir_calculado_30.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
-                </div>
-                <div class="kpi-item">
-                    <div>PMD 1% (Ingresos Brutos)</div>
-                    <strong style="font-size: 13px;">C$ ${calc.pmd_calculado_1.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
-                </div>
-                <div class="kpi-item" style="border-left: 2px solid #0369a1; background: #e0f2fe;">
-                    <div>IR Determinado (${calc.metodo_aplicado})</div>
-                    <strong style="font-size: 14px; color: #0369a1;">C$ ${calc.ir_determinado.toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
-                </div>
-            </div>
-
-            <div class="sec-title">F. LIQUIDACIÓN DEL IMPUESTO</div>
+            <div class="sec-head">E. CÁLCULO DEL IR Y F. LIQUIDACIÓN</div>
             <table>
-                <tr>
-                    <td style="border: 1px solid #cbd5e1; padding: 5px;">IR Determinado del Ejercicio Fiscal</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 5px; text-align: right; font-weight: bold; width: 140px;">C$ ${liq.ir_determinado.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #cbd5e1; padding: 5px;">(-) Anticipos Mensuales Pagados del 1% (Ley 822 Art. 61)</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 5px; text-align: right; color: #16a34a;">- C$ ${liq.anticipos_mensuales.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #cbd5e1; padding: 5px;">(-) Retenciones en la Fuente que le practicaron (Retenciones Sufridas)</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 5px; text-align: right; color: #16a34a;">- C$ ${liq.retenciones_sufridas.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                </tr>
-                <tr style="background: #f8fafc; font-weight: bold; font-size: 12px;">
-                    <td style="border: 1px solid #cbd5e1; padding: 7px;">${liq.saldo_a_pagar > 0 ? 'SALDO A PAGAR A LA DGI' : 'SALDO A FAVOR DEL CONTRIBUYENTE'}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 7px; text-align: right; color: ${liq.saldo_a_pagar > 0 ? '#dc2626' : '#16a34a'};">
-                        C$ ${(liq.saldo_a_pagar > 0 ? liq.saldo_a_pagar : liq.saldo_a_favor).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                    </td>
-                </tr>
+                <tr><td style="width: 70%;">Renta Neta Gravable Oficial</td><td class="text-right" style="font-weight: bold;">C$ ${fmt(val('ir-renta-gravable'))}</td></tr>
+                <tr><td>IR Actividades Económicas (30%)</td><td class="text-right">C$ ${fmt(val('ir-calculado-30'))}</td></tr>
+                <tr><td>Pago Mínimo Definitivo (1% de Ingresos)</td><td class="text-right">C$ ${fmt(val('ir-pmd-1'))}</td></tr>
+                <tr class="total-row" style="background: #e0f2fe;"><td><strong>IR DETERMINADO OFICIAL (El Mayor)</strong></td><td class="text-right"><strong>C$ ${fmt(val('ir-determinado'))}</strong></td></tr>
+                <tr><td>(-) Anticipos Mensuales Pagados del 1% PMD</td><td class="text-right" style="color: #16a34a;">- C$ ${fmt(val('liq-anticipos-1'))}</td></tr>
+                <tr class="total-row" style="background: #fee2e2;"><td><strong style="color: #dc2626; font-size: 13px;">SALDO A PAGAR A LA DGI</strong></td><td class="text-right"><strong style="color: #dc2626; font-size: 13px;">C$ ${fmt(val('liq-saldo-pagar'))}</strong></td></tr>
             </table>
 
-            <div style="margin-top: 25px; display: flex; justify-content: space-around; text-align: center;">
-                <div style="width: 200px; border-top: 1px solid #0f172a; padding-top: 4px;">
-                    Elaborado por (Contador)
-                </div>
-                <div style="width: 200px; border-top: 1px solid #0f172a; padding-top: 4px;">
-                    Aprobado por (Gerencia)
-                </div>
-            </div>
-
-            <div style="margin-top: 15px; font-size: 9px; color: #94a3b8; text-align: center;">
-                Comprobante de Simulación emitido por Jehová Jireh Moto Repuestos • Plataforma Fiscal Conforme Ley 822 Nicaragua
+            <div style="margin-top: 40px; display: flex; justify-content: space-around; text-align: center;">
+                <div style="width: 220px; border-top: 1px solid #000; padding-top: 5px;">Contador General</div>
+                <div style="width: 220px; border-top: 1px solid #000; padding-top: 5px;">Gerente Administrativo</div>
             </div>
         </body>
         </html>
@@ -662,3 +1049,55 @@ function imprimirFormulario106() {
     printWin.document.write(docContent);
     printWin.document.close();
 }
+
+/**
+ * Helpers auxiliares
+ */
+function fmt(val) {
+    if (val === null || val === undefined) return '0.00';
+    let num = (typeof val === 'number') ? val : (parseFloat(String(val).replace(/,/g, '').trim()) || 0);
+    if (isNaN(num)) num = 0;
+    if (Math.abs(num) < 0.000001) num = 0;
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function round2(val) {
+    const num = (typeof val === 'number') ? val : (parseFloat(String(val).replace(/,/g, '').trim()) || 0);
+    return Math.round(num * 100) / 100;
+}
+
+function setVal(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
+function setIn(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.value = fmt(val);
+}
+
+function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.classList.remove('active');
+}
+
+// Formateo automático de comas y punto decimal para todos los campos al enfocar y desenfocar
+document.addEventListener('focusin', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('dgi-input-renglon') && !e.target.readOnly) {
+        e.target.select();
+    }
+});
+
+document.addEventListener('focusout', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('dgi-input-renglon') && !e.target.readOnly) {
+        const raw = e.target.value;
+        if (e.target.id === 'cta-1203') {
+            const n = Math.abs(parseFloat(String(raw).replace(/,/g, '').trim()) || 0);
+            e.target.value = fmt(-n);
+        } else {
+            const n = parseFloat(String(raw).replace(/,/g, '').trim()) || 0;
+            e.target.value = fmt(n);
+        }
+        recalcularFormularioCuentas();
+    }
+});

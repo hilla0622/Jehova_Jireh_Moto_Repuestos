@@ -584,6 +584,63 @@ body {
     background-color: var(--bg-card-hover);
 }
 
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.btn-outline:hover {
+    background-color: var(--bg-card-hover);
+    color: var(--text-main);
+}
+
+.btn-outline.active {
+    background-color: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Switcher de Métodos de Flujo de Efectivo (Directo / Indirecto) */
+.flujo-metodo-switcher {
+    background: rgba(0, 0, 0, 0.28);
+    padding: 4px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.flujo-metodo-switcher .btn {
+    border-radius: 6px !important;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.45rem 0.95rem;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.flujo-metodo-switcher .btn.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.flujo-metodo-switcher .btn.btn-outline {
+    background: transparent !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+}
+
+.flujo-metodo-switcher .btn.btn-outline:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
 /* Tabs Navigation */
 .tab-content {
     display: none;
@@ -1584,23 +1641,116 @@ body {
     padding-right: 0.5rem;
 }
 
-/* Printable Ticket Styles */
+/* ==========================================================================
+   REGLAS GLOBALES DE IMPRESIÓN (Tickets e Informes)
+   ========================================================================== */
 @media print {
-    body * {
-        visibility: hidden;
+    @page {
+        margin: 5mm;
+        size: auto;
+    }
+
+    /* Ocultar interfaz general de la app */
+    .app-layout,
+    .sidebar,
+    .topbar,
+    .navbar,
+    .nav-menu,
+    .modal-header,
+    .modal-footer,
+    .modal-close,
+    .btn,
+    button,
+    .ticket-no-print,
+    .no-print {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Modal en modo impresión: eliminar posición fija, overlay y restricciones de altura */
+    .modal {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        backdrop-filter: none !important;
+    }
+
+    .modal-content {
+        display: block !important;
+        position: static !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        animation: none !important;
+    }
+
+    .modal-body {
+        padding: 0 !important;
+        overflow: visible !important;
+        max-height: none !important;
+    }
+
+    /* Comprobante de venta (Ticket) */
+    #ticket-print-area {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: 380px !important;
+        margin: 0 auto !important;
+        padding: 5px !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: none !important;
     }
 
     #ticket-print-area,
     #ticket-print-area * {
-        visibility: visible;
+        visibility: visible !important;
+        color: #000000 !important;
     }
 
-    #ticket-print-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+    #ticket-print-area div[style*="overflow"] {
+        max-height: none !important;
+        overflow: visible !important;
         box-shadow: none !important;
+        border: none !important;
+        padding: 0.25rem !important;
+    }
+
+    /* Informe Ejecutivo */
+    #informe-ejecutivo-print-area {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 10mm !important;
+        box-shadow: none !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+    }
+
+    #informe-ejecutivo-print-area,
+    #informe-ejecutivo-print-area * {
+        visibility: visible !important;
     }
 }
 
@@ -2063,26 +2213,7 @@ body {
     color: #1e293b !important;
 }
 
-/* Reglas de impresión para informe ejecutivo */
-@media print {
-    body * {
-        visibility: hidden !important;
-    }
-    #informe-ejecutivo-print-area, #informe-ejecutivo-print-area * {
-        visibility: visible !important;
-    }
-    #informe-ejecutivo-print-area {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 10mm !important;
-        box-shadow: none !important;
-        background: #ffffff !important;
-        color: #0f172a !important;
-    }
-}
+/* Reglas de impresión para informe ejecutivo integradas en la sección global de @media print */
 
 /* ==============================================================================
    MÓDULO TRIBUTARIO: DECLARACIÓN ANUAL IR (FORMULARIO 106 - VET DGI)

@@ -26,8 +26,6 @@ def register_fiscal_routes(app):
     @app.route('/api/fiscal/info', methods=['GET'])
     @fiscal_role_required
     def api_fiscal_info():
-        conn = app.config.get('DB_CONN_FUNC', None)
-        # Import local get_db_connection
         from app import get_db_connection
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -61,6 +59,7 @@ def register_fiscal_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/fiscal/guardar', methods=['POST'])
     @app.route('/api/fiscal/declaracion/guardar', methods=['POST'])
     @fiscal_role_required
     def api_fiscal_guardar_declaracion():
@@ -70,12 +69,15 @@ def register_fiscal_routes(app):
         try:
             data = request.json or {}
             anio = int(data.get("anio", 2026))
-            es_aprobada = bool(data.get("aprobar", False))
+            es_aprobada = bool(data.get("es_aprobada", data.get("aprobar", False)))
 
-            saldos = fiscal_service.obtener_saldos_contables_ejercicio(cursor, anio)
-            ajustes = fiscal_service.obtener_ajustes_ejercicio(cursor, anio)
-            acreds = fiscal_service.obtener_acreditamientos_ejercicio(cursor, anio)
-            sim = fiscal_service.mapear_formulario_106(saldos, ajustes, acreds)
+            if "simulacion" in data and isinstance(data["simulacion"], dict):
+                sim = data["simulacion"]
+            else:
+                saldos = fiscal_service.obtener_saldos_contables_ejercicio(cursor, anio)
+                ajustes = fiscal_service.obtener_ajustes_ejercicio(cursor, anio)
+                acreds = fiscal_service.obtener_acreditamientos_ejercicio(cursor, anio)
+                sim = fiscal_service.mapear_formulario_106(saldos, ajustes, acreds)
 
             decl_id = fiscal_service.guardar_declaracion_completa(
                 cursor, sim, session['user']['id'], es_aprobada=es_aprobada
@@ -84,7 +86,7 @@ def register_fiscal_routes(app):
             return jsonify({
                 "success": True,
                 "declaracion_id": decl_id,
-                "mensaje": f"Declaración IR {anio} guardada exitosamente como {'Aprobada' if es_aprobada else 'Borrador'}."
+                "mensaje": f"Declaración Anual IR {anio} guardada exitosamente como {'Aprobada' if es_aprobada else 'Borrador'}."
             })
         except Exception as e:
             conn.rollback()
@@ -92,6 +94,7 @@ def register_fiscal_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/fiscal/historial', methods=['GET'])
     @app.route('/api/fiscal/declaraciones', methods=['GET'])
     @fiscal_role_required
     def api_fiscal_listar_declaraciones():
@@ -100,10 +103,11 @@ def register_fiscal_routes(app):
         cursor = conn.cursor()
         try:
             decls = fiscal_service.listar_declaraciones_guardadas(cursor)
-            return jsonify(decls)
+            return jsonify({"declaraciones": decls})
         finally:
             conn.close()
 
+    @app.route('/api/fiscal/presentar', methods=['POST'])
     @app.route('/api/fiscal/declaracion/presentar', methods=['POST'])
     @fiscal_role_required
     def api_fiscal_presentar_declaracion():
@@ -125,6 +129,7 @@ def register_fiscal_routes(app):
             conn.close()
 
     @app.route('/api/fiscal/acreditamientos', methods=['GET', 'POST'])
+    @app.route('/api/fiscal/acreditamiento', methods=['POST'])
     @fiscal_role_required
     def api_fiscal_acreditamientos():
         from app import get_db_connection
@@ -134,7 +139,7 @@ def register_fiscal_routes(app):
             if request.method == 'GET':
                 anio = int(request.args.get('anio', 2026))
                 filas = fiscal_service.obtener_acreditamientos_ejercicio(cursor, anio)
-                return jsonify(filas)
+                return jsonify({"acreditamientos": filas})
 
             # POST: Nuevo acreditamiento
             data = request.json or {}
@@ -151,7 +156,20 @@ def register_fiscal_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/fiscal/acreditamientos/<int:anio>', methods=['GET'])
+    @fiscal_role_required
+    def api_fiscal_acreditamientos_anio(anio):
+        from app import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            filas = fiscal_service.obtener_acreditamientos_ejercicio(cursor, anio)
+            return jsonify({"acreditamientos": filas})
+        finally:
+            conn.close()
+
     @app.route('/api/fiscal/acreditamientos/<int:id>', methods=['DELETE'])
+    @app.route('/api/fiscal/acreditamiento/<int:id>', methods=['DELETE'])
     @fiscal_role_required
     def api_fiscal_eliminar_acreditamiento(id):
         from app import get_db_connection
@@ -168,6 +186,7 @@ def register_fiscal_routes(app):
             conn.close()
 
     @app.route('/api/fiscal/ajustes', methods=['POST'])
+    @app.route('/api/fiscal/ajuste', methods=['POST'])
     @fiscal_role_required
     def api_fiscal_guardar_ajuste():
         from app import get_db_connection
@@ -181,5 +200,17 @@ def register_fiscal_routes(app):
         except Exception as e:
             conn.rollback()
             return jsonify({"error": str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/fiscal/ajustes/<int:anio>', methods=['GET'])
+    @fiscal_role_required
+    def api_fiscal_ajustes_anio(anio):
+        from app import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            filas = fiscal_service.obtener_ajustes_ejercicio(cursor, anio)
+            return jsonify({"ajustes": filas})
         finally:
             conn.close()

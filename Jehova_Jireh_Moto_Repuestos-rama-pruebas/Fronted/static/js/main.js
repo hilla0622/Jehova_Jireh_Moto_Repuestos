@@ -861,7 +861,131 @@ function concluirSinImprimirTicket(codigoVenta) {
 }
 
 function imprimirTicketActual() {
-    window.print();
+    const v = ventaSeleccionadaActual;
+    const printArea = document.getElementById('ticket-print-area');
+
+    let ticketHtml = '';
+
+    if (v && v.detalles && Array.isArray(v.detalles) && v.detalles.length > 0) {
+        let itemsRows = '';
+        v.detalles.forEach(d => {
+            const pu = typeof d.precio_unitario === 'number' ? d.precio_unitario.toFixed(2) : Number(d.precio_unitario || 0).toFixed(2);
+            const st = typeof d.subtotal === 'number' ? d.subtotal.toFixed(2) : Number(d.subtotal || 0).toFixed(2);
+            itemsRows += `
+                <tr>
+                    <td style="padding: 4px 2px; font-size: 11px; text-align: left; vertical-align: top; word-break: break-word;">
+                        <strong>${d.producto_nombre || 'Producto'}</strong>
+                    </td>
+                    <td style="padding: 4px 2px; text-align: center; font-size: 11px; vertical-align: top; white-space: nowrap;">${d.cantidad}</td>
+                    <td style="padding: 4px 2px; text-align: right; font-size: 11px; vertical-align: top; white-space: nowrap;">$${pu}</td>
+                    <td style="padding: 4px 2px; text-align: right; font-size: 11px; font-weight: bold; vertical-align: top; white-space: nowrap;">$${st}</td>
+                </tr>
+            `;
+        });
+
+        const totalFormatted = typeof v.total === 'number' ? v.total.toFixed(2) : Number(v.total || 0).toFixed(2);
+
+        ticketHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket - ${v.codigo_venta}</title>
+    <style>
+        @page { size: auto; margin: 4mm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Courier New', Courier, monospace, monospace; color: #000; background: #fff; width: 100%; max-width: 320px; margin: 0 auto; padding: 10px 4px; }
+        .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 8px; }
+        .header h2 { font-size: 16px; font-weight: 900; margin-bottom: 2px; letter-spacing: 0.5px; }
+        .header .sub { font-size: 11px; font-weight: 700; }
+        .header .contact { font-size: 10px; color: #222; margin-top: 2px; }
+        .meta-info { font-size: 11px; margin-bottom: 8px; line-height: 1.45; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        th { border-bottom: 1px solid #000; font-size: 10px; font-weight: bold; padding: 4px 2px; color: #000; }
+        td { border-bottom: 1px dashed #bbb; }
+        .total-box { border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 6px 0; text-align: right; font-size: 14px; font-weight: 900; margin-top: 4px; }
+        .footer { text-align: center; font-size: 10px; color: #333; margin-top: 10px; padding-top: 6px; border-top: 1px dashed #aaa; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>JEHOVÁ JIREH</h2>
+        <div class="sub">MOTO REPUESTOS - MASATEPE</div>
+        <div class="contact">Atención de Calidad y Repuestos Originales</div>
+        <div class="contact">Tel: +505 8899-0000 | Masatepe, Masaya</div>
+    </div>
+    <div class="meta-info">
+        <div><strong>COMPROBANTE DE VENTA:</strong> ${v.codigo_venta}</div>
+        <div><strong>Fecha:</strong> ${v.fecha}</div>
+        <div><strong>Cliente:</strong> ${v.cliente || 'Cliente General'}</div>
+        <div><strong>Vendedor:</strong> ${v.vendedor || 'Sistema'}</div>
+        <div><strong>Forma de Pago:</strong> ${v.forma_pago || 'Efectivo'}</div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th style="text-align: left;">DETALLE</th>
+                <th style="text-align: center; width: 38px;">CANT</th>
+                <th style="text-align: right; width: 62px;">P.U</th>
+                <th style="text-align: right; width: 68px;">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>${itemsRows}</tbody>
+    </table>
+    <div class="total-box">TOTAL TOTAL: $${totalFormatted}</div>
+    <div class="footer">¡Gracias por su compra en Jehová Jireh! 🙏<br>Conserve este comprobante para cualquier reclamo.</div>
+</body>
+</html>`;
+    } else if (printArea) {
+        const clon = printArea.cloneNode(true);
+        const elementosNoPrint = clon.querySelectorAll('.ticket-no-print, button, .modal-close');
+        elementosNoPrint.forEach(el => el.remove());
+        ticketHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket de Venta</title>
+    <style>
+        @page { size: auto; margin: 4mm; }
+        body { font-family: monospace, sans-serif; color: #000; background: #fff; width: 100%; max-width: 320px; margin: 0 auto; padding: 10px 4px; }
+        div[style*="overflow"] { max-height: none !important; overflow: visible !important; box-shadow: none !important; }
+    </style>
+</head>
+<body>${clon.innerHTML}</body>
+</html>`;
+    }
+
+    if (ticketHtml) {
+        let printIframe = document.getElementById('ticket-print-iframe');
+        if (!printIframe) {
+            printIframe = document.createElement('iframe');
+            printIframe.id = 'ticket-print-iframe';
+            printIframe.style.position = 'fixed';
+            printIframe.style.right = '0';
+            printIframe.style.bottom = '0';
+            printIframe.style.width = '0';
+            printIframe.style.height = '0';
+            printIframe.style.border = '0';
+            printIframe.style.visibility = 'hidden';
+            document.body.appendChild(printIframe);
+        }
+
+        const doc = printIframe.contentWindow.document;
+        doc.open();
+        doc.write(ticketHtml);
+        doc.close();
+
+        setTimeout(() => {
+            try {
+                printIframe.contentWindow.focus();
+                printIframe.contentWindow.print();
+            } catch (err) {
+                console.warn('Fallback a window.print() debido a restricción de iframe:', err);
+                window.print();
+            }
+        }, 250);
+    } else {
+        window.print();
+    }
 }
 
 // ==============================================================================

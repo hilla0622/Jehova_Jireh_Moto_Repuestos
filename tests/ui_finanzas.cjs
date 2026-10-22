@@ -43,7 +43,7 @@ const fs = require('node:fs');
         await page.locator('#conc-cuenta-banco option[value="2"]').waitFor({state: 'attached'});
         assert.equal(await page.locator('#conc-input-saldo-banco').inputValue(), '');
         await page.locator('#conc-input-saldo-banco').fill('10000');
-        await page.locator('#conc-badge-cuadratura').getByText('Conciliación Cuadrada', {exact: false}).waitFor();
+        await page.locator('#conc-badge-cuadratura').getByText('Diferencia cero · revisión pendiente', {exact: true}).waitFor();
         if (output) await page.screenshot({path: path.join(output, 'conciliacion.png'), fullPage: true});
         const exported = await page.context().newPage();
         await exported.goto('http://127.0.0.1:5087/api/finanzas/reportes/exportar/flujo?start=2026-10-01&end=2026-10-31&metodo=Indirecto');

@@ -332,7 +332,10 @@ def calcular_conciliacion(libros, banco, partidas, corte):
         else:
             ajuste_banco += efecto
     diferencia = banco + ajuste_banco - libros - ajuste_libros
+    # Papel de trabajo aritmético del banco a libros (mismos ajustes, otra presentación).
+    puente = banco + ajuste_banco - ajuste_libros
     return serializable(dict(saldo_segun_libros=libros, saldo_segun_banco=banco,
                              saldo_libros_ajustado=libros + ajuste_libros,
                              saldo_banco_ajustado=banco + ajuste_banco, diferencia=diferencia,
+                             saldo_en_conciliacion=puente,
                              estado='Conciliada' if diferencia == 0 else 'Borrador'))

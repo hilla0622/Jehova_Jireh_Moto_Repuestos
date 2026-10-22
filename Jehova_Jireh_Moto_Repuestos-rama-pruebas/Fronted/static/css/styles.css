@@ -1097,17 +1097,86 @@ body {
 
 /* Printable Ticket Styles */
 @media print {
-    body * {
-        visibility: hidden;
+    @page {
+        margin: 5mm;
+        size: auto;
     }
-    #ticket-print-area, #ticket-print-area * {
-        visibility: visible;
+
+    .app-layout,
+    .sidebar,
+    .topbar,
+    .navbar,
+    .modal-header,
+    .modal-footer,
+    .modal-close,
+    .btn,
+    button,
+    .ticket-no-print,
+    .no-print {
+        display: none !important;
+        visibility: hidden !important;
     }
-    #ticket-print-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .modal {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+
+    .modal-content {
+        display: block !important;
+        position: static !important;
         box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        max-width: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .modal-body {
+        padding: 0 !important;
+        overflow: visible !important;
+        max-height: none !important;
+    }
+
+    #ticket-print-area {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: 380px !important;
+        margin: 0 auto !important;
+        padding: 5px !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+    }
+
+    #ticket-print-area, #ticket-print-area * {
+        visibility: visible !important;
+        color: #000000 !important;
+    }
+
+    #ticket-print-area div[style*="overflow"] {
+        max-height: none !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0.25rem !important;
     }
 }

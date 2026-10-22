@@ -234,7 +234,7 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
     r18_casa_matriz_sucursales = 0.00
     # Otros agentes no financieros (IVA por pagar 2.1.03, sueldos 2.1.04, serv 2.1.05, retenciones 2.1.06 y 2.1.07, provisiones 2.1.08)
     r19_otros_agentes_no_fin = round(
-        sal("2.1.03") + sal("2.1.04") + sal("2.1.05") + sal("2.1.06") + sal("2.1.07") + sal("2.1.08"), 2
+        sal("2.1.03") + sal("2.1.04") + sal("2.1.05") + sal("2.1.06") + sal("2.1.07") + sal("2.1.08") + sal("2.1.10"), 2
     )
     # Renglón 20: Pasivo Fijo Nacional (15 + 16 + 17 + 18 + 19)
     r20_pasivo_fijo_nacional = round(r15_dividendos_por_pagar_res + r16_inst_financieras_desarrollo + r17_resto_inst_financieras + r18_casa_matriz_sucursales + r19_otros_agentes_no_fin, 2)
@@ -427,7 +427,9 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
         },
         "ajustes": ajustes,
         "acreditamientos": acreds,
-        "validaciones": validaciones
+        "validaciones": validaciones,
+        "cuentas_balance": {k: float(v["saldo"]) for k, v in cb.items()},
+        "cuentas_resultados": {k: float(v["saldo"]) for k, v in cr.items()}
     }
 
 def obtener_acreditamientos_ejercicio(cursor, anio):
@@ -694,6 +696,10 @@ def listar_declaraciones_guardadas(cursor):
 
 def registrar_presentacion_dgi(cursor, data, usuario_id):
     decl_id = int(data.get("declaracion_id"))
+    cursor.execute("SELECT id FROM declaraciones_ir WHERE id = ?", (decl_id,))
+    declaration = cursor.fetchone()
+    if not declaration:
+        raise ValueError('No se encontró la declaración especificada.')
     num_referencia = data.get("numero_referencia_dgi", "").strip()
     fecha_evento = data.get("fecha_evento") or fecha_hoy_nicaragua()
     importe_pagado = float(data.get("importe_pagado", 0.0))

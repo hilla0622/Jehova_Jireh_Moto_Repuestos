@@ -1,0 +1,77 @@
+<div class="conc-workspace">
+    <header class="conc-heading">
+        <div><span class="conc-eyebrow">CONTROL DE CUENTAS · CIERRE MENSUAL</span><h3>Conciliación bancaria</h3><p>Compará lo que registró el banco con lo que registró tu empresa y explicá las diferencias.</p></div>
+        <span id="conc-estado-guardado" class="conc-chip">Sin cargar</span>
+    </header>
+    <div class="conc-periodo">
+        <label>Cuenta bancaria<select id="conc-cuenta-banco" class="form-control" onchange="cargarDatosConciliacion()"><option value="">Seleccionar cuenta bancaria</option></select></label>
+        <label>Mes<select id="conc-mes" class="form-control" onchange="cargarDatosConciliacion()">{% for nombre in ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] %}<option value="{{ loop.index }}">{{ nombre }}</option>{% endfor %}</select></label>
+        <label>Año<input id="conc-anio" class="form-control" type="number" min="1900" max="9999" value="2026" onchange="cargarDatosConciliacion()"></label>
+        <button type="button" class="btn btn-secondary" onclick="cargarDatosConciliacion()">Cargar período</button>
+    </div>
+    <div id="conc-mensaje" class="conc-notice" role="status" aria-live="polite">Seleccioná la cuenta y el mes que querés revisar.</div>
+    <fieldset id="conc-edicion" disabled>
+        <section class="conc-step">
+            <div class="conc-step-title"><span>1</span><div><h4>Reuní los dos estados de cuenta</h4><p id="conc-periodo-texto">Usá la misma cuenta y el mismo mes en ambos documentos.</p></div></div>
+            <div class="conc-saldos">
+                <label class="conc-stat">Saldo final del banco<input id="conc-input-saldo-banco" class="form-control" type="number" step="0.01" placeholder="Ej. 35500.00" oninput="recalcularConciliacionEnVivo()"><small>Copialo del extracto bancario, en C$.</small></label>
+                <div class="conc-stat">Saldo final de la empresa<strong id="conc-lbl-saldo-libros">—</strong><small>Calculado desde el Libro Mayor, en C$.</small></div>
+                <div class="conc-stat conc-stat-diff">Diferencia entre los saldos<strong id="conc-diferencia-original">—</strong><small>Banco menos empresa, antes de explicar las diferencias.</small></div>
+            </div>
+            <div class="conc-extracto-header">
+                <label>Saldo inicial del banco (C$)<input id="conc-saldo-inicial-banco" type="number" step="0.01" class="form-control" placeholder="Saldo al empezar el mes" oninput="renderComparacionConciliacion()"></label>
+                <p id="conc-control-extracto" aria-live="polite">Ingresá el saldo inicial y transcribí los movimientos del extracto.</p>
+            </div>
+            <details id="conc-agregar-extracto" class="conc-details"><summary>+ Agregar movimiento del banco</summary>
+                <form id="conc-form-banco" class="conc-form" onsubmit="agregarMovimientoBanco(event)">
+                    <label>Fecha<input id="conc-banco-fecha" type="date" class="form-control" required></label>
+                    <label class="conc-wide">Concepto<input id="conc-banco-concepto" class="form-control" maxlength="255" placeholder="Ej. Comisión bancaria" required></label>
+                    <label>Referencia<input id="conc-banco-ref" class="form-control" maxlength="100" placeholder="Documento o cheque"></label>
+                    <label>Movimiento<select id="conc-banco-tipo" class="form-control"><option value="retiro">Retiro (salida)</option><option value="deposito">Depósito (entrada)</option></select></label>
+                    <label>Monto (C$)<input id="conc-banco-monto" type="number" min="0.01" step="0.01" class="form-control" required></label>
+                    <button type="submit" class="btn btn-primary">Agregar al extracto</button>
+                </form>
+            </details>
+        </section>
+        <section class="conc-step">
+            <div class="conc-step-title"><span>2</span><div><h4>Compará movimiento por movimiento</h4><p>Depósitos del banco ↔ Debe de la empresa. Retiros del banco ↔ Haber de la empresa.</p></div></div>
+            <div class="conc-match-tools">
+                <button type="button" class="btn btn-secondary" onclick="vincularCoincidenciasConciliacion()">Marcar coincidencias exactas</button>
+                <button id="conc-vincular" type="button" class="btn btn-primary" onclick="vincularSeleccionConciliacion()" disabled>Vincular seleccionados</button>
+                <label class="conc-inline"><input id="conc-solo-pendientes" type="checkbox" onchange="renderComparacionConciliacion()"> Solo sin revisar</label>
+                <span id="conc-conteo" class="conc-chip">0 vinculados</span>
+            </div>
+            <p class="conc-help">Las coincidencias exactas requieren fecha, monto y sentido iguales, sin duplicados. Si la fecha o el concepto cambian, seleccioná un movimiento de cada lado y vinculalos después de revisar el soporte. Usá “Solo banco” o “Solo empresa” para explicar un movimiento ausente en el otro estado.</p>
+            <div class="conc-comparison">
+                <article class="conc-document"><header><span class="conc-eyebrow">DOCUMENTO DEL BANCO</span><h4>Estado de cuenta bancario</h4><p>Retiros, depósitos y saldo según el extracto.</p></header><div class="conc-table-scroll"><table class="conc-table"><thead><tr><th>Fecha / concepto</th><th>Retiros</th><th>Depósitos</th><th>Saldo</th><th>Revisión</th></tr></thead><tbody id="conc-tbody-banco"></tbody></table></div></article>
+                <article class="conc-document conc-company"><header><span class="conc-eyebrow">REGISTROS DE TU EMPRESA</span><h4>Auxiliar contable de bancos</h4><p>Debe = entradas · Haber = salidas. Importado del Libro Mayor.</p></header><div class="conc-table-scroll"><table class="conc-table"><thead><tr><th>Fecha / concepto</th><th>Debe (+)</th><th>Haber (−)</th><th>Saldo</th><th>Revisión</th></tr></thead><tbody id="conc-tbody-movimientos-libros"></tbody></table></div></article>
+            </div>
+        </section>
+        <section class="conc-step">
+            <div class="conc-step-title"><span>3</span><div><h4>Explicá las diferencias</h4><p>Cada movimiento que aparece en un solo estado queda en uno de estos cuatro grupos.</p></div></div>
+            <div id="conc-grupos" class="conc-groups"></div>
+            <details class="conc-details"><summary>Registrar otra diferencia o un error en libros</summary>
+                <p class="conc-help">Usá esta opción para pendientes anteriores o casos que no vinculaste a una fila. Registrá solo diferencias comprobadas; no agregués importes para forzar el resultado a cero.</p>
+                <form id="form-partida-transito" class="conc-form" onsubmit="agregarPartidaTransito(event)">
+                    <label class="conc-wide">¿Qué ocurrió?<select id="partida-tipo" class="form-control"><option value="Nota de Debito">Retiro del banco sin registrar en la empresa</option><option value="Deposito en Transito">Entrada de la empresa que no aparece en el banco</option><option value="Nota de Credito">Depósito del banco sin registrar en la empresa</option><option value="Cheque en Transito">Salida de la empresa que no aparece en el banco</option><option value="Error en Libros">Error de registro en libros</option></select></label>
+                    <label>Fecha<input id="partida-fecha" type="date" class="form-control" required></label>
+                    <label>Referencia<input id="partida-doc" class="form-control" maxlength="100" required></label>
+                    <label>Monto (C$)<input id="partida-monto" type="number" min="0.01" step="0.01" class="form-control" required></label>
+                    <label class="conc-wide">Explicación<input id="partida-desc" class="form-control" maxlength="255" required></label>
+                    <label>Si es error en libros<select id="partida-efecto" class="form-control"><option value="Suma">Falta sumar a libros</option><option value="Resta">Falta restar de libros</option></select></label>
+                    <button type="submit" class="btn btn-secondary">Agregar diferencia</button>
+                </form>
+            </details>
+        </section>
+        <section class="conc-step conc-result">
+            <div class="conc-step-title"><span>4</span><div><h4>Del saldo del banco al saldo de la empresa</h4><p>Este papel de trabajo explica la diferencia. Guardarlo no crea ni corrige asientos contables.</p></div></div>
+            <div class="conc-result-grid"><div id="conc-puente" class="conc-bridge"></div><aside>
+                <div id="conc-badge-cuadratura" role="status" aria-live="polite">Ingresá el saldo del banco.</div>
+                <p id="conc-siguiente-paso"></p>
+                <p id="conc-pendientes-resumen" class="conc-help"></p>
+                <button id="conc-guardar" type="button" class="btn btn-primary" onclick="guardarConciliacionBancaria()">Guardar borrador</button>
+                <p id="conc-guardado-ayuda" class="conc-help">El extracto, los vínculos y las diferencias se conservan al guardar.</p>
+            </aside></div>
+        </section>
+    </fieldset>
+</div>

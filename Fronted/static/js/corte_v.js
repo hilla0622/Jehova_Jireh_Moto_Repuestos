@@ -1858,6 +1858,23 @@ async function cargarLiquidacionesLaborales() {
     }
 }
 
+function toggleCamposPagoLiquidacion() {
+    const est = document.getElementById('liq-estado')?.value;
+    const b = document.getElementById('liq-bloque-pago');
+    if (!b) return;
+    b.style.display = (est === 'Pagado') ? 'block' : 'none';
+}
+
+function actualizarCuentaLiquidacion() {
+    const metodo = document.getElementById('liq-metodo-pago')?.value;
+    const cta = document.getElementById('liq-cuenta-id');
+    if (!cta) return;
+    cta.value = (metodo === 'Efectivo') ? '1' : '2';
+}
+
+window.toggleCamposPagoLiquidacion = toggleCamposPagoLiquidacion;
+window.actualizarCuentaLiquidacion = actualizarCuentaLiquidacion;
+
 async function abrirModalNuevaLiquidacion() {
     await asegurarEmpleadosCache();
     const sel = document.getElementById('liq-empleado-id');
@@ -1874,6 +1891,15 @@ async function abrirModalNuevaLiquidacion() {
     document.getElementById('liq-deducciones').value = '0.00';
     const estEl = document.getElementById('liq-estado');
     if (estEl) estEl.value = 'Borrador';
+
+    const b = document.getElementById('liq-bloque-pago');
+    if (b) b.style.display = 'none';
+    const m = document.getElementById('liq-metodo-pago');
+    if (m) m.value = 'Transferencia Bancaria';
+    const c = document.getElementById('liq-cuenta-id');
+    if (c) c.value = '2';
+    const r = document.getElementById('liq-numero-referencia');
+    if (r) r.value = '';
 
     const tit = document.getElementById('modal-liquidacion-titulo');
     if (tit) tit.innerHTML = '<i class="ph-bold ph-receipt"></i> Calcular Liquidación / Finiquito (Ley 185)';
@@ -1915,6 +1941,14 @@ async function editarLiquidacion(id) {
     const estEl = document.getElementById('liq-estado');
     if (estEl) estEl.value = l.estado || 'Borrador';
 
+    const m = document.getElementById('liq-metodo-pago');
+    if (m) m.value = l.metodo_pago || 'Transferencia Bancaria';
+    const c = document.getElementById('liq-cuenta-id');
+    if (c) c.value = l.cuenta_id ? String(l.cuenta_id) : (l.metodo_pago === 'Efectivo' ? '1' : '2');
+    const r = document.getElementById('liq-numero-referencia');
+    if (r) r.value = l.numero_referencia || '';
+    toggleCamposPagoLiquidacion();
+
     const tit = document.getElementById('modal-liquidacion-titulo');
     if (tit) tit.innerHTML = `<i class="ph-bold ph-pencil"></i> Editar Liquidación ${l.codigo || ''}`;
     const btn = document.getElementById('btn-guardar-liquidacion');
@@ -1936,6 +1970,11 @@ async function guardarLiquidacion(e) {
     };
     if (estEl && estEl.value) {
         data.estado = estEl.value;
+        if (estEl.value === 'Pagado') {
+            data.metodo_pago = document.getElementById('liq-metodo-pago')?.value || 'Transferencia Bancaria';
+            data.cuenta_id = parseInt(document.getElementById('liq-cuenta-id')?.value || '2');
+            data.numero_referencia = document.getElementById('liq-numero-referencia')?.value || '';
+        }
     }
 
     if (!data.empleado_id || !data.fecha_salida) {
@@ -2033,8 +2072,11 @@ async function cargarPagosNomina() {
                 <td>${p.fecha_pago?.slice(0, 10) || '—'}</td>
                 <td><span class="badge" style="background: rgba(59,130,246,0.15); color: #3b82f6;">${p.metodo_pago}</span></td>
                 <td><code>${p.numero_referencia || '—'}</code></td>
-                <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${cs(p.monto_pagado)}</td>
-                <td><span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e;">${p.estado}</span></td>
+                <td>
+                    <span class="badge" style="background: ${p.estado === 'Confirmado' ? 'rgba(34,197,94,0.15)' : (p.estado === 'Pendiente' ? 'rgba(234,179,8,0.15)' : 'rgba(239,68,68,0.15)')}; color: ${p.estado === 'Confirmado' ? '#22c55e' : (p.estado === 'Pendiente' ? '#eab308' : '#ef4444')};">
+                        ${p.estado}${p.asiento_id ? ` <small style="font-size:0.65rem; opacity:0.85;">(#${p.asiento_id})</small>` : ''}
+                    </span>
+                </td>
                 <td style="text-align:center;">
                     <div style="display:inline-flex; gap:5px; align-items:center; justify-content:center; flex-wrap:wrap;">
                         <button type="button" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="editarPagoNomina(${p.id})" title="Editar Pago">

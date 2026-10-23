@@ -423,15 +423,22 @@ class RRHHTest(unittest.TestCase):
         self.assertEqual(r_get.status_code, 200)
         self.assertEqual(r_get.json['motivo_salida'], 'Renuncia Voluntaria')
 
-        # 3. Editar liquidación (PUT)
+        # 3. Editar liquidación (PUT) - Cambiar a Pagado con Efectivo
         r_put = self.client.put(f'/api/rrhh/liquidaciones/{lid}', json={
             'motivo_salida': 'Despido Injustificado (Art. 45)',
-            'estado': 'Aprobado'
+            'estado': 'Pagado',
+            'metodo_pago': 'Efectivo',
+            'numero_referencia': 'REC-EF-001'
         })
         self.assertEqual(r_put.status_code, 200)
         actualizado = self.client.get(f'/api/rrhh/liquidaciones/{lid}').json
-        self.assertEqual(actualizado['estado'], 'Aprobado')
+        self.assertEqual(actualizado['estado'], 'Pagado')
         self.assertIn('Despido Injustificado', actualizado['motivo_salida'])
+        asiento_liq_id = self.scalar(f"SELECT asiento_id FROM liquidaciones_laborales WHERE id={lid}")
+        self.assertIsNotNone(asiento_liq_id)
+        # Verificar que la salida de dinero fue acreditada a Caja (1.1.01)
+        cta_caja_id = self.scalar("SELECT id FROM cuentas_contables WHERE codigo='1.1.01'")
+        self.assertGreater(self.scalar(f"SELECT haber FROM movimientos_contables WHERE asiento_id={asiento_liq_id} AND cuenta_id={cta_caja_id}"), 0)
 
         # 4. Validar permisos no autorizados
         self.login('Vendedor')
@@ -443,6 +450,8 @@ class RRHHTest(unittest.TestCase):
         r_del = self.client.delete(f'/api/rrhh/liquidaciones/{lid}')
         self.assertEqual(r_del.status_code, 200)
         self.assertEqual(self.scalar('SELECT COUNT(*) FROM liquidaciones_laborales'), 0)
+        # Verificar que el asiento de liquidación se eliminó
+        self.assertEqual(self.scalar(f"SELECT COUNT(*) FROM asientos_contables WHERE id={asiento_liq_id}"), 0)
 
     def test_nomina_get_y_put(self):
         self.login('Administrador')
@@ -470,6 +479,12 @@ class RRHHTest(unittest.TestCase):
         r_post = self.pago(nomina_id=1, monto_pagado='500', numero_referencia='TEST-PAG-001')
         self.assertEqual(r_post.status_code, 201)
         pid = self.scalar("SELECT id FROM pagos_nomina WHERE numero_referencia='TEST-PAG-001'")
+        asiento_pago_id = self.scalar(f"SELECT asiento_id FROM pagos_nomina WHERE id={pid}")
+        self.assertIsNotNone(asiento_pago_id)
+        self.assertEqual(self.scalar(f"SELECT COUNT(*) FROM movimientos_contables WHERE asiento_id={asiento_pago_id}"), 2)
+        # Verificar que el haber está en Bancos (1.1.02)
+        cta_banco_id = self.scalar("SELECT id FROM cuentas_contables WHERE codigo='1.1.02'")
+        self.assertEqual(self.scalar(f"SELECT haber FROM movimientos_contables WHERE asiento_id={asiento_pago_id} AND cuenta_id={cta_banco_id}"), 500)
 
         # 1. Consultar pago por ID
         r_get = self.client.get(f'/api/rrhh/pagos-nomina/{pid}')
@@ -487,6 +502,8 @@ class RRHHTest(unittest.TestCase):
         self.assertEqual(actualizado['metodo_pago'], 'Cheque')
         self.assertEqual(actualizado['numero_referencia'], 'CHQ-2026-999')
         self.assertEqual(actualizado['monto_pagado'], 600.0)
+        # Verificar que los movimientos contables se actualizaron a 600
+        self.assertEqual(self.scalar(f"SELECT haber FROM movimientos_contables WHERE asiento_id={asiento_pago_id} AND cuenta_id={cta_banco_id}"), 600)
 
         # 3. Validar permisos
         self.login('Vendedor')
@@ -498,6 +515,9 @@ class RRHHTest(unittest.TestCase):
         r_del = self.client.delete(f'/api/rrhh/pagos-nomina/{pid}')
         self.assertEqual(r_del.status_code, 200)
         self.assertEqual(self.scalar('SELECT COUNT(*) FROM pagos_nomina WHERE id=1'), 0)
+        # Verificar que el asiento y sus movimientos se eliminaron
+        self.assertEqual(self.scalar(f"SELECT COUNT(*) FROM asientos_contables WHERE id={asiento_pago_id}"), 0)
+        self.assertEqual(self.scalar(f"SELECT COUNT(*) FROM movimientos_contables WHERE asiento_id={asiento_pago_id}"), 0)
 
 
 if __name__ == '__main__':

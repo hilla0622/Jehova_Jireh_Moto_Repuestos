@@ -504,7 +504,7 @@ def register_corte_v_routes(app):
                        l.fecha_ingreso, l.fecha_salida, l.motivo_salida, l.salario_base,
                        l.antiguedad_anios, l.antiguedad_meses, l.antiguedad_dias,
                        l.total_percepciones, l.deducciones_totales, l.neto_a_pagar,
-                       l.estado, l.fecha_elaboracion
+                       l.estado, l.fecha_elaboracion, l.metodo_pago, l.numero_referencia, l.cuenta_id, l.asiento_id
                 FROM liquidaciones_laborales l
                 INNER JOIN empleados e ON l.empleado_id = e.id
                 ORDER BY l.id DESC
@@ -629,9 +629,13 @@ def register_corte_v_routes(app):
             return jsonify({"error": "No tienes permisos."}), 403
 
         if request.method == 'DELETE':
-            row = execute_query("SELECT id, codigo FROM liquidaciones_laborales WHERE id = ?", (id,), fetchone=True)
+            row = execute_query("SELECT id, codigo, asiento_id FROM liquidaciones_laborales WHERE id = ?", (id,), fetchone=True)
             if not row:
                 return jsonify({"error": "Liquidación no encontrada."}), 404
+            asiento_id = row.get('asiento_id')
+            if asiento_id:
+                execute_query("DELETE FROM movimientos_contables WHERE asiento_id = ?", (asiento_id,), commit=True)
+                execute_query("DELETE FROM asientos_contables WHERE id = ?", (asiento_id,), commit=True)
             execute_query("DELETE FROM liquidaciones_laborales WHERE id = ?", (id,), commit=True)
             return jsonify({"success": True, "mensaje": f"Liquidación {row['codigo']} eliminada correctamente."})
 
@@ -689,17 +693,76 @@ def register_corte_v_routes(app):
             total_percepciones = round(monto_pend + monto_vac + monto_agui + monto_indem, 2)
             neto_pagar = max(0.0, round(total_percepciones - deducciones, 2))
 
+            metodo_pago = data.get('metodo_pago') or row.get('metodo_pago') or 'Transferencia Bancaria'
+            numero_ref = data.get('numero_referencia') or row.get('numero_referencia')
+            cuenta_id = data.get('cuenta_id') or row.get('cuenta_id')
+            asiento_id = row.get('asiento_id')
+            fecha_pago = data.get('fecha_pago') or (d_egr.isoformat() if estado == 'Pagado' else row.get('fecha_pago'))
+
+            # Sincronización contable (Caja y Bancos)
+            if estado in ('Borrador', 'Aprobado'):
+                if asiento_id:
+                    execute_query("DELETE FROM movimientos_contables WHERE asiento_id = ?", (asiento_id,), commit=True)
+                    execute_query("DELETE FROM asientos_contables WHERE id = ?", (asiento_id,), commit=True)
+                    asiento_id = None
+            elif estado == 'Pagado':
+                # Resolver cuenta de salida (Caja General 1.1.01 o Banco General 1.1.02)
+                cta_row = None
+                if cuenta_id:
+                    try:
+                        cta_row = execute_query("SELECT id FROM cuentas_contables WHERE id = ?", (int(cuenta_id),), fetchone=True)
+                    except Exception:
+                        cta_row = None
+                if not cta_row:
+                    cod = '1.1.01' if metodo_pago == 'Efectivo' else '1.1.02'
+                    cta_row = execute_query("SELECT id FROM cuentas_contables WHERE codigo = ?", (cod,), fetchone=True)
+                    if not cta_row:
+                        nom_cta = 'Caja' if cod == '1.1.01' else 'Bancos'
+                        execute_query("""INSERT INTO cuentas_contables (codigo, nombre, clasificacion, naturaleza, descripcion, activo)
+                            VALUES (?, ?, 'Activo corriente', 'Deudora', ?, 1)""", (cod, nom_cta, nom_cta), commit=True)
+                        cta_row = execute_query("SELECT id FROM cuentas_contables WHERE codigo = ?", (cod,), fetchone=True)
+                cuenta_id = cta_row['id'] if cta_row else 1
+
+                # Resolver cuenta de contrapartida pasivo/laboral (2.1.04 Sueldos y salarios por pagar)
+                cta_contra = execute_query("SELECT id FROM cuentas_contables WHERE codigo = '2.1.04'", fetchone=True)
+                if not cta_contra:
+                    execute_query("""INSERT INTO cuentas_contables (codigo, nombre, clasificacion, naturaleza, descripcion, activo)
+                        VALUES ('2.1.04', 'Sueldos y salarios por pagar', 'Pasivo corriente', 'Acreedora', 'Sueldos por pagar', 1)""", commit=True)
+                    cta_contra = execute_query("SELECT id FROM cuentas_contables WHERE codigo = '2.1.04'", fetchone=True)
+                cta_contra_id = cta_contra['id'] if cta_contra else 12
+
+                concepto_asiento = f"Pago liquidación {row['codigo']} - {emp['nombre_completo']} ({metodo_pago} Ref: {numero_ref or 'S/R'})"
+                uid = session.get('user', {}).get('id', 1)
+
+                if not asiento_id:
+                    execute_query("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                        VALUES (GETDATE(), ?, 'RRHH_LIQUIDACION', ?, ?)""", (concepto_asiento, id, uid), commit=True)
+                    last_asiento = execute_query("SELECT MAX(id) AS id FROM asientos_contables WHERE modulo_origen = 'RRHH_LIQUIDACION' AND referencia_id = ?", (id,), fetchone=True)
+                    asiento_id = int(last_asiento['id']) if last_asiento else None
+
+                if asiento_id:
+                    execute_query("DELETE FROM movimientos_contables WHERE asiento_id = ?", (asiento_id,), commit=True)
+                    if neto_pagar > 0:
+                        # DEBE: Cancela la obligación laboral (2.1.04)
+                        execute_query("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)",
+                            (asiento_id, cta_contra_id, neto_pagar), commit=True)
+                        # HABER: Caja o Bancos (Disminuye el activo real de forma que impacta Libro Mayor y Estados Financieros)
+                        execute_query("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)",
+                            (asiento_id, cuenta_id, neto_pagar), commit=True)
+
             execute_query("""
                 UPDATE liquidaciones_laborales
                 SET empleado_id = ?, fecha_salida = ?, motivo_salida = ?, salario_base = ?,
                     antiguedad_anios = ?, antiguedad_meses = ?, antiguedad_dias = ?,
                     monto_dias_pendientes = ?, dias_vacaciones_pendientes = ?, monto_vacaciones = ?,
                     monto_aguinaldo_proporcional = ?, monto_indemnizacion_antiguedad = ?,
-                    total_percepciones = ?, deducciones_totales = ?, neto_a_pagar = ?, estado = ?
+                    total_percepciones = ?, deducciones_totales = ?, neto_a_pagar = ?, estado = ?,
+                    metodo_pago = ?, numero_referencia = ?, cuenta_id = ?, asiento_id = ?, fecha_pago = ?
                 WHERE id = ?
             """, (emp_id, d_egr, motivo, salario, anios, meses, dias,
                   monto_pend, saldo_vac, monto_vac, monto_agui, monto_indem,
-                  total_percepciones, deducciones, neto_pagar, estado, id), commit=True)
+                  total_percepciones, deducciones, neto_pagar, estado,
+                  metodo_pago, numero_ref, cuenta_id, asiento_id, fecha_pago, id), commit=True)
 
             return jsonify({
                 "success": True,

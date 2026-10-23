@@ -226,12 +226,60 @@ async function abrirPagoControl() {
     if (tit) tit.textContent = 'Registrar pago de nómina';
     const btn = document.getElementById('btn-guardar-pago-control');
     if (btn) btn.textContent = 'Confirmar pago';
+    if (form.elements.metodo_pago) form.elements.metodo_pago.value = 'Transferencia Bancaria';
+    if (form.elements.cuenta_id) form.elements.cuenta_id.value = '2';
+    if (form.elements.estado) form.elements.estado.value = 'Confirmado';
+    actualizarEstadoPagoUI();
     openModal('modal-pago-control');
     try {
         const rows = await rrhhApi('/api/nomina/historial');
         form.elements.nomina_id.innerHTML = '<option value="">Seleccione una nómina</option>' + rows.map(r => `<option value="${r.id}">#${r.id} · ${r.mes}/${r.anio}</option>`).join('');
     } catch (error) { form.querySelector('.rrhh-error').textContent = error.message; }
 }
+function actualizarCuentaSugeridaPago() {
+    const form = document.getElementById('form-pago-control');
+    if (!form || !form.elements.metodo_pago || !form.elements.cuenta_id) return;
+    const metodo = form.elements.metodo_pago.value;
+    form.elements.cuenta_id.value = (metodo === 'Efectivo') ? '1' : '2';
+}
+window.actualizarCuentaSugeridaPago = actualizarCuentaSugeridaPago;
+
+function actualizarEstadoPagoUI() {
+    const form = document.getElementById('form-pago-control');
+    if (!form) return;
+    const estado = form.elements.estado ? form.elements.estado.value : 'Confirmado';
+    const esConfirmado = (estado === 'Confirmado');
+    const metodoEl = form.elements.metodo_pago;
+    const cuentaEl = form.elements.cuenta_id;
+    const refEl = form.elements.numero_referencia;
+    const btn = document.getElementById('btn-guardar-pago-control');
+
+    [metodoEl, cuentaEl, refEl].forEach(el => {
+        if (!el) return;
+        el.disabled = !esConfirmado;
+        el.style.opacity = esConfirmado ? '1' : '0.45';
+        el.style.cursor = esConfirmado ? 'default' : 'not-allowed';
+        el.style.backgroundColor = esConfirmado ? '' : 'rgba(255, 255, 255, 0.05)';
+    });
+
+    if (refEl) {
+        refEl.required = esConfirmado;
+        if (!esConfirmado) {
+            refEl.placeholder = `(No aplica en estado ${estado})`;
+        } else {
+            refEl.placeholder = 'Ej: BAC-TRF-001 o LAFISE-002';
+        }
+    }
+
+    if (btn) {
+        const esNuevo = !form.elements.pago_id || !form.elements.pago_id.value;
+        if (esNuevo) {
+            btn.textContent = esConfirmado ? 'Confirmar pago' : `Guardar comprobante (${estado})`;
+        }
+    }
+}
+window.actualizarEstadoPagoUI = actualizarEstadoPagoUI;
+
 async function cargarEmpleadosPago() {
     const form = document.getElementById('form-pago-control');
     form.elements.empleado_id.innerHTML = '<option value="">Seleccione un trabajador</option>';
@@ -259,6 +307,10 @@ function guardarPagoControl(event) {
     return rrhhGuardar(event, async form => {
         const id = form.elements.pago_id?.value;
         const payload = Object.fromEntries(new FormData(form));
+        if (form.elements.metodo_pago) payload.metodo_pago = form.elements.metodo_pago.value;
+        if (form.elements.cuenta_id) payload.cuenta_id = form.elements.cuenta_id.value;
+        if (form.elements.numero_referencia) payload.numero_referencia = form.elements.numero_referencia.value;
+        if (form.elements.estado) payload.estado = form.elements.estado.value;
         if (id) {
             await rrhhApi(`/api/rrhh/pagos-nomina/${id}`, rrhhJson('PUT', payload));
         } else {
@@ -299,6 +351,9 @@ async function editarPagoNomina(id) {
 
     form.elements.fecha_pago.value = p.fecha_pago ? p.fecha_pago.slice(0, 10) : rrhhHoy();
     form.elements.metodo_pago.value = p.metodo_pago || 'Transferencia Bancaria';
+    if (form.elements.cuenta_id) {
+        form.elements.cuenta_id.value = p.cuenta_id ? String(p.cuenta_id) : (p.metodo_pago === 'Efectivo' ? '1' : '2');
+    }
     form.elements.numero_referencia.value = p.numero_referencia || '';
     form.elements.monto_pagado.removeAttribute('max');
     form.elements.monto_pagado.value = p.monto_pagado;
@@ -306,6 +361,7 @@ async function editarPagoNomina(id) {
     if (form.elements.estado) {
         form.elements.estado.value = p.estado || 'Confirmado';
     }
+    actualizarEstadoPagoUI();
 
     document.getElementById('pago-saldo').textContent = `Monto registrado: C$ ${Number(p.monto_pagado).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
     const tit = document.getElementById('modal-pago-control-titulo');

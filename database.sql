@@ -667,6 +667,11 @@ CREATE TABLE [liquidaciones_laborales] (
     [deducciones_totales] decimal(12,2) DEFAULT ((0.00)) NULL,
     [neto_a_pagar] decimal(12,2) NOT NULL,
     [estado] varchar(30) DEFAULT ('Borrador') NULL,
+    [metodo_pago] varchar(50) NULL,
+    [numero_referencia] varchar(100) NULL,
+    [cuenta_id] int NULL,
+    [asiento_id] int NULL,
+    [fecha_pago] date NULL,
     [elaborado_por] varchar(100) NULL,
     [fecha_elaboracion] datetime DEFAULT (getdate()) NULL,
     CONSTRAINT [pk_liquidaciones_laborales] PRIMARY KEY ([id])
@@ -792,6 +797,8 @@ CREATE TABLE [pagos_nomina] (
     [metodo_pago] varchar(50) DEFAULT ('Transferencia Bancaria') NULL,
     [numero_referencia] varchar(100) NULL,
     [comprobante] varchar(255) NULL,
+    [cuenta_id] int NULL,
+    [asiento_id] int NULL,
     [estado] varchar(30) DEFAULT ('Confirmado') NULL,
     [observaciones] varchar(255) NULL,
     [registrado_por] varchar(100) DEFAULT ('Administrador') NULL,
@@ -2597,3 +2604,25 @@ CREATE TABLE [higiene_riesgo_seguimientos] (
 );
 END
 GO
+IF COL_LENGTH('pagos_nomina', 'cuenta_id') IS NULL
+    ALTER TABLE pagos_nomina ADD cuenta_id int NULL;
+GO
+IF COL_LENGTH('pagos_nomina', 'asiento_id') IS NULL
+    ALTER TABLE pagos_nomina ADD asiento_id int NULL;
+GO
+IF COL_LENGTH('liquidaciones_laborales', 'metodo_pago') IS NULL
+    ALTER TABLE liquidaciones_laborales ADD metodo_pago varchar(50) NULL;
+GO
+IF COL_LENGTH('liquidaciones_laborales', 'numero_referencia') IS NULL
+    ALTER TABLE liquidaciones_laborales ADD numero_referencia varchar(100) NULL;
+GO
+IF COL_LENGTH('liquidaciones_laborales', 'cuenta_id') IS NULL
+    ALTER TABLE liquidaciones_laborales ADD cuenta_id int NULL;
+GO
+IF COL_LENGTH('liquidaciones_laborales', 'asiento_id') IS NULL
+    ALTER TABLE liquidaciones_laborales ADD asiento_id int NULL;
+GO
+IF COL_LENGTH('liquidaciones_laborales', 'fecha_pago') IS NULL
+    ALTER TABLE liquidaciones_laborales ADD fecha_pago date NULL;
+GO
+

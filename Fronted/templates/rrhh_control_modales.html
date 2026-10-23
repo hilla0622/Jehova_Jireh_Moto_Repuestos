@@ -75,10 +75,13 @@
         <div class="grid-2col"><label class="form-group">Monto pagado (C$)<input name="monto_pagado" class="form-control" type="number" min="0.01" step="0.01" required></label>
         <label class="form-group">Fecha de pago<input name="fecha_pago" class="form-control" type="date" required></label></div>
         <div class="grid-2col">
-            <label class="form-group">Método<select name="metodo_pago" class="form-control"><option>Transferencia Bancaria</option><option>Efectivo</option><option>Cheque</option></select></label>
-            <label class="form-group">Estado<select name="estado" id="pago-estado" class="form-control"><option value="Confirmado">Confirmado</option><option value="Pendiente">Pendiente</option><option value="Anulado">Anulado</option></select></label>
+            <label class="form-group">Método<select name="metodo_pago" id="pago-metodo" class="form-control" onchange="actualizarCuentaSugeridaPago()"><option>Transferencia Bancaria</option><option>Efectivo</option><option>Cheque</option></select></label>
+            <label class="form-group">Cuenta de salida<select name="cuenta_id" id="pago-cuenta-id" class="form-control"><option value="2">Banco General (1.1.02)</option><option value="1">Caja General (1.1.01)</option></select></label>
         </div>
-        <label class="form-group">Referencia o número de comprobante<input name="numero_referencia" class="form-control" maxlength="100" required></label>
+        <div class="grid-2col">
+            <label class="form-group">Estado<select name="estado" id="pago-estado" class="form-control" onchange="actualizarEstadoPagoUI()"><option value="Confirmado">Confirmado</option><option value="Pendiente">Pendiente</option><option value="Anulado">Anulado</option></select></label>
+            <label class="form-group">Referencia o número de comprobante<input name="numero_referencia" id="pago-referencia" class="form-control" maxlength="100" placeholder="Ej: BAC-TRF-001 o LAFISE-002" required></label>
+        </div>
         <p class="rrhh-error" role="alert"></p>
     </div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('modal-pago-control')">Cancelar</button><button type="submit" id="btn-guardar-pago-control" class="btn btn-primary">Confirmar pago</button></div></form>
 </div></div>

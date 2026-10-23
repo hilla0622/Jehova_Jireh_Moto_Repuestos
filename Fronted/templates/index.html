@@ -3978,11 +3978,37 @@
                     </div>
                     <div class="form-group" style="margin-top:0.5rem;">
                         <label>Estado de la Liquidación:</label>
-                        <select id="liq-estado" class="form-control">
+                        <select id="liq-estado" class="form-control" onchange="toggleCamposPagoLiquidacion()">
                             <option value="Borrador">Borrador</option>
                             <option value="Aprobado">Aprobado</option>
                             <option value="Pagado">Pagado</option>
                         </select>
+                    </div>
+                    <div id="liq-bloque-pago" style="display:none; margin-top:0.75rem; padding:0.85rem; border:1px solid rgba(255,255,255,0.12); border-radius:8px; background:rgba(255,255,255,0.03);">
+                        <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.6rem; color:var(--primary, #3b82f6); display:flex; align-items:center; gap:0.4rem;">
+                            <i class="ph-bold ph-credit-card"></i> Datos del Desembolso / Pago
+                        </div>
+                        <div class="grid-2col">
+                            <div class="form-group">
+                                <label>Método de Pago: *</label>
+                                <select id="liq-metodo-pago" class="form-control" onchange="actualizarCuentaLiquidacion()">
+                                    <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Cheque">Cheque</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Pagar desde (Cuenta): *</label>
+                                <select id="liq-cuenta-id" class="form-control">
+                                    <option value="2">Banco General (1.1.02)</option>
+                                    <option value="1">Caja General (1.1.01)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Referencia o N° de Comprobante / Cheque: *</label>
+                            <input type="text" id="liq-numero-referencia" class="form-control" placeholder="Ej: BAC-TRF-00458 o LAFISE-CHQ-102">
+                        </div>
                     </div>
                     <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.25); border-radius:6px; padding:0.75rem; font-size:0.8rem; color:#15803d; margin-top:0.75rem;">
                         <i class="ph-bold ph-info"></i> El sistema calculará de forma automática la antigüedad exacta (años, meses y días), el aguinaldo proporcional desde el 1 de diciembre, el saldo compensable de vacaciones y la indemnización legal por años de servicio (si corresponde).

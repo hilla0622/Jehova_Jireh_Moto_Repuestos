@@ -99,6 +99,36 @@ def register_rrhh_control_routes(app):
                     row[key] = float(value)
         return rows
 
+    def resolver_cuenta_desembolso(cur, cuenta_id_param, metodo):
+        if cuenta_id_param:
+            try:
+                cur.execute("SELECT id FROM cuentas_contables WHERE id = ?", (int(cuenta_id_param),))
+                r = cur.fetchone()
+                if r:
+                    return int(r[0])
+            except Exception:
+                pass
+        cod = '1.1.01' if metodo == 'Efectivo' else '1.1.02'
+        cur.execute("SELECT id FROM cuentas_contables WHERE codigo = ?", (cod,))
+        r = cur.fetchone()
+        if r:
+            return int(r[0])
+        nombre = 'Caja' if cod == '1.1.01' else 'Bancos'
+        cur.execute("""INSERT INTO cuentas_contables
+            (codigo, nombre, clasificacion, naturaleza, descripcion, activo)
+            VALUES (?, ?, 'Activo corriente', 'Deudora', ?, 1)""", (cod, nombre, nombre))
+        return identidad(cur)
+
+    def resolver_cuenta_sueldos_pagar(cur):
+        cur.execute("SELECT id FROM cuentas_contables WHERE codigo = '2.1.04'")
+        r = cur.fetchone()
+        if r:
+            return int(r[0])
+        cur.execute("""INSERT INTO cuentas_contables
+            (codigo, nombre, clasificacion, naturaleza, descripcion, activo)
+            VALUES ('2.1.04', 'Sueldos y salarios por pagar', 'Pasivo corriente', 'Acreedora', 'Sueldos por pagar', 1)""")
+        return identidad(cur)
+
     @app.route('/api/rrhh/pagos-nomina', methods=['GET', 'POST'])
     @login_required
     def pagos_controlados():
@@ -113,30 +143,70 @@ def register_rrhh_control_routes(app):
             if not monto.is_finite() or monto <= 0 or monto > Decimal('9999999999.99') or monto != monto.quantize(Decimal('.01')):
                 raise ValueError('El pago debe ser positivo, finito y tener hasta dos decimales.')
             dia = fecha(data, 'fecha_pago')
-            metodo = texto(data, 'metodo_pago', 50)
-            ref = texto(data, 'numero_referencia', 100)
+            estado = texto(data, 'estado', 30) if data.get('estado') else 'Confirmado'
+            if estado not in ('Confirmado', 'Pendiente', 'Anulado'):
+                estado = 'Confirmado'
+
+            metodo = texto(data, 'metodo_pago', 50) if data.get('metodo_pago') else 'Transferencia Bancaria'
+            if estado == 'Confirmado':
+                ref = texto(data, 'numero_referencia', 100)
+            else:
+                ref = str(data.get('numero_referencia') or '').strip()[:100]
+            cuenta_id_in = data.get('cuenta_id')
+
             with transaccion() as cur:
                 # Mismo orden de bloqueo que generación/anulación: cabecera primero.
-                cur.execute('SELECT id FROM nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (nid,))
-                if not cur.fetchone():
+                cur.execute('SELECT id, periodo_mes, periodo_anio FROM nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (nid,))
+                nom_row = cur.fetchone()
+                if not nom_row:
                     return jsonify(error='Nómina no encontrada.'), 404
+                mes_nom, anio_nom = nom_row[1], nom_row[2]
+
                 cur.execute('SELECT neto_pagar FROM detalle_nomina WHERE nomina_id=? AND empleado_id=?', (nid, eid))
                 detalle = cur.fetchone()
                 if not detalle:
                     return jsonify(error='El empleado no pertenece a esa nómina.'), 400
                 cur.execute("SELECT ISNULL(SUM(monto_pagado),0) FROM pagos_nomina WHERE nomina_id=? AND empleado_id=? AND estado='Confirmado'", (nid, eid))
                 saldo = Decimal(str(detalle[0])) - Decimal(str(cur.fetchone()[0]))
-                if monto > saldo:
-                    return jsonify(error=f'El pago supera el saldo pendiente: C$ {saldo:,.2f}.'), 409
-                if ref:
-                    cur.execute('SELECT id FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE numero_referencia=? AND metodo_pago=? AND estado=\'Confirmado\'', (ref, metodo))
-                    if cur.fetchone():
-                        return jsonify(error='La referencia de pago ya fue registrada para ese método.'), 409
+
+                asiento_id = None
+                cuenta_id = resolver_cuenta_desembolso(cur, cuenta_id_in, metodo) if (cuenta_id_in or estado == 'Confirmado') else None
+
+                if estado == 'Confirmado':
+                    if monto > saldo:
+                        return jsonify(error=f'El pago supera el saldo pendiente: C$ {saldo:,.2f}.'), 409
+                    if ref:
+                        cur.execute('SELECT id FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE numero_referencia=? AND metodo_pago=? AND estado=\'Confirmado\'', (ref, metodo))
+                        if cur.fetchone():
+                            return jsonify(error='La referencia de pago ya fue registrada para ese método.'), 409
+
+                    cur.execute('SELECT nombre_completo FROM empleados WHERE id=?', (eid,))
+                    emp_row = cur.fetchone()
+                    emp_nom = emp_row[0] if emp_row else f"Empleado #{eid}"
+
+                    cta_sueldos = resolver_cuenta_sueldos_pagar(cur)
+
+                    concepto_asiento = f"Pago de nómina {mes_nom:02d}/{anio_nom} - {emp_nom} ({metodo} Ref: {ref})"
+                    uid = session.get('user', {}).get('id', 1)
+                    cur.execute("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                        VALUES (GETDATE(), ?, 'RRHH_PAGO', ?, ?)""", (concepto_asiento, nid, uid))
+                    asiento_id = identidad(cur)
+
+                    # DEBIT: 2.1.04 Sueldos y salarios por pagar (Disminuye pasivo)
+                    cur.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)",
+                        (asiento_id, cta_sueldos, float(monto)))
+                    # CREDIT: Cuenta de Caja o Banco (Disminuye activo real en balance y mayor)
+                    cur.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)",
+                        (asiento_id, cuenta_id, float(monto)))
+
                 cur.execute('''INSERT INTO pagos_nomina
-                    (nomina_id, empleado_id, monto_pagado, fecha_pago, metodo_pago, numero_referencia, estado, registrado_por)
-                    VALUES (?, ?, ?, ?, ?, ?, 'Confirmado', ?)''',
-                    (nid, eid, str(monto), dia, metodo, ref, usuario()))
-            return jsonify(success=True, mensaje='Pago confirmado.', saldo_pendiente=float(saldo-monto)), 201
+                    (nomina_id, empleado_id, monto_pagado, fecha_pago, metodo_pago, numero_referencia, estado, registrado_por, cuenta_id, asiento_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (nid, eid, str(monto), dia, metodo, ref, estado, usuario(), cuenta_id, asiento_id))
+            
+            msg = 'Pago confirmado y contabilizado.' if estado == 'Confirmado' else f'Comprobante guardado en estado {estado}.'
+            saldo_resp = float(saldo - monto) if estado == 'Confirmado' else float(saldo)
+            return jsonify(success=True, mensaje=msg, saldo_pendiente=saldo_resp), 201
         except (ValueError, InvalidOperation):
             return jsonify(error='Verifique el importe, los identificadores y los datos del pago.'), 400
 
@@ -153,11 +223,16 @@ def register_rrhh_control_routes(app):
 
         if request.method == 'DELETE':
             with transaccion() as cur:
-                cur.execute('SELECT id FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (pago_id,))
-                if not cur.fetchone():
+                cur.execute('SELECT id, asiento_id FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (pago_id,))
+                row = cur.fetchone()
+                if not row:
                     return jsonify(error='Pago no encontrado.'), 404
+                asiento_id = row[1]
+                if asiento_id:
+                    cur.execute('DELETE FROM movimientos_contables WHERE asiento_id=?', (asiento_id,))
+                    cur.execute('DELETE FROM asientos_contables WHERE id=?', (asiento_id,))
                 cur.execute('DELETE FROM pagos_nomina WHERE id=?', (pago_id,))
-            return jsonify(success=True, mensaje='Comprobante de pago eliminado correctamente.')
+            return jsonify(success=True, mensaje='Comprobante de pago y asiento contable eliminados correctamente.')
 
         if request.method == 'PUT':
             data = request.get_json(silent=True) or {}
@@ -166,13 +241,14 @@ def register_rrhh_control_routes(app):
                 metodo = texto(data, 'metodo_pago', 50) if data.get('metodo_pago') else None
                 ref = texto(data, 'numero_referencia', 100) if data.get('numero_referencia') else None
                 estado = texto(data, 'estado', 30) if data.get('estado') else None
+                cuenta_id_in = data.get('cuenta_id')
                 monto_val = data.get('monto_pagado')
                 monto = Decimal(str(monto_val)) if monto_val is not None else None
                 if monto is not None and (not monto.is_finite() or monto <= 0 or monto > Decimal('9999999999.99') or monto != monto.quantize(Decimal('.01'))):
                     raise ValueError('El pago debe ser positivo, finito y tener hasta dos decimales.')
 
                 with transaccion() as cur:
-                    cur.execute('SELECT id, nomina_id, empleado_id, monto_pagado, fecha_pago, metodo_pago, numero_referencia, estado FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (pago_id,))
+                    cur.execute('SELECT id, nomina_id, empleado_id, monto_pagado, fecha_pago, metodo_pago, numero_referencia, estado, cuenta_id, asiento_id FROM pagos_nomina WITH (UPDLOCK, HOLDLOCK) WHERE id=?', (pago_id,))
                     actual = cur.fetchone()
                     if not actual:
                         return jsonify(error='Pago no encontrado.'), 404
@@ -183,6 +259,14 @@ def register_rrhh_control_routes(app):
                     nuevo_metodo = metodo or actual[5]
                     nuevo_ref = ref if ref is not None else actual[6]
                     nuevo_estado = estado or actual[7]
+                    asiento_id = actual[9]
+
+                    if cuenta_id_in:
+                        nuevo_cuenta_id = resolver_cuenta_desembolso(cur, cuenta_id_in, nuevo_metodo)
+                    elif actual[8]:
+                        nuevo_cuenta_id = actual[8]
+                    else:
+                        nuevo_cuenta_id = resolver_cuenta_desembolso(cur, None, nuevo_metodo)
 
                     if nuevo_monto != Decimal(str(actual[3])):
                         cur.execute('SELECT neto_pagar FROM detalle_nomina WHERE nomina_id=? AND empleado_id=?', (nid, eid))
@@ -199,9 +283,39 @@ def register_rrhh_control_routes(app):
                         if cur.fetchone():
                             return jsonify(error='La referencia de pago ya fue registrada para ese método.'), 409
 
+                    # Actualización contable sincronizada
+                    if nuevo_estado in ('Anulado', 'Pendiente'):
+                        if asiento_id:
+                            cur.execute('DELETE FROM movimientos_contables WHERE asiento_id=?', (asiento_id,))
+                            cur.execute('DELETE FROM asientos_contables WHERE id=?', (asiento_id,))
+                            asiento_id = None
+                    elif nuevo_estado == 'Confirmado':
+                        cta_sueldos = resolver_cuenta_sueldos_pagar(cur)
+                        if not asiento_id:
+                            cur.execute('SELECT periodo_mes, periodo_anio FROM nomina WHERE id=?', (nid,))
+                            nom_row = cur.fetchone()
+                            mes_nom, anio_nom = (nom_row[1], nom_row[2]) if nom_row else (1, 2026)
+                            cur.execute('SELECT nombre_completo FROM empleados WHERE id=?', (eid,))
+                            emp_row = cur.fetchone()
+                            emp_nom = emp_row[0] if emp_row else f"Empleado #{eid}"
+                            concepto_asiento = f"Pago de nómina {mes_nom:02d}/{anio_nom} - {emp_nom} ({nuevo_metodo} Ref: {nuevo_ref})"
+                            uid = session.get('user', {}).get('id', 1)
+                            cur.execute("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                                VALUES (GETDATE(), ?, 'RRHH_PAGO', ?, ?)""", (concepto_asiento, nid, uid))
+                            asiento_id = identidad(cur)
+                        else:
+                            cur.execute('DELETE FROM movimientos_contables WHERE asiento_id=?', (asiento_id,))
+
+                        # DEBITO: 2.1.04 Sueldos y salarios por pagar
+                        cur.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)",
+                            (asiento_id, cta_sueldos, float(nuevo_monto)))
+                        # CREDITO: Caja o Bancos (Disminuye activo real)
+                        cur.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)",
+                            (asiento_id, nuevo_cuenta_id, float(nuevo_monto)))
+
                     cur.execute('''UPDATE pagos_nomina
-                        SET monto_pagado=?, fecha_pago=?, metodo_pago=?, numero_referencia=?, estado=?
-                        WHERE id=?''', (str(nuevo_monto), nuevo_dia, nuevo_metodo, nuevo_ref, nuevo_estado, pago_id))
+                        SET monto_pagado=?, fecha_pago=?, metodo_pago=?, numero_referencia=?, estado=?, cuenta_id=?, asiento_id=?
+                        WHERE id=?''', (str(nuevo_monto), nuevo_dia, nuevo_metodo, nuevo_ref, nuevo_estado, nuevo_cuenta_id, asiento_id, pago_id))
 
                 return jsonify(success=True, mensaje='Comprobante de pago actualizado correctamente.')
             except (ValueError, InvalidOperation) as exc:

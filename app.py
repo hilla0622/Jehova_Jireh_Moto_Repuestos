@@ -690,9 +690,22 @@ def api_caja_cierre():
     monto_final_real = data.get('monto_final_real', 0.0)
     observaciones = data.get('observaciones', '')
     
+    if monto_final_real is None:
+        monto_final_real = 0.0
+    try:
+        monto_final_real = float(monto_final_real)
+    except (ValueError, TypeError):
+        monto_final_real = 0.0
+
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        if not sesion_id:
+            cursor.execute("SELECT TOP 1 id FROM sesiones_caja WHERE usuario_id = ? AND estado = 'Abierta' ORDER BY id DESC", (session['user']['id'],))
+            open_caja = cursor.fetchone()
+            if open_caja:
+                sesion_id = open_caja.id
+
         cursor.execute("SELECT monto_inicial, estado FROM sesiones_caja WHERE id = ? AND usuario_id = ?", 
                        (sesion_id, session['user']['id']))
         caja = cursor.fetchone()

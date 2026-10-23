@@ -2397,22 +2397,22 @@
         <div class="modal-content modal-sm">
             <div class="modal-header">
                 <h3><i class="ph-bold ph-lock-key"></i> Cierre de Caja</h3>
-                <button class="modal-close" onclick="closeModal('modal-cierre-caja')">&times;</button>
+                <button class="modal-close" onclick="cerrarModalCierreCaja()">&times;</button>
             </div>
             <form id="form-cierre-caja" onsubmit="event.preventDefault(); submitCierreCaja();">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>Efectivo Total en Caja (C$)</label>
-                        <input type="number" step="0.01" id="caja-monto-final" required>
+                        <label>Efectivo Total en Caja (C$) <span style="color: var(--danger, #ef4444);">*</span></label>
+                        <input type="number" step="0.01" min="0" id="caja-monto-final" class="form-control" placeholder="0.00" autocomplete="off" required style="font-size: 1.15rem; font-weight: bold; border-color: var(--primary);">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin-top: 15px;">
                         <label>Observaciones / Novedades</label>
-                        <textarea id="caja-observaciones" rows="3" placeholder="Ej: Faltante de 10 cordobas, vuelto mal dado..."></textarea>
+                        <textarea id="caja-observaciones" class="form-control" rows="3" placeholder="Ej: Faltante de 10 cordobas, vuelto mal dado..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-cierre-caja')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary"><i class="ph-bold ph-check-circle"></i> Cerrar Caja</button>
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalCierreCaja()">Cancelar</button>
+                    <button type="submit" id="btn-submit-cierre-caja" class="btn btn-primary"><i class="ph-bold ph-check-circle"></i> Cerrar Caja</button>
                 </div>
             </form>
         </div>
@@ -2435,7 +2435,7 @@
                 </div>
             </div>
             <div class="modal-footer" style="justify-content: center; border-top: none;">
-                <button type="button" class="btn btn-primary" onclick="closeModal('modal-caja-cerrada-exito'); switchTab('tab-reportes');" style="width: 100%; font-size: 1.1rem; padding: 0.75rem;"><i class="ph-bold ph-arrow-right"></i> Aceptar y Ver Reportes</button>
+                <button type="button" class="btn btn-primary" onclick="closeModal('modal-caja-cerrada-exito'); if (document.getElementById('tab-reportes')) { switchTab('tab-reportes'); } else { switchTab('tab-ventas'); }" style="width: 100%; font-size: 1.1rem; padding: 0.75rem;"><i class="ph-bold ph-arrow-right"></i> Aceptar y Continuar</button>
             </div>
         </div>
     </div>

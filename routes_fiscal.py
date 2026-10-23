@@ -107,6 +107,35 @@ def register_fiscal_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/fiscal/declaracion/<int:decl_id>', methods=['GET', 'DELETE'])
+    @fiscal_role_required
+    def api_fiscal_declaracion_item(decl_id):
+        from app import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            if request.method == 'GET':
+                detalle = fiscal_service.obtener_declaracion_detalle(cursor, decl_id)
+                if not detalle:
+                    return jsonify({"error": "Declaración no encontrada."}), 404
+                return jsonify({"declaracion": detalle})
+            
+            if request.method == 'DELETE':
+                fiscal_service.eliminar_declaracion(cursor, decl_id)
+                conn.commit()
+                return jsonify({
+                    "success": True,
+                    "mensaje": "Borrador de declaración eliminado correctamente."
+                })
+        except ValueError as ve:
+            conn.rollback()
+            return jsonify({"error": str(ve)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({"error": str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/fiscal/presentar', methods=['POST'])
     @app.route('/api/fiscal/declaracion/presentar', methods=['POST'])
     @fiscal_role_required

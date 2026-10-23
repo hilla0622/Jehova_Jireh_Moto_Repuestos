@@ -748,25 +748,183 @@ async function cargarAcreditamientos() {
     }
 }
 
+function actualizarCamposAcreditamiento() {
+    const tipo = document.getElementById('acred-tipo')?.value || 'RETENCION_SUFRIDA';
+    const groupTasa = document.getElementById('group-tasa');
+    const retenedorLabel = document.getElementById('acred-retenedor-label');
+    const retenedorInput = document.getElementById('acred-retenedor-nombre');
+    const baseInput = document.getElementById('acred-base');
+    const baseLabel = document.getElementById('acred-base-label');
+    const importeInput = document.getElementById('acred-importe');
+    const notaSpan = document.getElementById('acred-calculo-nota');
+    const infoBox = document.getElementById('acred-info-box');
+    const pctSelect = document.getElementById('acred-porcentaje-select');
+    const pctCustom = document.getElementById('acred-porcentaje-custom');
+
+    if (pctCustom) pctCustom.style.display = 'none';
+
+    if (tipo === 'RETENCION_SUFRIDA') {
+        if (groupTasa) groupTasa.style.display = 'block';
+        if (retenedorLabel) retenedorLabel.textContent = 'Agente Retenedor (Cliente o Banco):';
+        if (retenedorInput) {
+            retenedorInput.placeholder = 'Ej: Distribuidora Central S.A. o BAC';
+            if (retenedorInput.value === 'DGI - Administración de Rentas' || retenedorInput.value === 'DGI - Declaración Anual IR Anterior') {
+                retenedorInput.value = '';
+            }
+        }
+        if (baseLabel) baseLabel.textContent = 'Base Gravable / Subtotal Factura (C$):';
+        if (baseInput) {
+            baseInput.disabled = false;
+            baseInput.style.opacity = '1';
+            baseInput.style.cursor = 'default';
+        }
+        if (pctSelect) pctSelect.value = '2.00';
+        if (notaSpan) notaSpan.textContent = 'Cálculo sugerido: Base × 2% según Art. 132 LCT (puede ajustar los centavos si la constancia física difiere).';
+        if (infoBox) infoBox.style.display = 'flex';
+    } else if (tipo === 'ANTICIPO_PAGADO') {
+        if (groupTasa) groupTasa.style.display = 'none';
+        if (retenedorLabel) retenedorLabel.textContent = 'Administración Tributaria:';
+        if (retenedorInput && !retenedorInput.value) {
+            retenedorInput.value = 'DGI - Administración de Rentas';
+        }
+        if (baseLabel) baseLabel.textContent = 'Ingresos Brutos del Mes (C$):';
+        if (baseInput) {
+            baseInput.disabled = false;
+            baseInput.style.opacity = '1';
+            baseInput.style.cursor = 'default';
+        }
+        if (notaSpan) notaSpan.textContent = 'Cálculo de ley: Ingresos Brutos × 1% de Anticipo Mensual PMD (Art. 61 LCT).';
+        if (infoBox) infoBox.style.display = 'flex';
+    } else if (tipo === 'CREDITO_FISCAL') {
+        if (groupTasa) groupTasa.style.display = 'none';
+        if (retenedorLabel) retenedorLabel.textContent = 'Origen del Crédito Fiscal:';
+        if (retenedorInput && !retenedorInput.value) {
+            retenedorInput.value = 'DGI - Saldo a Favor Declaración Anterior';
+        }
+        if (baseLabel) baseLabel.textContent = 'Base Gravable (No aplica):';
+        if (baseInput) {
+            baseInput.value = '0.00';
+            baseInput.disabled = true;
+            baseInput.style.opacity = '0.5';
+            baseInput.style.cursor = 'not-allowed';
+        }
+        if (notaSpan) notaSpan.textContent = 'Ingrese directamente el saldo a favor aprobado por DGI en el importe acreditable.';
+        if (infoBox) infoBox.style.display = 'flex';
+        if (importeInput) importeInput.focus();
+    }
+    calcularImporteRetenido();
+}
+window.actualizarCamposAcreditamiento = actualizarCamposAcreditamiento;
+
+function actualizarTasaAcreditamiento() {
+    const pctSelect = document.getElementById('acred-porcentaje-select');
+    const pctCustom = document.getElementById('acred-porcentaje-custom');
+    const notaSpan = document.getElementById('acred-calculo-nota');
+    if (pctSelect && pctCustom) {
+        if (pctSelect.value === 'custom') {
+            pctCustom.style.display = 'block';
+            pctCustom.focus();
+            if (notaSpan) notaSpan.textContent = 'Porcentaje personalizado ingresado por el usuario.';
+        } else {
+            pctCustom.style.display = 'none';
+            if (notaSpan) {
+                if (pctSelect.value === '2.00') {
+                    notaSpan.textContent = 'Cálculo sugerido: Base × 2% según Art. 132 LCT (Venta de Repuestos y Servicios).';
+                } else if (pctSelect.value === '1.50') {
+                    notaSpan.textContent = 'Cálculo sugerido: Base × 1.5% (Retención por cobros con tarjeta en POS).';
+                } else if (pctSelect.value === '10.00') {
+                    notaSpan.textContent = 'Cálculo sugerido: Base × 10% (Servicios Profesionales / Honorarios).';
+                }
+            }
+        }
+    }
+    calcularImporteRetenido();
+}
+window.actualizarTasaAcreditamiento = actualizarTasaAcreditamiento;
+
+function calcularImporteRetenido() {
+    const tipo = document.getElementById('acred-tipo')?.value || 'RETENCION_SUFRIDA';
+    const baseInput = document.getElementById('acred-base');
+    const importeInput = document.getElementById('acred-importe');
+    if (!baseInput || !importeInput) return;
+
+    if (tipo === 'CREDITO_FISCAL') {
+        return;
+    }
+
+    const base = parseFloat(baseInput.value) || 0;
+    let pct = 0;
+
+    if (tipo === 'ANTICIPO_PAGADO') {
+        pct = 1.0;
+    } else {
+        const pctSelect = document.getElementById('acred-porcentaje-select');
+        if (pctSelect && pctSelect.value === 'custom') {
+            pct = parseFloat(document.getElementById('acred-porcentaje-custom')?.value) || 0;
+        } else if (pctSelect) {
+            pct = parseFloat(pctSelect.value) || 2.0;
+        } else {
+            pct = 2.0;
+        }
+    }
+
+    if (base > 0 && pct > 0) {
+        const calc = Math.round(base * (pct / 100.0) * 100) / 100;
+        importeInput.value = calc.toFixed(2);
+    } else if (base <= 0) {
+        importeInput.value = '0.00';
+    }
+}
+window.calcularImporteRetenido = calcularImporteRetenido;
+
 function abrirModalAcreditamiento() {
     const f = document.getElementById('form-acreditamiento');
     if (f) f.reset();
     const inF = document.getElementById('acred-fecha');
     if (inF) inF.value = new Date().toISOString().split('T')[0];
+    const tipoSel = document.getElementById('acred-tipo');
+    if (tipoSel) tipoSel.value = 'RETENCION_SUFRIDA';
+    actualizarCamposAcreditamiento();
     const modal = document.getElementById('modal-acreditamiento');
     if (modal) modal.classList.add('active');
 }
 
 async function guardarAcreditamientoFiscal(e) {
     if (e) e.preventDefault();
+    const tipo = document.getElementById('acred-tipo').value;
+    const ref = document.getElementById('acred-referencia').value.trim();
+    const base = parseFloat(document.getElementById('acred-base').value || 0);
+    const importe = parseFloat(document.getElementById('acred-importe').value || 0);
+
+    let pct = 0;
+    if (tipo === 'ANTICIPO_PAGADO') {
+        pct = 1.0;
+    } else if (tipo === 'RETENCION_SUFRIDA') {
+        const pctSelect = document.getElementById('acred-porcentaje-select');
+        pct = (pctSelect && pctSelect.value === 'custom')
+            ? (parseFloat(document.getElementById('acred-porcentaje-custom')?.value) || 0)
+            : (parseFloat(pctSelect?.value) || 2.0);
+    }
+
+    let concepto = '';
+    if (tipo === 'RETENCION_SUFRIDA') {
+        concepto = `Retención IR ${pct}% Ref: ${ref}`;
+    } else if (tipo === 'ANTICIPO_PAGADO') {
+        concepto = `Anticipo IR 1% Ref: ${ref}`;
+    } else {
+        concepto = `Saldo a Favor Ref: ${ref}`;
+    }
+
     const payload = {
         ejercicio_fiscal: anioFiscalSeleccionado,
-        tipo: document.getElementById('acred-tipo').value,
-        numero_referencia: document.getElementById('acred-referencia').value.trim(),
+        tipo: tipo,
+        concepto: concepto,
+        numero_referencia: ref,
         fecha: document.getElementById('acred-fecha').value,
         agente_retenedor_nombre: document.getElementById('acred-retenedor-nombre').value.trim(),
-        monto_base: parseFloat(document.getElementById('acred-base').value || 0),
-        importe_total: parseFloat(document.getElementById('acred-importe').value || 0)
+        monto_base: base,
+        porcentaje_aplicado: pct,
+        importe_total: importe
     };
 
     try {
@@ -778,7 +936,7 @@ async function guardarAcreditamientoFiscal(e) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al guardar acreditamiento.');
         closeModal('modal-acreditamiento');
-        if (typeof mostrarNotificacion === 'function') mostrarNotificacion('Constancia registrada.', 'success');
+        if (typeof mostrarNotificacion === 'function') mostrarNotificacion('Constancia registrada exitosamente.', 'success');
         cargarAcreditamientos();
         cargarSimulacionFiscal(false);
     } catch (err) {
@@ -880,28 +1038,294 @@ async function cargarHistorialDeclaraciones() {
         const lista = data.declaraciones || [];
 
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding: 2rem;">No hay declaraciones guardadas o presentadas en el historial.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted" style="padding: 2rem;">No hay declaraciones guardadas o presentadas en el historial.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = lista.map(d => `
+        tbody.innerHTML = lista.map(d => {
+            const rawFecha = d.created_at || d.fecha_creacion || '';
+            let fechaStr = '--';
+            if (rawFecha) {
+                const s = rawFecha.replace('T', ' ');
+                const [fDate, fTime] = s.split(' ');
+                const ymd = fDate.split('-');
+                if (ymd.length === 3) {
+                    const dma = `${ymd[2]}/${ymd[1]}/${ymd[0]}`;
+                    const hhmm = fTime ? fTime.slice(0, 5) : '';
+                    fechaStr = hhmm ? `${dma} <span style="font-size:0.75rem; opacity:0.75;">${hhmm}</span>` : dma;
+                } else {
+                    fechaStr = fDate;
+                }
+            }
+
+            return `
             <tr>
                 <td><strong>${d.ejercicio_fiscal}</strong></td>
                 <td>v${d.version}</td>
                 <td>${d.es_sustitutiva ? '<span class="badge badge-warning">Sustitutiva</span>' : '<span class="badge badge-primary">Original</span>'}</td>
-                <td>${d.created_at ? d.created_at.split('T')[0] : '--'}</td>
-                <td><span class="badge ${d.estado === 'Aprobada' ? 'badge-success' : 'badge-secondary'}">${d.estado}</span></td>
+                <td>${fechaStr}</td>
+                <td><span class="badge ${d.estado === 'Aprobada' || d.estado === 'Presentada' ? 'badge-success' : 'badge-secondary'}">${d.estado}</span></td>
                 <td style="text-align: right; font-family: monospace;">C$ ${fmt(d.ir_determinado)}</td>
                 <td style="text-align: right; font-family: monospace; color: #16a34a;">- C$ ${fmt(d.total_acreditamientos)}</td>
                 <td style="text-align: right; font-weight: bold; font-family: monospace; color: ${d.saldo_a_pagar > 0 ? '#dc2626' : '#16a34a'};">
                     C$ ${fmt(d.saldo_a_pagar > 0 ? d.saldo_a_pagar : d.saldo_a_favor)}
                 </td>
+                <td style="text-align: center;">
+                    <div style="display: inline-flex; gap: 5px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem;" onclick="imprimirDeclaracionEspecifica(${d.id})" title="Imprimir Formulario 106 de este borrador">
+                            <i class="ph-bold ph-printer"></i> Imprimir
+                        </button>
+                        ${d.estado === 'Borrador' ? `
+                            <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="eliminarDeclaracionBorrador(${d.id})" title="Eliminar borrador">
+                                <i class="ph-bold ph-trash"></i> Borrar
+                            </button>
+                        ` : `
+                            <button type="button" class="btn btn-secondary btn-sm" disabled style="padding: 4px 8px; font-size: 0.75rem; opacity: 0.4; cursor: not-allowed;" title="Las declaraciones aprobadas/presentadas no se pueden borrar">
+                                <i class="ph-bold ph-lock"></i>
+                            </button>
+                        `}
+                    </div>
+                </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     } catch (err) {
         console.error('Error cargando historial:', err);
     }
 }
+
+async function eliminarDeclaracionBorrador(id) {
+    let confirmacion = false;
+    if (typeof Swal !== 'undefined') {
+        const res = await Swal.fire({
+            title: '¿Eliminar este borrador?',
+            text: 'Esta acción eliminará el borrador guardado del historial. No se afectarán los movimientos contables.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
+        confirmacion = res.isConfirmed;
+    } else {
+        confirmacion = confirm('¿Está seguro de eliminar este borrador de declaración?');
+    }
+    if (!confirmacion) return;
+
+    try {
+        const res = await fetch(`/api/fiscal/declaracion/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar el borrador.');
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('Borrador eliminado correctamente.', 'success');
+        } else if (typeof Swal !== 'undefined') {
+            Swal.fire('Eliminado', 'El borrador ha sido eliminado.', 'success');
+        }
+        cargarHistorialDeclaraciones();
+    } catch (err) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Error', err.message, 'error');
+        } else {
+            alert(err.message);
+        }
+    }
+}
+window.eliminarDeclaracionBorrador = eliminarDeclaracionBorrador;
+
+async function imprimirDeclaracionEspecifica(id) {
+    try {
+        const res = await fetch(`/api/fiscal/declaracion/${id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al obtener la declaración.');
+        const d = data.declaracion;
+        if (!d) throw new Error('Declaración no encontrada.');
+
+        const printWin = window.open('', '_blank', 'width=950,height=1050');
+        if (!printWin) {
+            alert('Por favor permita ventanas emergentes para imprimir.');
+            return;
+        }
+
+        const renglonesBalance = (d.renglones || []).filter(r => r.seccion === 'BALANCE_GENERAL');
+        const renglonesResultados = (d.renglones || []).filter(r => r.seccion === 'ESTADO_RESULTADOS');
+
+        const rawFecha = d.created_at || d.fecha_creacion || '';
+        const fechaFmt = rawFecha ? rawFecha.replace('T', ' ').slice(0, 16) : '--';
+
+        const rowsBalanceHtml = renglonesBalance.length > 0
+            ? renglonesBalance.map(r => {
+                const esTotal = r.descripcion.toLowerCase().includes('total');
+                return `<tr class="${esTotal ? 'total-row' : ''}">
+                    <td class="text-center" style="width: 40px;">${r.renglon}</td>
+                    <td>${r.cuentas ? `<code>${r.cuentas}</code> ` : ''}${r.descripcion}</td>
+                    <td class="text-right" style="width: 140px;">${fmt(r.importe)}</td>
+                </tr>`;
+            }).join('')
+            : `<tr><td colspan="3" class="text-center text-muted">Sin detalle de balance registrado.</td></tr>`;
+
+        const rowsResultadosHtml = renglonesResultados.length > 0
+            ? renglonesResultados.map(r => {
+                const esTotal = r.descripcion.toLowerCase().includes('total') || r.descripcion.toLowerCase().includes('utilidad');
+                return `<tr class="${esTotal ? 'total-row' : ''}">
+                    <td class="text-center" style="width: 40px;">${r.renglon}</td>
+                    <td>${r.cuentas ? `<code>${r.cuentas}</code> ` : ''}${r.descripcion}</td>
+                    <td class="text-right" style="width: 140px;">${fmt(r.importe)}</td>
+                </tr>`;
+            }).join('')
+            : `<tr><td colspan="3" class="text-center text-muted">Sin detalle de resultados registrado.</td></tr>`;
+
+        const docContent = `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>Declaración Anual IR ${d.ejercicio_fiscal} - Formulario 106 DGI (#${d.id})</title>
+                <style>
+                    body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                    th, td { border: 1px solid #94a3b8; padding: 4px 6px; }
+                    .dgi-hdr { display: flex; justify-content: space-between; align-items: center; border: 1px solid #005fa8; padding: 10px; margin-bottom: 8px; }
+                    .title-box { display: flex; border: 1px solid #005fa8; margin-bottom: 10px; }
+                    .code-106 { font-size: 26px; font-weight: bold; color: #005fa8; padding: 8px 15px; border-right: 1px solid #005fa8; display: flex; align-items: center; }
+                    .sec-head { background: #005fa8; color: #fff; font-weight: bold; padding: 4px 8px; text-transform: uppercase; font-size: 11px; }
+                    .total-row { background: #f1f5f9; font-weight: bold; }
+                    .total-row td { border-top: 2px solid #000; border-bottom: 2px solid #000; }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    @media print {
+                        body { margin: 10px; }
+                        .no-print { display: none !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="no-print" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <div><strong>Declaración #${d.id} (${d.estado})</strong> · Registrada: ${fechaFmt} · Versión: v${d.version}</div>
+                    <button onclick="window.print()" style="background: #005fa8; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                        Imprimir Formulario
+                    </button>
+                </div>
+
+                <div class="dgi-hdr">
+                    <div>
+                        <strong>Gobierno de Reconciliación y Unidad Nacional</strong><br>
+                        <span>Ministerio de Hacienda y Crédito Público • Dirección General de Ingresos (DGI)</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <strong>Ventanilla Electrónica Tributaria (VET)</strong><br>
+                        <span>Ejercicio Fiscal: <strong>${d.ejercicio_fiscal}</strong></span>
+                    </div>
+                </div>
+
+                <div class="title-box">
+                    <div class="code-106">106</div>
+                    <div style="flex: 1; text-align: center; padding: 6px;">
+                        <strong style="font-size: 14px; color: #005fa8;">DECLARACION ANUAL DEL IMPUESTO SOBRE LA RENTA (IR)</strong><br>
+                        <span style="font-weight: bold;">RENTA ANUAL IR 106 · VERSIÓN ${d.version} (${d.estado.toUpperCase()})</span>
+                    </div>
+                    <div style="padding: 6px 12px; text-align: right; border-left: 1px solid #005fa8; font-size: 10px;">
+                        <strong>Período:</strong> 12<br>
+                        <strong>Tipo:</strong> ${d.es_sustitutiva ? 'Sustitutiva' : 'Original'}<br>
+                        <strong>Fecha:</strong> ${fechaFmt.slice(0, 10)}
+                    </div>
+                </div>
+
+                <div class="sec-head">A. DATOS GENERALES</div>
+                <table>
+                    <tr>
+                        <td style="width: 20%; font-weight: bold;">Número RUC:</td>
+                        <td style="width: 30%;">J0310000000001</td>
+                        <td style="width: 25%; font-weight: bold;">Razón Social:</td>
+                        <td>Jehová Jireh Moto Repuestos y Servicios</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Actividad Económica:</td>
+                        <td>Comercio al por menor de repuestos y mantenimiento</td>
+                        <td style="font-weight: bold;">Elaborado por:</td>
+                        <td>${d.usuario_elaboro || 'Sistema'}</td>
+                    </tr>
+                </table>
+
+                <div class="sec-head">B. BALANCE GENERAL (ESTADO DE SITUACIÓN FINANCIERA)</div>
+                <table>
+                    <thead>
+                        <tr style="background: #e2e8f0;">
+                            <th style="width: 40px;">No.</th>
+                            <th>Cuenta / Concepto Contable</th>
+                            <th class="text-right" style="width: 140px;">Importe (C$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsBalanceHtml}
+                    </tbody>
+                </table>
+
+                <div class="sec-head">D. ESTADO DE RESULTADOS</div>
+                <table>
+                    <thead>
+                        <tr style="background: #e2e8f0;">
+                            <th style="width: 40px;">No.</th>
+                            <th>Concepto Económico</th>
+                            <th class="text-right" style="width: 140px;">Importe (C$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsResultadosHtml}
+                    </tbody>
+                </table>
+
+                <div class="sec-head">E. CÁLCULO DEL IR Y F. LIQUIDACIÓN DEL IMPUESTO</div>
+                <table>
+                    <tr>
+                        <td style="width: 70%;"><strong>Renta Neta Gravable Oficial</strong></td>
+                        <td class="text-right" style="font-weight: bold; width: 30%;">C$ ${fmt(d.renta_neta_gravable)}</td>
+                    </tr>
+                    <tr>
+                        <td>IR por Actividades Económicas (30%)</td>
+                        <td class="text-right">C$ ${fmt(d.ir_calculado)}</td>
+                    </tr>
+                    <tr>
+                        <td>Pago Mínimo Definitivo (1% de Ingresos Brutos)</td>
+                        <td class="text-right">C$ ${fmt(d.pago_minimo_definitivo)}</td>
+                    </tr>
+                    <tr class="total-row" style="background: #e0f2fe;">
+                        <td><strong>56. IR DETERMINADO OFICIAL (Rige el mayor)</strong></td>
+                        <td class="text-right"><strong>C$ ${fmt(d.ir_determinado)}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>60. (-) Total Pagos Anticipados y Acreditamientos</td>
+                        <td class="text-right" style="color: #16a34a; font-weight: bold;">- C$ ${fmt(d.total_acreditamientos)}</td>
+                    </tr>
+                    ${d.saldo_a_pagar > 0 ? `
+                        <tr class="total-row" style="background: #fee2e2;">
+                            <td><strong style="color: #dc2626; font-size: 13px;">61. SALDO A PAGAR A LA DGI</strong></td>
+                            <td class="text-right"><strong style="color: #dc2626; font-size: 13px;">C$ ${fmt(d.saldo_a_pagar)}</strong></td>
+                        </tr>
+                    ` : `
+                        <tr class="total-row" style="background: #dcfce7;">
+                            <td><strong style="color: #16a34a; font-size: 13px;">62. SALDO A FAVOR DEL CONTRIBUYENTE</strong></td>
+                            <td class="text-right"><strong style="color: #16a34a; font-size: 13px;">C$ ${fmt(d.saldo_a_favor)}</strong></td>
+                        </tr>
+                    `}
+                </table>
+
+                <div style="margin-top: 40px; display: flex; justify-content: space-around; text-align: center;">
+                    <div style="width: 220px; border-top: 1px solid #000; padding-top: 5px;">Contador General</div>
+                    <div style="width: 220px; border-top: 1px solid #000; padding-top: 5px;">Gerente Administrativo</div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        printWin.document.open();
+        printWin.document.write(docContent);
+        printWin.document.close();
+    } catch (err) {
+        alert('Error al generar la impresión: ' + err.message);
+    }
+}
+window.imprimirDeclaracionEspecifica = imprimirDeclaracionEspecifica;
 
 /**
  * Imprimir Formulario Oficial 106
@@ -1049,6 +1473,222 @@ function imprimirFormulario106() {
     printWin.document.write(docContent);
     printWin.document.close();
 }
+window.imprimirFormulario106 = imprimirFormulario106;
+
+/**
+ * Imprimir Vista Resumen Ejecutivo (Formato Imagen 1)
+ */
+function imprimirResumenEjecutivo() {
+    recalcularFormularioCuentas();
+
+    const anio = anioFiscalSeleccionado || 2026;
+    const fecha = document.getElementById('vet-resumen-fecha')?.textContent || new Date().toISOString().slice(0, 10);
+    const noDecl = document.getElementById('vet-resumen-no-decl')?.textContent || `IR106-${anio}-SIM`;
+    const tipoDecl = document.getElementById('vet-resumen-tipo-decl')?.textContent || 'Original';
+
+    const activos = document.getElementById('kpi-res-activos')?.textContent || 'C$ 0.00';
+    const pasivos = document.getElementById('kpi-res-pasivos')?.textContent || 'C$ 0.00';
+    const patrimonio = document.getElementById('kpi-res-patrimonio')?.textContent || 'C$ 0.00';
+    const cuadre = document.getElementById('kpi-res-cuadre')?.textContent || 'Cuadrado ✓';
+
+    const ingresos = document.getElementById('kpi-res-ingresos')?.textContent || 'C$ 0.00';
+    const costos = document.getElementById('kpi-res-costos')?.textContent || 'C$ 0.00';
+    const gastos = document.getElementById('kpi-res-gastos')?.textContent || 'C$ 0.00';
+    const utilidad = document.getElementById('kpi-res-utilidad')?.textContent || 'C$ 0.00';
+
+    const rentaNeta = document.getElementById('kpi-res-renta-neta')?.textContent || 'C$ 0.00';
+    const ir30 = document.getElementById('kpi-res-ir30')?.textContent || 'C$ 0.00';
+    const pmd1 = document.getElementById('kpi-res-pmd1')?.textContent || 'C$ 0.00';
+    const irDeterminado = document.getElementById('kpi-res-ir-determinado')?.textContent || 'C$ 0.00';
+
+    const acreditamientos = document.getElementById('kpi-res-acreditamientos')?.textContent || 'C$ 0.00';
+    const saldoPagar = document.getElementById('kpi-res-saldo-pagar')?.textContent || 'C$ 0.00';
+    const saldoFavor = document.getElementById('kpi-res-saldo-favor')?.textContent || 'C$ 0.00';
+    const tienePagar = (document.getElementById('card-saldo-final-pagar')?.style.display !== 'none');
+
+    const printWin = window.open('', '_blank', 'width=950,height=1050');
+    if (!printWin) {
+        alert('Por favor permita ventanas emergentes para imprimir.');
+        return;
+    }
+
+    const docContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Resumen Ejecutivo - Declaración Anual IR ${anio} - Jehová Jireh</title>
+            <style>
+                body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; margin: 25px; background: #fff; }
+                .dgi-hdr { display: flex; justify-content: space-between; align-items: center; border: 1px solid #005fa8; padding: 10px 14px; margin-bottom: 10px; border-radius: 4px; }
+                .title-box { display: flex; border: 2px solid #005fa8; margin-bottom: 12px; border-radius: 4px; background: #f8fafc; }
+                .code-106 { font-size: 28px; font-weight: 900; color: #005fa8; padding: 10px 18px; border-right: 2px solid #005fa8; display: flex; align-items: center; background: #e0f2fe; }
+                .sec-banner { background: #005fa8; color: #fff; font-weight: bold; padding: 5px 10px; font-size: 11px; text-transform: uppercase; margin-top: 14px; margin-bottom: 6px; border-radius: 3px; letter-spacing: 0.5px; }
+                .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+                .kpi-box { border: 1px solid #cbd5e1; border-radius: 5px; padding: 8px 10px; background: #f8fafc; }
+                .kpi-box .kpi-label { font-size: 10px; color: #64748b; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+                .kpi-box .kpi-val { font-size: 13px; font-weight: 800; font-family: monospace; color: #0f172a; }
+                .highlight-blue { border: 2px solid #005fa8; background: #f0f9ff; }
+                .highlight-blue .kpi-val { color: #005fa8; font-size: 14px; }
+                .highlight-red { border: 2px solid #dc2626; background: #fef2f2; }
+                .highlight-red .kpi-val { color: #dc2626; font-size: 15px; }
+                .highlight-green { border: 2px solid #16a34a; background: #f0fdf4; }
+                .highlight-green .kpi-val { color: #16a34a; font-size: 15px; }
+                .general-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+                .general-table td { padding: 5px 8px; border: 1px solid #cbd5e1; }
+                .no-print { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 8px 14px; margin-bottom: 16px; border-radius: 6px; border: 1px solid #cbd5e1; }
+                @media print {
+                    body { margin: 10px; }
+                    .no-print { display: none !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="no-print">
+                <div><strong>Vista Resumen Ejecutivo — Declaración Anual IR ${anio}</strong></div>
+                <button onclick="window.print()" style="background: #005fa8; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                    Imprimir Resumen
+                </button>
+            </div>
+
+            <div class="dgi-hdr">
+                <div>
+                    <strong style="font-size: 12px;">Gobierno de Reconciliación y Unidad Nacional</strong><br>
+                    <span style="font-size: 10px; color: #475569;">Ministerio de Hacienda y Crédito Público • Dirección General de Ingresos (DGI)</span>
+                </div>
+                <div style="text-align: right;">
+                    <strong>Ventanilla Electrónica Tributaria (VET)</strong><br>
+                    <span>Ejercicio Fiscal: <strong>${anio}</strong></span>
+                </div>
+            </div>
+
+            <div class="title-box">
+                <div class="code-106">106</div>
+                <div style="flex: 1; text-align: center; padding: 8px;">
+                    <strong style="font-size: 14px; color: #005fa8; letter-spacing: 0.5px;">DECLARACION ANUAL DEL IMPUESTO SOBRE LA RENTA (IR)</strong><br>
+                    <span style="font-weight: 800; font-size: 12px; color: #334155;">RENTA ANUAL IR 106 · VISTA RESUMEN EJECUTIVO</span>
+                </div>
+                <div style="padding: 8px 14px; text-align: right; border-left: 2px solid #005fa8; font-size: 10px; background: #fff;">
+                    <strong>No. Declaración:</strong> ${noDecl}<br>
+                    <strong>Tipo:</strong> ${tipoDecl}<br>
+                    <strong>Fecha:</strong> ${fecha}
+                </div>
+            </div>
+
+            <div class="sec-banner">A. Datos Generales del Contribuyente</div>
+            <table class="general-table">
+                <tr>
+                    <td style="width: 20%; font-weight: bold; background: #f8fafc;">Número RUC:</td>
+                    <td style="width: 30%; font-family: monospace; font-weight: bold; color: #005fa8;">J0310000000001</td>
+                    <td style="width: 25%; font-weight: bold; background: #f8fafc;">Razón Social:</td>
+                    <td style="font-weight: bold;">Jehová Jireh Moto Repuestos y Servicios</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; background: #f8fafc;">Actividad Económica:</td>
+                    <td colspan="3">Comercio al por menor de repuestos, lubricantes y mantenimiento de motocicletas</td>
+                </tr>
+            </table>
+
+            <div class="sec-banner">B. Balance General — Situación Financiera</div>
+            <div class="kpi-grid">
+                <div class="kpi-box">
+                    <div class="kpi-label">Total Activo (Renglón 12)</div>
+                    <div class="kpi-val">${activos}</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-label">Total Pasivo (Renglón 22)</div>
+                    <div class="kpi-val">${pasivos}</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-label">Patrimonio Neto (Renglón 26)</div>
+                    <div class="kpi-val">${patrimonio}</div>
+                </div>
+                <div class="kpi-box highlight-green">
+                    <div class="kpi-label" style="color: #16a34a;">Estado de Cuadre</div>
+                    <div class="kpi-val" style="color: #16a34a; font-size: 12px;">${cuadre}</div>
+                </div>
+            </div>
+
+            <div class="sec-banner">D. Estado de Resultados — Rendimiento Operativo</div>
+            <div class="kpi-grid">
+                <div class="kpi-box">
+                    <div class="kpi-label">Ingresos Brutos (R32)</div>
+                    <div class="kpi-val">${ingresos}</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-label">Costo de Ventas (R33)</div>
+                    <div class="kpi-val">${costos}</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-label">Gastos Operativos (R47)</div>
+                    <div class="kpi-val">${gastos}</div>
+                </div>
+                <div class="kpi-box highlight-blue">
+                    <div class="kpi-label" style="color: #005fa8;">Utilidad Neta (R48)</div>
+                    <div class="kpi-val" style="color: #005fa8;">${utilidad}</div>
+                </div>
+            </div>
+
+            <div class="sec-banner">E. Cálculo del Impuesto sobre la Renta (IR)</div>
+            <div class="kpi-grid">
+                <div class="kpi-box">
+                    <div class="kpi-label">Renta Neta Gravable</div>
+                    <div class="kpi-val">${rentaNeta}</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-label">IR 30% (Art. 52 Ley 822)</div>
+                    <div class="kpi-val">${ir30}</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-label">Pago Mínimo Definitivo 1%</div>
+                    <div class="kpi-val">${pmd1}</div>
+                </div>
+                <div class="kpi-box highlight-blue">
+                    <div class="kpi-label" style="color: #005fa8;">IR Determinado Oficial</div>
+                    <div class="kpi-val" style="color: #005fa8;">${irDeterminado}</div>
+                </div>
+            </div>
+
+            <div class="sec-banner">F. Liquidación Final del Impuesto y Acreditamientos</div>
+            <div class="kpi-grid">
+                <div class="kpi-box">
+                    <div class="kpi-label">IR Determinado</div>
+                    <div class="kpi-val">${irDeterminado}</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-label">Total Acreditamientos</div>
+                    <div class="kpi-val" style="color: #16a34a;">${acreditamientos}</div>
+                </div>
+                ${tienePagar ? `
+                    <div class="kpi-box highlight-red" style="grid-column: span 2;">
+                        <div class="kpi-label" style="color: #dc2626;">Saldo a Pagar a la DGI (Renglón 61)</div>
+                        <div class="kpi-val" style="color: #dc2626; font-size: 16px;">${saldoPagar}</div>
+                    </div>
+                ` : `
+                    <div class="kpi-box highlight-green" style="grid-column: span 2;">
+                        <div class="kpi-label" style="color: #16a34a;">Saldo a Favor del Contribuyente (Renglón 62)</div>
+                        <div class="kpi-val" style="color: #16a34a; font-size: 16px;">${saldoFavor}</div>
+                    </div>
+                `}
+            </div>
+
+            <div style="margin-top: 45px; display: flex; justify-content: space-around; text-align: center;">
+                <div style="width: 220px; border-top: 1px solid #334155; padding-top: 6px; font-size: 11px; font-weight: bold;">
+                    Contador General<br><small style="font-weight: normal; color: #64748b;">Firma y Sello</small>
+                </div>
+                <div style="width: 220px; border-top: 1px solid #334155; padding-top: 6px; font-size: 11px; font-weight: bold;">
+                    Gerente Administrativo<br><small style="font-weight: normal; color: #64748b;">Representante Legal</small>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    printWin.document.open();
+    printWin.document.write(docContent);
+    printWin.document.close();
+}
+window.imprimirResumenEjecutivo = imprimirResumenEjecutivo;
 
 /**
  * Helpers auxiliares
@@ -1078,7 +1718,10 @@ function setIn(id, val) {
 
 function closeModal(id) {
     const m = document.getElementById(id);
-    if (m) m.classList.remove('active');
+    if (m) {
+        m.classList.remove('active');
+        m.style.display = 'none';
+    }
 }
 
 // Formateo automático de comas y punto decimal para todos los campos al enfocar y desenfocar

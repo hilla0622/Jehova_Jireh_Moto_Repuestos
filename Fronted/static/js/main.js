@@ -304,7 +304,8 @@ async function verificarEstadoCaja() {
 }
 
 function abrirModalAperturaCaja() {
-    document.getElementById('form-apertura-caja').reset();
+    const form = document.getElementById('form-apertura-caja');
+    if (form) form.reset();
     
     // Obtener fecha actual formateada
     const now = new Date();
@@ -315,15 +316,27 @@ function abrirModalAperturaCaja() {
         fechaInput.value = formattedDate;
     }
     
-    document.getElementById('modal-apertura-caja').style.display = 'flex';
+    openModal('modal-apertura-caja');
+    setTimeout(() => {
+        const montoInput = document.getElementById('caja-monto-inicial');
+        if (montoInput) montoInput.focus();
+    }, 100);
 }
 
 function cerrarModalAperturaCaja() {
-    document.getElementById('modal-apertura-caja').style.display = 'none';
+    closeModal('modal-apertura-caja');
 }
 
 async function submitAperturaCaja() {
-    const monto = parseFloat(document.getElementById('caja-monto-inicial').value);
+    const inputMonto = document.getElementById('caja-monto-inicial');
+    if (!inputMonto) return;
+    const rawVal = inputMonto.value.trim();
+    if (rawVal === '' || isNaN(parseFloat(rawVal))) {
+        alert("Por favor ingrese el monto inicial de apertura.");
+        inputMonto.focus();
+        return;
+    }
+    const monto = parseFloat(rawVal);
     try {
         const response = await fetch('/api/caja/apertura', {
             method: 'POST',
@@ -339,28 +352,73 @@ async function submitAperturaCaja() {
             verificarEstadoCaja();
         }
     } catch(e) {
-        alert("Error de red.");
+        alert("Error de red al intentar abrir la caja.");
     }
 }
 
 function abrirModalCierreCaja() {
-    document.getElementById('form-cierre-caja').reset();
-    document.getElementById('modal-cierre-caja').style.display = 'flex';
+    const form = document.getElementById('form-cierre-caja');
+    if (form) form.reset();
+    openModal('modal-cierre-caja');
+    setTimeout(() => {
+        const montoInput = document.getElementById('caja-monto-final');
+        if (montoInput) montoInput.focus();
+    }, 100);
 }
 
 function cerrarModalCierreCaja() {
-    document.getElementById('modal-cierre-caja').style.display = 'none';
+    closeModal('modal-cierre-caja');
 }
 
 async function submitCierreCaja() {
-    const montoFinal = parseFloat(document.getElementById('caja-monto-final').value);
-    const obs = document.getElementById('caja-observaciones').value;
+    const inputMonto = document.getElementById('caja-monto-final');
+    if (!inputMonto) return;
     
-    const responseEstado = await fetch('/api/caja/estado');
-    const cajaAct = await responseEstado.json();
-    if(cajaAct.estado !== 'Abierta') return alert("No hay caja abierta");
+    const rawVal = inputMonto.value.trim();
+    if (rawVal === '' || isNaN(parseFloat(rawVal))) {
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje({ titulo: 'Monto requerido', texto: 'Por favor ingrese el monto de efectivo total en caja.', icono: 'warning' });
+        } else {
+            alert('Por favor ingrese el monto de efectivo total en caja.');
+        }
+        inputMonto.focus();
+        return;
+    }
     
+    const montoFinal = parseFloat(rawVal);
+    if (montoFinal < 0) {
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje({ titulo: 'Monto inválido', texto: 'El monto en caja no puede ser negativo.', icono: 'warning' });
+        } else {
+            alert('El monto en caja no puede ser negativo.');
+        }
+        inputMonto.focus();
+        return;
+    }
+
+    const obsInput = document.getElementById('caja-observaciones');
+    const obs = obsInput ? obsInput.value.trim() : '';
+
+    const btnSubmit = document.getElementById('btn-submit-cierre-caja') || document.querySelector('#form-cierre-caja button[type="submit"]');
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Cerrando Caja...';
+    }
+
     try {
+        const responseEstado = await fetch('/api/caja/estado');
+        const cajaAct = await responseEstado.json();
+        if (cajaAct.estado !== 'Abierta') {
+            if (typeof mostrarMensaje === 'function') {
+                mostrarMensaje({ titulo: 'Atención', texto: 'No hay ninguna caja abierta actualmente.', icono: 'info' });
+            } else {
+                alert('No hay caja abierta');
+            }
+            cerrarModalCierreCaja();
+            verificarEstadoCaja();
+            return;
+        }
+
         const response = await fetch('/api/caja/cierre', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -372,25 +430,46 @@ async function submitCierreCaja() {
         });
         const data = await response.json();
         if (data.error) {
-            alert("Error: " + data.error);
+            if (typeof mostrarMensaje === 'function') {
+                mostrarMensaje({ titulo: 'Error al cerrar caja', texto: data.error, icono: 'error' });
+            } else {
+                alert("Error: " + data.error);
+            }
         } else {
-            let dif = data.diferencia;
+            let dif = Number(data.diferencia !== undefined ? data.diferencia : 0);
             let msg = `Diferencia encontrada: <strong>C$ ${dif.toFixed(2)}</strong>`;
-            if(dif < 0) msg += "<br><br><span style='color: #ef4444;'><i class='ph-bold ph-warning'></i> ¡FALTANTE DE DINERO! Debes reportarlo.</span>";
-            if(dif > 0) msg += "<br><br><span style='color: #f59e0b;'><i class='ph-bold ph-warning'></i> ¡SOBRANTE DE DINERO!</span>";
-            if(dif === 0) msg += "<br><br><span style='color: #10b981;'><i class='ph-bold ph-check'></i> CAJA CUADRADA EXACTAMENTE.</span>";
+            if (dif < 0) {
+                msg += "<br><br><span style='color: #ef4444; font-weight: 600;'><i class='ph-bold ph-warning'></i> ¡FALTANTE DE DINERO! Debes reportarlo.</span>";
+            } else if (dif > 0) {
+                msg += "<br><br><span style='color: #f59e0b; font-weight: 600;'><i class='ph-bold ph-warning'></i> ¡SOBRANTE DE DINERO!</span>";
+            } else {
+                msg += "<br><br><span style='color: #10b981; font-weight: 600;'><i class='ph-bold ph-check-circle'></i> CAJA CUADRADA EXACTAMENTE.</span>";
+            }
             
-            document.getElementById('msg-caja-cerrada-exito-text').innerHTML = msg;
+            const msgEl = document.getElementById('msg-caja-cerrada-exito-text');
+            if (msgEl) msgEl.innerHTML = msg;
+            
             cerrarModalCierreCaja();
             verificarEstadoCaja();
             openModal('modal-caja-cerrada-exito');
             
-            if(document.getElementById('tab-reportes').classList.contains('active')){
+            const tabReportes = document.getElementById('tab-reportes');
+            if (tabReportes && tabReportes.classList.contains('active') && typeof cargarSesionesCaja === 'function') {
                 cargarSesionesCaja();
             }
         }
     } catch(e) {
-        alert("Error de red.");
+        console.error('Error al cerrar caja:', e);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje({ titulo: 'Error de red', texto: 'No se pudo conectar con el servidor para cerrar la caja.', icono: 'error' });
+        } else {
+            alert("Error de red al procesar el cierre de caja.");
+        }
+    } finally {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="ph-bold ph-check-circle"></i> Cerrar Caja';
+        }
     }
 }
 
@@ -418,6 +497,7 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('active');
+        modal.style.display = 'flex';
         if (modalId === 'modal-asiento' && typeof prepareAsientoModal === 'function') {
             prepareAsientoModal();
         }
@@ -488,21 +568,28 @@ async function eliminarCuenta(id) {
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
 }
 
 // Cerrar cualquier modal al hacer clic en el fondo oscuro (backdrop)
 document.addEventListener('click', (e) => {
-    if (e.target && e.target.classList && e.target.classList.contains('modal') && e.target.classList.contains('active')) {
-        e.target.classList.remove('active');
+    if (e.target && e.target.classList && e.target.classList.contains('modal')) {
+        if (e.target.classList.contains('active') || e.target.style.display === 'flex') {
+            closeModal(e.target.id);
+        }
     }
 });
 
 // Cerrar modal al presionar la tecla Escape
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        const activeModal = document.querySelector('.modal.active');
-        if (activeModal) activeModal.classList.remove('active');
+        const activeModal = document.querySelector('.modal.active') || document.querySelector('.modal[style*="display: flex"]');
+        if (activeModal && activeModal.id) {
+            closeModal(activeModal.id);
+        }
     }
 });
 

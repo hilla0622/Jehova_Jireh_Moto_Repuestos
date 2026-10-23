@@ -477,8 +477,10 @@ def guardar_acreditamiento(cursor, data, usuario_id):
     importe_total = float(data.get("importe_total", 0.0))
     doc_url = data.get("documento_respaldo_url", "")
 
-    if not concepto or not numero_referencia:
-        raise ValueError("El concepto y el número de referencia/constancia son obligatorios.")
+    if not concepto:
+        concepto = f"{tipo} Ref: {numero_referencia}".strip()
+    if not numero_referencia:
+        raise ValueError("El número de referencia/constancia es obligatorio.")
     if importe_total <= 0 and monto_base > 0 and porcentaje > 0:
         importe_total = round(monto_base * (porcentaje / 100.0), 2)
     if importe_total <= 0:
@@ -672,10 +674,11 @@ def listar_declaraciones_guardadas(cursor):
                d.created_at, d.fecha_aprobacion, u.nombre_completo AS usuario_elaboro
         FROM declaraciones_ir d
         LEFT JOIN usuarios u ON d.usuario_elaboro_id = u.id
-        ORDER BY d.ejercicio_fiscal DESC, d.version DESC
+        ORDER BY d.ejercicio_fiscal DESC, d.version DESC, d.id DESC
     """)
     filas = []
     for r in cursor.fetchall():
+        fecha_str = str(r.created_at)[:19] if r.created_at else ""
         filas.append({
             "id": r.id,
             "ejercicio_fiscal": r.ejercicio_fiscal,
@@ -689,10 +692,80 @@ def listar_declaraciones_guardadas(cursor):
             "acreditamientos": float(r.total_acreditamientos or 0),
             "saldo_a_pagar": float(r.saldo_a_pagar or 0),
             "saldo_a_favor": float(r.saldo_a_favor or 0),
-            "fecha_creacion": str(r.created_at)[:19] if r.created_at else "",
+            "fecha_creacion": fecha_str,
+            "created_at": fecha_str,
             "usuario_elaboro": r.usuario_elaboro or "Sistema"
         })
     return filas
+
+def eliminar_declaracion(cursor, decl_id):
+    cursor.execute("SELECT id, estado, version, ejercicio_fiscal FROM declaraciones_ir WHERE id = ?", (decl_id,))
+    row = cursor.fetchone()
+    if not row:
+        raise ValueError("Declaración no encontrada.")
+    if row.estado != 'Borrador':
+        raise ValueError("Solo se pueden eliminar declaraciones en estado 'Borrador'. Las declaraciones presentadas están protegidas.")
+    
+    cursor.execute("DELETE FROM declaracion_renglones_detalle WHERE declaracion_id = ?", (decl_id,))
+    cursor.execute("DELETE FROM declaracion_validaciones WHERE declaracion_id = ?", (decl_id,))
+    cursor.execute("DELETE FROM declaraciones_ir WHERE id = ?", (decl_id,))
+    return True
+
+def obtener_declaracion_detalle(cursor, decl_id):
+    cursor.execute("""
+        SELECT d.*, u.nombre_completo AS usuario_elaboro
+        FROM declaraciones_ir d
+        LEFT JOIN usuarios u ON d.usuario_elaboro_id = u.id
+        WHERE d.id = ?
+    """, (decl_id,))
+    d = cursor.fetchone()
+    if not d:
+        return None
+    
+    cursor.execute("""
+        SELECT seccion, numero_renglon, descripcion_renglon, tipo_renglon,
+               importe_base_contable, importe_ajustes, importe_declarado, cuentas_asociadas
+        FROM declaracion_renglones_detalle
+        WHERE declaracion_id = ?
+        ORDER BY id ASC
+    """, (decl_id,))
+    renglones = []
+    for r in cursor.fetchall():
+        renglones.append({
+            "seccion": r.seccion,
+            "renglon": r.numero_renglon,
+            "descripcion": r.descripcion_renglon,
+            "tipo": r.tipo_renglon,
+            "importe_base": float(r.importe_base_contable or 0),
+            "importe_ajustes": float(r.importe_ajustes or 0),
+            "importe": float(r.importe_declarado or 0),
+            "cuentas": r.cuentas_asociadas or ""
+        })
+    
+    fecha_str = str(d.created_at)[:19] if d.created_at else ""
+    return {
+        "id": d.id,
+        "ejercicio_fiscal": d.ejercicio_fiscal,
+        "version": d.version,
+        "es_sustitutiva": bool(d.es_sustitutiva),
+        "estado": d.estado,
+        "regimen": d.regimen_tributario_aplicado,
+        "total_ingresos_brutos": float(d.total_ingresos_brutos or 0),
+        "total_costos": float(d.total_costos or 0),
+        "total_gastos": float(d.total_gastos_deducibles or 0),
+        "renta_neta_gravable": float(d.renta_neta_gravable or 0),
+        "ir_calculado": float(d.ir_calculado or 0),
+        "pago_minimo_definitivo": float(d.pago_minimo_definitivo or 0),
+        "ir_determinado": float(d.ir_determinado or 0),
+        "total_acreditamientos": float(d.total_acreditamientos or 0),
+        "saldo_a_pagar": float(d.saldo_a_pagar or 0),
+        "saldo_a_favor": float(d.saldo_a_favor or 0),
+        "observaciones": d.observaciones or "",
+        "fecha_creacion": fecha_str,
+        "created_at": fecha_str,
+        "usuario_elaboro": d.usuario_elaboro or "Sistema",
+        "renglones": renglones
+    }
 
 def registrar_presentacion_dgi(cursor, data, usuario_id):
     decl_id = int(data.get("declaracion_id"))

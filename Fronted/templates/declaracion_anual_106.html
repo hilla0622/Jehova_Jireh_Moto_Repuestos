@@ -23,8 +23,11 @@
             <button type="button" class="btn btn-secondary btn-sm" onclick="cargarSimulacionFiscal(true)" title="Recalcular automáticamente desde el catálogo y asientos contables">
                 <i class="ph-bold ph-arrows-clockwise"></i> Cargar desde Contabilidad
             </button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="imprimirFormulario106()" title="Imprimir Formato Oficial VET DGI">
-                <i class="ph-bold ph-printer"></i> Imprimir VET
+            <button type="button" class="btn btn-secondary btn-sm" onclick="imprimirFormulario106()" title="Imprimir Formulario Oficial 106 Detallado por Cuentas (Formato Imagen 2)">
+                <i class="ph-bold ph-printer"></i> Imprimir Formulario 106
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="imprimirResumenEjecutivo()" title="Imprimir Vista Resumen Ejecutivo (Formato Imagen 1)">
+                <i class="ph-bold ph-file-text"></i> Imprimir Resumen Ejecutivo
             </button>
         </div>
     </div>
@@ -905,7 +908,10 @@
                         Editar Declaración por Cuentas
                     </button>
                 </div>
-                <div style="display: flex; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary" onclick="imprimirResumenEjecutivo()" title="Imprimir este Resumen Ejecutivo en formato oficial">
+                        <i class="ph-bold ph-printer"></i> Imprimir Resumen
+                    </button>
                     <button type="button" class="btn btn-secondary" onclick="guardarDeclaracionBorrador()">
                         <i class="ph-bold ph-floppy-disk"></i> Guardar Borrador
                     </button>
@@ -1011,10 +1017,11 @@
                                 <th style="text-align: right;">IR Determinado</th>
                                 <th style="text-align: right;">Acreditamientos</th>
                                 <th style="text-align: right;">Saldo Neto</th>
+                                <th style="text-align: center; width: 160px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-historial-fiscal">
-                            <tr><td colspan="8" class="text-center text-muted" style="padding: 2rem;">Cargando historial de declaraciones...</td></tr>
+                            <tr><td colspan="9" class="text-center text-muted" style="padding: 2rem;">Cargando historial de declaraciones...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1041,6 +1048,16 @@
                         <option value="CREDITO_FISCAL">Saldo a Favor Período Anterior</option>
                     </select>
                 </div>
+                <div class="form-group" id="group-tasa">
+                    <label id="acred-tasa-label">Porcentaje Aplicado (Ley 822):</label>
+                    <select id="acred-porcentaje-select" class="form-control" onchange="actualizarTasaAcreditamiento()">
+                        <option value="2.00" selected>2% - Venta de Repuestos / Bienes / Taller (Art. 132 LCT)</option>
+                        <option value="1.50">1.5% - Retención POS por Ventas con Tarjetas Bancarias</option>
+                        <option value="10.00">10% - Servicios Profesionales</option>
+                        <option value="custom">Otro porcentaje (personalizado)...</option>
+                    </select>
+                    <input type="number" step="0.01" min="0" max="100" id="acred-porcentaje-custom" class="form-control" placeholder="Escriba el % (ej: 2.00)" style="display:none; margin-top: 6px;" oninput="calcularImporteRetenido()">
+                </div>
                 <div class="grid-2col">
                     <div class="form-group">
                         <label>No. de Constancia / Referencia:</label>
@@ -1052,18 +1069,22 @@
                     </div>
                 </div>
                 <div class="form-group" id="group-retenedor">
-                    <label>Agente Retenedor (Cliente o Banco):</label>
+                    <label id="acred-retenedor-label">Agente Retenedor (Cliente o Banco):</label>
                     <input type="text" id="acred-retenedor-nombre" class="form-control" placeholder="Ej: Distribuidora Central S.A. o BAC">
                 </div>
                 <div class="grid-2col">
-                    <div class="form-group">
-                        <label>Base Gravable (C$):</label>
+                    <div class="form-group" id="group-base">
+                        <label id="acred-base-label">Base Gravable / Subtotal Factura (C$):</label>
                         <input type="number" step="0.01" id="acred-base" class="form-control" placeholder="0.00" oninput="calcularImporteRetenido()">
                     </div>
-                    <div class="form-group">
-                        <label>Importe Retenido / Pagado (C$):</label>
+                    <div class="form-group" id="group-importe">
+                        <label id="acred-importe-label">Importe Retenido / Pagado (C$):</label>
                         <input type="number" step="0.01" id="acred-importe" class="form-control" placeholder="0.00" required style="font-weight: bold; color: #005fa8;">
                     </div>
+                </div>
+                <div id="acred-info-box" class="alert alert-info" style="font-size: 0.85rem; margin-top: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="ph-bold ph-info" style="font-size: 1.1rem;"></i>
+                    <span id="acred-calculo-nota">Cálculo sugerido: Base × 2% según Art. 132 LCT (puede ajustar los centavos si la constancia física difiere).</span>
                 </div>
             </div>
             <div class="modal-footer">

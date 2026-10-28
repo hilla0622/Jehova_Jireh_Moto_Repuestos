@@ -1,0 +1,68 @@
+<section id="tab-panel" class="tab-content active">
+    <div class="dashboard-heading">
+        <div><h1>Panel principal</h1><p>Resumen de operaciones · Jehová Jireh Moto Repuestos</p></div>
+        <button type="button" class="dashboard-link" onclick="loadDashboardStats()" aria-label="Actualizar panel"><i class="ph-bold ph-arrow-clockwise" aria-hidden="true"></i> Actualizar</button>
+    </div>
+
+    <div class="dashboard-summary" aria-label="Resumen general">
+        <div><span>Repuestos en catálogo</span><strong id="stat-total-productos">—</strong></div>
+        <div><span>Ventas acumuladas</span><strong id="stat-total-ventas">—</strong><small id="stat-conteo-ventas"></small></div>
+        <div><span>Repuestos bajo mínimo</span><strong id="stat-stock-bajo" class="dashboard-alert">—</strong></div>
+        <div><span>Proveedores registrados</span><strong id="stat-proveedores">—</strong></div>
+    </div>
+    <p id="dashboard-load-status" class="dashboard-load-status" role="status" hidden></p>
+
+    <div class="dashboard-grid">
+        <article class="dashboard-panel">
+            <header class="dashboard-panel-heading"><h2>Accesos rápidos</h2></header>
+            <div class="quick-actions-list dashboard-actions">
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
+                <button type="button" class="action-tile" onclick="switchTab('tab-ventas')"><i class="ph-bold ph-shopping-cart" aria-hidden="true"></i><span>Punto de Venta (POS)</span></button>
+                {% endif %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
+                <button type="button" class="action-tile" onclick="switchTab('tab-inventario')"><i class="ph-bold ph-package" aria-hidden="true"></i><span>Consultar Inventario</span></button>
+                {% endif %}
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores'] %}
+                <button type="button" class="action-tile" onclick="switchTab('tab-compras')"><i class="ph-bold ph-arrow-down-left" aria-hidden="true"></i><span>Ingreso de Compras</span></button>
+                {% endif %}
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
+                <button type="button" class="action-tile" onclick="switchTab('tab-reportes')"><i class="ph-bold ph-chart-line-up" aria-hidden="true"></i><span>Reportes y Contabilidad</span></button>
+                <button type="button" class="action-tile" onclick="switchTab('tab-fiscal')"><i class="ph-bold ph-receipt" aria-hidden="true"></i><span>Declaración DGI</span></button>
+                {% endif %}
+                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Responsable de Recursos Humanos'] %}
+                <button type="button" class="action-tile" onclick="switchTab('tab-rrhh')"><i class="ph-bold ph-users" aria-hidden="true"></i><span>Recursos Humanos</span></button>
+                {% endif %}
+            </div>
+        </article>
+
+        <article class="dashboard-panel">
+            <header class="dashboard-panel-heading"><h2>Actividades recientes</h2><span class="dashboard-panel-note">Ventas e inventario</span></header>
+            <div class="dashboard-table-wrap" tabindex="0" role="region" aria-label="Actividades recientes">
+                <table class="dashboard-table"><thead><tr><th>Tipo</th><th>Descripción</th><th>Usuario</th><th>Fecha</th></tr></thead><tbody id="dashboard-activity"><tr><td colspan="4" class="dashboard-empty">Cargando actividades…</td></tr></tbody></table>
+            </div>
+        </article>
+
+        <article class="dashboard-panel">
+            <header class="dashboard-panel-heading"><h2>Productos con stock bajo</h2>
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
+                <button type="button" class="dashboard-link" onclick="switchTab('tab-inventario')">Ver inventario <span aria-hidden="true">→</span></button>
+                {% endif %}
+            </header>
+            <div class="dashboard-table-wrap" tabindex="0" role="region" aria-label="Productos con stock bajo">
+                <table class="dashboard-table"><thead><tr><th>Código</th><th>Repuesto</th><th class="dashboard-number">Existencias</th><th class="dashboard-number">Mínimo</th></tr></thead><tbody id="dashboard-low-stock"><tr><td colspan="4" class="dashboard-empty">Cargando inventario…</td></tr></tbody></table>
+            </div>
+            <p id="dashboard-stock-note" class="dashboard-footnote"></p>
+        </article>
+
+        <article class="dashboard-panel">
+            <header class="dashboard-panel-heading"><h2>Últimas ventas</h2>
+                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
+                <button type="button" class="dashboard-link" onclick="switchTab('tab-ventas')">Ver todas <span aria-hidden="true">→</span></button>
+                {% endif %}
+            </header>
+            <div class="dashboard-table-wrap" tabindex="0" role="region" aria-label="Últimas ventas">
+                <table class="dashboard-table"><thead><tr><th>Código / fecha</th><th>Cliente</th><th class="dashboard-number">Total</th><th>Estado</th><th><span class="sr-only">Comprobante</span></th></tr></thead><tbody id="recent-sales-list"><tr><td colspan="5" class="dashboard-empty">Cargando ventas…</td></tr></tbody></table>
+            </div>
+        </article>
+    </div>
+</section>

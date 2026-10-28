@@ -1,0 +1,68 @@
+/* Panel principal: diseño de trabajo compacto, sin afectar los demás módulos. */
+.gestion-ui #tab-panel { --dashboard-border: var(--border-color); padding-top: 24px; }
+[data-theme="light"] .gestion-ui #tab-panel { --dashboard-border: #dedfe3; }
+#tab-panel .dashboard-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+#tab-panel .dashboard-heading h1 { font-size: 25px; letter-spacing: -.035em; line-height: 1.3; }
+#tab-panel .dashboard-heading p { color: var(--text-muted); font-size: 12px; margin-top: 5px; }
+#tab-panel .dashboard-summary { display: grid; grid-template-columns: .9fr 1.5fr 1fr 1fr; margin-bottom: 22px; padding: 15px 0; border-block: 1px solid var(--dashboard-border); }
+#tab-panel .dashboard-summary > div { padding: 0 20px; border-right: 1px solid var(--dashboard-border); min-width: 0; }
+#tab-panel .dashboard-summary > div:first-child { padding-left: 0; }
+#tab-panel .dashboard-summary > div:last-child { border: 0; }
+#tab-panel .dashboard-summary span { display: block; color: var(--text-muted); font-size: 11px; margin-bottom: 5px; }
+#tab-panel .dashboard-summary strong { font-size: clamp(18px,1.7vw,25px); letter-spacing: -.025em; font-variant-numeric: tabular-nums; line-height: 1.3; }
+#tab-panel .dashboard-summary small { font-size: 10px; color: var(--text-muted); display: block; margin-top: 3px; }
+#tab-panel .dashboard-alert { color: var(--accent-red); }
+#tab-panel .dashboard-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.12fr); gap: 18px; align-items: stretch; }
+#tab-panel .dashboard-panel { min-width: 0; background: var(--bg-card); border: 1px solid var(--dashboard-border); border-radius: 4px; padding: 0 16px 14px; overflow: hidden; }
+#tab-panel .dashboard-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 57px; padding: 14px 0; }
+#tab-panel .dashboard-panel-heading h2 { border-left: 3px solid var(--primary); padding-left: 9px; font-size: 14px; font-weight: 700; line-height: 1.4; letter-spacing: -.02em; }
+#tab-panel .dashboard-panel-note { font-size: 10px; color: var(--text-muted); text-align: right; }
+#tab-panel .dashboard-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; color: var(--text-muted); background: none; border: 0; font: 11px var(--font-body); cursor: pointer; padding: 4px 0 4px 4px; flex-shrink: 0; }
+#tab-panel .dashboard-link:hover { color: var(--primary); text-decoration: underline; }
+#tab-panel button:focus-visible, #tab-panel .dashboard-table-wrap:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.gestion-ui #tab-panel .dashboard-actions { padding: 0; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.gestion-ui #tab-panel .action-tile { min-height: 82px; padding: 14px 17px; gap: 9px; border-radius: 7px; box-shadow: none; text-align: left; background: var(--bg-dark); color: var(--text-main); }
+.gestion-ui #tab-panel .action-tile i { font-size: 22px; }
+.gestion-ui #tab-panel .action-tile span { font-size: 12px; line-height: 1.4; }
+.gestion-ui #tab-panel .action-tile:hover { transform: none; }
+#tab-panel .dashboard-table-wrap { overflow-x: auto; max-width: 100%; scrollbar-width: thin; }
+#tab-panel .dashboard-table { width: 100%; border-collapse: collapse; font-size: 11px; line-height: 1.45; }
+#tab-panel .dashboard-table th { background: var(--bg-table-th); color: var(--text-muted); text-align: left; font-size: 10px; font-weight: 600; padding: 9px 8px; white-space: nowrap; border-block: 1px solid var(--dashboard-border); }
+#tab-panel .dashboard-table td { padding: 10px 8px; border-bottom: 1px solid var(--dashboard-border); vertical-align: middle; overflow-wrap: anywhere; }
+#tab-panel .dashboard-description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+#tab-panel #dashboard-activity td:nth-child(3) { white-space: nowrap; }
+#tab-panel .dashboard-table tbody tr:nth-child(even) { background: var(--bg-card-hover); }
+#tab-panel .dashboard-table tbody tr:last-child td { border-bottom: 0; }
+#tab-panel .dashboard-table small { color: var(--text-muted); display: block; font-size: 10px; margin-top: 3px; white-space: nowrap; }
+#tab-panel .dashboard-table .dashboard-number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#tab-panel .dashboard-code { white-space: nowrap; font-weight: 600; }
+#tab-panel .dashboard-type { display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+#tab-panel .dashboard-type i { font-size: 15px; color: var(--primary); }
+#tab-panel .dashboard-stock-count { color: var(--accent-red); font-weight: 700; }
+#tab-panel .dashboard-sale-status { font-size: 10px; color: var(--text-muted); }
+#tab-panel .dashboard-sale-status.is-complete { color: var(--accent-green); }
+#tab-panel .dashboard-ticket { display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid var(--dashboard-border); border-radius: 3px; background: transparent; color: var(--text-muted); cursor: pointer; }
+#tab-panel .dashboard-ticket:hover { border-color: var(--primary); color: var(--primary); }
+#tab-panel .dashboard-empty { text-align: center; color: var(--text-muted); padding: 28px 12px; }
+#tab-panel .dashboard-footnote { font-size: 10px; color: var(--text-muted); padding-top: 10px; }
+#tab-panel .dashboard-load-status { font-size: 12px; color: var(--text-muted); margin: -8px 0 16px; }
+#tab-panel .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 1100px) {
+    #tab-panel .dashboard-grid { grid-template-columns: minmax(0,1fr); }
+    #tab-panel .dashboard-summary > div { padding-inline: 10px; }
+    #tab-panel .dashboard-summary strong { font-size: 19px; }
+}
+@media (max-width: 600px) {
+    .gestion-ui #tab-panel { padding-top: 18px; }
+    #tab-panel .dashboard-heading { align-items: flex-start; }
+    #tab-panel .dashboard-heading h1 { font-size: 22px; }
+    #tab-panel .dashboard-summary { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px 0; }
+    #tab-panel .dashboard-summary > div { padding-inline: 12px; }
+    #tab-panel .dashboard-summary > div:nth-child(odd) { padding-left: 0; }
+    #tab-panel .dashboard-summary > div:nth-child(even) { border: 0; }
+    #tab-panel .dashboard-summary strong { font-size: 18px; }
+    #tab-panel .dashboard-panel { padding-inline: 12px; }
+    #tab-panel .dashboard-panel-heading { flex-wrap: wrap; }
+    #tab-panel .dashboard-table { min-width: 430px; }
+    .gestion-ui #tab-panel .action-tile { padding: 12px; }
+}

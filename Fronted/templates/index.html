@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/rrhh_control.css') }}?v=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/conciliacion.css') }}?v=3.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v=1.4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=1.0">
     <script>
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -139,130 +140,7 @@
             <div class="content-body">
                 
                 <!-- TAB 1: PANEL PRINCIPAL -->
-                <section id="tab-panel" class="tab-content active">
-                    <div class="welcome-banner">
-                        <div class="banner-text">
-                            <h1>Bienvenido, {{ usuario.nombre }} 👋</h1>
-                            <p>Modo de acceso: <strong>{{ usuario.rol }}</strong>. Panel centralizado de operaciones de Jehová Jireh Moto Repuestos (Masatepe).</p>
-                        </div>
-                        <div class="banner-right">
-                            <div class="banner-status">
-                                <span class="status-indicator online"></span>
-                                <span>Servidor Operativo</span>
-                            </div>
-                            <div class="banner-logo-badge">
-                                <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh" class="banner-logo-img">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Stats Grid -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon orange">
-                                <i class="ph-bold ph-package"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Total Repuestos</span>
-                                <span class="stat-value" id="stat-total-productos">0</span>
-                                <span class="stat-subtext">Catálogo en sistema</span>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon green">
-                                <i class="ph-bold ph-currency-dollar"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Ventas Totales</span>
-                                <span class="stat-value" id="stat-total-ventas">$0.00</span>
-                                <span class="stat-subtext" id="stat-conteo-ventas">0 transacciones</span>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon red">
-                                <i class="ph-bold ph-warning-circle"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Stock Bajo Alerta</span>
-                                <span class="stat-value" id="stat-stock-bajo">0</span>
-                                <span class="stat-subtext">Requieren reabastecimiento</span>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon blue">
-                                <i class="ph-bold ph-truck"></i>
-                            </div>
-                            <div class="stat-data">
-                                <span class="stat-title">Proveedores Registrados</span>
-                                <span class="stat-value" id="stat-proveedores">0</span>
-                                <span class="stat-subtext">Proveedores activos</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions Section -->
-                    <div class="grid-2col margin-top">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3><i class="ph-bold ph-lightning"></i> Módulos Disponibles para tu Perfil</h3>
-                            </div>
-                            <div class="card-body quick-actions-list">
-                                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Vendedor'] %}
-                                <button class="action-tile" onclick="switchTab('tab-ventas')">
-                                    <i class="ph-bold ph-shopping-cart"></i>
-                                    <span>Punto de Venta (POS)</span>
-                                </button>
-                                {% endif %}
-
-                                {% if usuario.rol in ['Administrador', 'Encargado de Inventario', 'Vendedor'] %}
-                                <button class="action-tile" onclick="switchTab('tab-inventario')">
-                                    <i class="ph-bold ph-package"></i>
-                                    <span>Consultar Inventario</span>
-                                </button>
-                                {% endif %}
-
-                                {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
-                                <button class="action-tile" onclick="switchTab('tab-compras')">
-                                    <i class="ph-bold ph-arrow-down-left"></i>
-                                    <span>Ingreso de Compras</span>
-                                </button>
-                                {% endif %}
-
-                                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Contador'] %}
-                                <button class="action-tile" onclick="switchTab('tab-reportes')">
-                                    <i class="ph-bold ph-chart-line-up"></i>
-                                    <span>Reportes y Contabilidad</span>
-                                </button>
-                                <button class="action-tile" onclick="switchTab('tab-fiscal')">
-                                    <i class="ph-bold ph-receipt"></i>
-                                    <span>Declaración DGI</span>
-                                </button>
-                                {% endif %}
-
-                                {% if usuario.rol in ['Administrador', 'Gerente Administrativo y Financiero', 'Responsable de Recursos Humanos'] %}
-                                <button class="action-tile" onclick="switchTab('tab-rrhh')">
-                                    <i class="ph-bold ph-users"></i>
-                                    <span>Recursos Humanos</span>
-                                </button>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h3><i class="ph-bold ph-clock-counter-clockwise"></i> Actividad Reciente de Ventas</h3>
-                            </div>
-                            <div class="card-body">
-                                <div id="recent-sales-list" class="recent-list">
-                                    <!-- Carga dinámica -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                {% include 'dashboard_panel.html' %}
 
                 <!-- TAB 2: INVENTARIO -->
                 {% if usuario.rol in ['Administrador', 'Gerente de Operaciones', 'Encargado de Inventario'] %}
@@ -5545,7 +5423,7 @@
     {% include 'rrhh_control_modales.html' %}
 
     <!-- Script Principal SPA del Sistema -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=5.5"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=5.6"></script>
     <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.1"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
     <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.6"></script>

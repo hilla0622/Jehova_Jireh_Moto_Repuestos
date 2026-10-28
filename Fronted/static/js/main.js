@@ -599,36 +599,90 @@ document.addEventListener('keydown', (e) => {
 // ==============================================================================
 
 async function loadDashboardStats() {
-    try {
-        const [resProds, resVentas, resProvs] = await Promise.all([
-            fetch('/api/productos').then(r => r.json()),
-            fetch('/api/ventas').then(r => r.json()),
-            fetch('/api/proveedores').then(r => r.json())
-        ]);
-
-        if (Array.isArray(resProds)) productosCache = resProds;
-        if (Array.isArray(resProvs)) proveedoresCache = resProvs;
-        if (Array.isArray(resVentas)) ventasCache = resVentas;
-
-        const elTotalProds = document.getElementById('stat-total-productos');
-        if (elTotalProds) elTotalProds.textContent = formatCantidad(resProds.length || 0);
-
-        const totalVentasSum = Array.isArray(resVentas) ? resVentas.reduce((acc, v) => acc + (v.total || 0), 0) : 0;
-        const elTotalVentas = document.getElementById('stat-total-ventas');
-        if (elTotalVentas) elTotalVentas.textContent = `$${formatMoneda(totalVentasSum, '')}`;
-
-        const elConteoVentas = document.getElementById('stat-conteo-ventas');
-        if (elConteoVentas) elConteoVentas.textContent = `${formatCantidad(resVentas.length || 0)} transacciones`;
-
-        const stockBajoCount = Array.isArray(resProds) ? resProds.filter(p => p.stock <= p.min_stock).length : 0;
-        const elStockBajo = document.getElementById('stat-stock-bajo');
-        if (elStockBajo) elStockBajo.textContent = formatCantidad(stockBajoCount);
-
-        renderRecentSalesList(resVentas);
-
-    } catch (err) {
-        console.error('Error al cargar datos del panel:', err);
+    // Cada fuente puede fallar sin impedir que se muestren las demás.
+    const status = document.getElementById('dashboard-load-status');
+    if (status) { status.hidden = false; status.textContent = 'Actualizando datos…'; }
+    const results = await Promise.allSettled(
+        ['/api/productos', '/api/ventas', '/api/proveedores', '/api/movimientos'].map(async url => {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`No se pudo consultar ${url}`);
+            const data = await response.json();
+            if (!Array.isArray(data)) throw new Error(`Respuesta inválida: ${url}`);
+            return data;
+        })
+    );
+    const [productos, ventas, proveedores, movimientos] = results.map(r => r.status === 'fulfilled' ? r.value : null);
+    const put = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    if (productos) {
+        productosCache = productos;
+        put('stat-total-productos', formatCantidad(productos.length));
+        put('stat-stock-bajo', formatCantidad(productos.filter(p => Number(p.stock) <= Number(p.min_stock)).length));
+    } else {
+        put('stat-total-productos', '—'); put('stat-stock-bajo', '—');
     }
+    if (ventas) {
+        ventasCache = ventas;
+        const completadas = ventas.filter(v => v.estado === 'Completada');
+        put('stat-total-ventas', `$${formatMoneda(completadas.reduce((sum, v) => sum + Number(v.total || 0), 0), '')}`);
+        put('stat-conteo-ventas', `${formatCantidad(completadas.length)} ventas completadas`);
+    } else {
+        put('stat-total-ventas', '—'); put('stat-conteo-ventas', 'No disponible');
+    }
+    if (proveedores) proveedoresCache = proveedores;
+    put('stat-proveedores', proveedores ? formatCantidad(proveedores.length) : '—');
+    renderDashboardStock(productos);
+    renderRecentSalesList(ventas);
+    renderDashboardActivity(ventas, movimientos);
+    if (status) {
+        const failed = results.some(r => r.status === 'rejected');
+        status.textContent = failed ? 'No se pudieron cargar algunos datos. Usa Actualizar para intentarlo de nuevo.' : '';
+        status.hidden = !failed;
+    }
+}
+
+function dashboardEscape(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
+}
+
+function dashboardNewest(rows) {
+    // Las fechas locales ISO se ordenan sin convertirlas a UTC ni cambiar el día.
+    return [...rows].sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')) || Number(b.id) - Number(a.id));
+}
+
+function dashboardDate(value) {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : 'Sin fecha';
+}
+
+function renderDashboardStock(productos) {
+    const tbody = document.getElementById('dashboard-low-stock');
+    if (!tbody) return;
+    const bajos = productos ? productos.filter(p => Number(p.stock) <= Number(p.min_stock))
+        .sort((a, b) => Number(a.stock) - Number(b.stock) || String(a.nombre).localeCompare(String(b.nombre), 'es')) : [];
+    tbody.innerHTML = bajos.length ? bajos.slice(0, 6).map(p => `<tr>
+        <td class="dashboard-code">${dashboardEscape(p.codigo)}</td><td>${dashboardEscape(p.nombre)}</td>
+        <td class="dashboard-number dashboard-stock-count">${formatCantidad(p.stock)}</td>
+        <td class="dashboard-number">${formatCantidad(p.min_stock)}</td></tr>`).join('')
+        : `<tr><td colspan="4" class="dashboard-empty">${productos ? 'No hay repuestos bajo el mínimo.' : 'No se pudo cargar el inventario.'}</td></tr>`;
+    const note = document.getElementById('dashboard-stock-note');
+    if (note) note.textContent = bajos.length ? `Mostrando ${Math.min(bajos.length, 6)} de ${formatCantidad(bajos.length)} repuestos que requieren reposición.` : '';
+}
+
+function renderDashboardActivity(ventas, movimientos) {
+    const tbody = document.getElementById('dashboard-activity');
+    if (!tbody) return;
+    const events = [
+        ...(ventas || []).map(v => ({...v, tipo: 'Venta', icon: 'shopping-cart', usuario: v.vendedor,
+            descripcion: `${v.codigo_venta} · ${v.estado || 'Registrada'}`})),
+        ...(movimientos || []).filter(m => m.tipo !== 'SALIDA_VENTA').map(m => ({...m,
+            tipo: String(m.tipo).startsWith('ENTRADA') ? 'Entrada' : 'Ajuste', icon: 'package',
+            descripcion: `${m.producto_codigo} · ${m.producto_nombre}`}))
+    ];
+    tbody.innerHTML = events.length ? dashboardNewest(events).slice(0, 6).map(e => `<tr>
+        <td><span class="dashboard-type"><i class="ph-bold ph-${e.icon}" aria-hidden="true"></i>${e.tipo}</span></td>
+        <td><span class="dashboard-description" title="${dashboardEscape(e.descripcion)}">${dashboardEscape(e.descripcion)}</span></td><td>${dashboardEscape(e.usuario || 'Sin asignar')}</td>
+        <td class="dashboard-code">${dashboardDate(e.fecha)}</td></tr>`).join('')
+        : `<tr><td colspan="4" class="dashboard-empty">${ventas && movimientos ? 'No hay actividades registradas.' : 'No se pudieron cargar las actividades.'}</td></tr>`;
 }
 
 function renderRecentSalesList(ventas) {
@@ -636,33 +690,17 @@ function renderRecentSalesList(ventas) {
     if (!container) return;
 
     if (!Array.isArray(ventas) || ventas.length === 0) {
-        container.innerHTML = `<div class="empty-state"><p>No hay ventas registradas aún.</p></div>`;
+        container.innerHTML = `<tr><td colspan="5" class="dashboard-empty">${ventas ? 'No hay ventas registradas aún.' : 'No se pudieron cargar las ventas.'}</td></tr>`;
         return;
     }
 
-    const ultimas = ventas.slice(-5).reverse();
-    let html = `<ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">`;
-    ultimas.forEach(v => {
-        html += `
-            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--border-color);">
-                <div>
-                    <strong style="color: var(--text-main);">${v.codigo_venta}</strong>
-                    <div style="font-size: 0.78rem; color: var(--text-muted);">${v.cliente} | ${v.vendedor}</div>
-                </div>
-                <div style="text-align: right; display: flex; align-items: center; gap: 0.75rem;">
-                    <div>
-                        <span style="color: var(--accent-green); font-weight: 700;">$${formatMoneda(v.total, '')}</span>
-                        <div style="font-size: 0.75rem; color: var(--text-dim);">${v.fecha}</div>
-                    </div>
-                    <button class="btn btn-secondary icon-btn-text" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;" onclick="verComprobanteVenta(${v.id})" title="Ver Ticket">
-                        <i class="ph-bold ph-receipt"></i>
-                    </button>
-                </div>
-            </li>
-        `;
-    });
-    html += `</ul>`;
-    container.innerHTML = html;
+    container.innerHTML = dashboardNewest(ventas).slice(0, 6).map(v => `<tr>
+        <td class="dashboard-code">${dashboardEscape(v.codigo_venta)}<small>${dashboardDate(v.fecha)}</small></td>
+        <td>${dashboardEscape(v.cliente || 'Cliente de mostrador')}</td>
+        <td class="dashboard-number">$${formatMoneda(v.total, '')}</td>
+        <td><span class="dashboard-sale-status ${v.estado === 'Completada' ? 'is-complete' : ''}">${dashboardEscape(v.estado || 'Registrada')}</span></td>
+        <td><button type="button" class="dashboard-ticket" onclick="verComprobanteVenta(${Number(v.id)})" aria-label="Ver ticket ${dashboardEscape(v.codigo_venta)}"><i class="ph-bold ph-receipt" aria-hidden="true"></i></button></td>
+        </tr>`).join('');
 }
 
 // ==============================================================================

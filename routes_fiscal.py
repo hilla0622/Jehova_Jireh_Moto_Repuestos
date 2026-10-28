@@ -22,6 +22,16 @@ def fiscal_role_required(f):
     return decorated
 
 def register_fiscal_routes(app):
+
+    @app.route('/api/fiscal/respaldo-demo/<int:anio>', methods=['GET'])
+    @fiscal_role_required
+    def api_fiscal_respaldo_demo(anio):
+        from app import get_db_connection
+        conn = get_db_connection()
+        try:
+            return jsonify({'documentos': fiscal_service.obtener_respaldo_demostracion(conn.cursor(), anio)})
+        finally:
+            conn.close()
     
     @app.route('/api/fiscal/info', methods=['GET'])
     @fiscal_role_required
@@ -68,16 +78,9 @@ def register_fiscal_routes(app):
         cursor = conn.cursor()
         try:
             data = request.json or {}
-            anio = int(data.get("anio", 2026))
             es_aprobada = bool(data.get("es_aprobada", data.get("aprobar", False)))
-
-            if "simulacion" in data and isinstance(data["simulacion"], dict):
-                sim = data["simulacion"]
-            else:
-                saldos = fiscal_service.obtener_saldos_contables_ejercicio(cursor, anio)
-                ajustes = fiscal_service.obtener_ajustes_ejercicio(cursor, anio)
-                acreds = fiscal_service.obtener_acreditamientos_ejercicio(cursor, anio)
-                sim = fiscal_service.mapear_formulario_106(saldos, ajustes, acreds)
+            sim = fiscal_service.preparar_declaracion_desde_contabilidad(cursor, data)
+            anio = sim['anio']
 
             decl_id = fiscal_service.guardar_declaracion_completa(
                 cursor, sim, session['user']['id'], es_aprobada=es_aprobada
@@ -88,6 +91,9 @@ def register_fiscal_routes(app):
                 "declaracion_id": decl_id,
                 "mensaje": f"Declaración Anual IR {anio} guardada exitosamente como {'Aprobada' if es_aprobada else 'Borrador'}."
             })
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({"error": str(e)}), 400
         except Exception as e:
             conn.rollback()
             return jsonify({"error": str(e)}), 500
@@ -145,12 +151,21 @@ def register_fiscal_routes(app):
         cursor = conn.cursor()
         try:
             data = request.json or {}
+            # Guardado, aprobación y constancia se confirman en una sola transacción.
+            if 'simulacion' in data:
+                sim = fiscal_service.preparar_declaracion_desde_contabilidad(cursor, data)
+                data['declaracion_id'] = fiscal_service.guardar_declaracion_completa(
+                    cursor, sim, session['user']['id'], es_aprobada=True)
             fiscal_service.registrar_presentacion_dgi(cursor, data, session['user']['id'])
             conn.commit()
             return jsonify({
                 "success": True,
+                "declaracion_id": data['declaracion_id'],
                 "mensaje": "Constancia de presentación y pago ante la DGI registrada con éxito."
             })
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({"error": str(e)}), 400
         except Exception as e:
             conn.rollback()
             return jsonify({"error": str(e)}), 500

@@ -12,10 +12,68 @@
 """
 
 import json
+import math
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, timezone, timedelta
 
 def fecha_hoy_nicaragua():
     return datetime.now(timezone(timedelta(hours=-6))).date().isoformat()
+
+
+def calcular_ir_anual(ingresos, renta, tasa_pmd=1):
+    """Art. 52 LCT: tarifa sobre toda la renta neta, no por tramos marginales.
+
+    PMD por defecto para el resto de contribuyentes (art. 61, Ley 987).
+    Una exención o clasificación distinta requiere configuración documentada.
+    """
+    ingresos, renta = Decimal(str(ingresos)), max(Decimal('0'), Decimal(str(renta)))
+    tasa = Decimal('30')
+    if ingresos <= Decimal('12000000'):
+        for limite, porcentaje in [('100000', '10'), ('200000', '15'),
+                                   ('350000', '20'), ('500000', '25')]:
+            if renta <= Decimal(limite):
+                tasa = Decimal(porcentaje)
+                break
+    redondear = lambda valor: float(valor.quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
+    return {
+        'tasa_ir': float(tasa), 'tasa_pmd': float(tasa_pmd),
+        'ir_calculado': redondear(renta * tasa / 100),
+        'pmd_calculado': redondear(max(Decimal('0'), ingresos) * Decimal(str(tasa_pmd)) / 100),
+    }
+
+
+def preparar_declaracion_desde_contabilidad(cursor, data):
+    """Reconstruye en servidor; nunca persiste los totales enviados por el cliente."""
+    propuesta = data.get('simulacion')
+    if propuesta is not None and not isinstance(propuesta, dict):
+        raise ValueError('La simulación debe ser un objeto.')
+    anio = int((propuesta or {}).get('anio', data.get('anio', fecha_hoy_nicaragua()[:4])))
+    if not 2000 <= anio <= int(fecha_hoy_nicaragua()[:4]):
+        raise ValueError('Ejercicio fiscal inválido o futuro.')
+    if 'anio' in data and int(data['anio']) != anio:
+        raise ValueError('El ejercicio no coincide con el de la simulación.')
+    saldos = obtener_saldos_contables_ejercicio(cursor, anio)
+    sim = mapear_formulario_106(saldos, obtener_ajustes_ejercicio(cursor, anio),
+                                obtener_acreditamientos_ejercicio(cursor, anio))
+    sim['negocio'] = obtener_info_tributaria(cursor)
+    if propuesta is not None:
+        for seccion, campos in {
+            'balance': ('total_activos', 'total_pasivos', 'patrimonio_total'),
+            'resultados': ('total_ingresos_brutos', 'total_costos', 'total_gastos'),
+            'calculo_ir': ('gastos_no_deducibles', 'ingresos_no_gravables', 'renta_neta_gravable',
+                           'ir_calculado_30', 'pmd_calculado_1', 'ir_determinado'),
+            'liquidacion': ('total_acreditamientos', 'anticipos_mensuales', 'retenciones_sufridas',
+                            'creditos_fiscales_ant', 'saldo_a_pagar', 'saldo_a_favor'),
+        }.items():
+            for campo in campos:
+                try:
+                    importe = float(propuesta[seccion][campo])
+                except (KeyError, TypeError, ValueError):
+                    raise ValueError(f'Importe inválido: {seccion}.{campo}.')
+                if not math.isfinite(importe) or abs(importe - sim[seccion][campo]) > .011:
+                    raise ValueError('Los importes no coinciden con Contabilidad. Registre los cambios '
+                                     'en contabilidad, ajustes o acreditamientos y vuelva a cargar el formulario.')
+    return sim
 
 CATALOGO_RETENCIONES_DGI = [
     {
@@ -78,7 +136,7 @@ def obtener_info_tributaria(cursor):
         }
     return {
         "id": 0,
-        "ruc": "J0310000000001",
+        "ruc": "SIN CONFIGURAR",
         "razon_social": "Jehová Jireh Moto Repuestos y Servicios",
         "nombre_comercial": "Jehová Jireh Moto Repuestos",
         "actividad_economica": "Comercio al por menor de repuestos, lubricantes y mantenimiento de motocicletas",
@@ -113,13 +171,15 @@ def obtener_saldos_contables_ejercicio(cursor, anio):
     """
     fecha_inicio = f"{anio}-01-01"
     hoy = fecha_hoy_nicaragua()
+    if not 2000 <= int(anio) <= int(hoy[:4]):
+        raise ValueError('Ejercicio fiscal inválido o futuro.')
     fecha_fin = f"{anio}-12-31" if str(anio) < hoy[:4] else min(hoy, f"{anio}-12-31")
 
     # 1. Movimientos acumulados para cuentas de Balance (hasta fecha_fin)
     cursor.execute("""
         SELECT c.id, c.codigo, c.nombre, c.clasificacion, c.naturaleza,
-               ISNULL(SUM(m.debe), 0) AS total_debe,
-               ISNULL(SUM(m.haber), 0) AS total_haber
+               ISNULL(SUM(CASE WHEN a.id IS NOT NULL THEN m.debe ELSE 0 END), 0) AS total_debe,
+               ISNULL(SUM(CASE WHEN a.id IS NOT NULL THEN m.haber ELSE 0 END), 0) AS total_haber
         FROM cuentas_contables c
         LEFT JOIN movimientos_contables m ON c.id = m.cuenta_id
         LEFT JOIN asientos_contables a ON a.id = m.asiento_id AND CAST(a.fecha AS DATE) <= ?
@@ -181,8 +241,15 @@ def obtener_saldos_contables_ejercicio(cursor, anio):
             "saldo": saldo
         }
 
+    cursor.execute("""
+        SELECT COUNT(*) FROM asientos_contables
+        WHERE fecha <= ? AND modulo_origen = 'DEMO_FISCAL'
+    """, (fecha_fin,))
+    datos_demo = bool(cursor.fetchone()[0])
+
     return {
         "anio": anio,
+        "datos_demostracion": datos_demo,
         "fecha_inicio": fecha_inicio,
         "fecha_fin": fecha_fin,
         "balance": cuentas_balance,
@@ -220,7 +287,7 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
     r10_total_mobiliarios = round(r8_parque_vehicular + r9_otros_mobiliarios, 2)
     
     # Otros activos (IVA acreditable 1.1.05 u otros)
-    r11_otros_activos = sal("1.1.05")
+    r11_otros_activos = round(sal("1.1.05") + sal("1.1.06"), 2)
     
     # Renglón 12: Total Activos (1 + 2 + 3 + 7 + 10 + 11)
     r12_total_activos = round(r1_efectivo + r2_cuentas_cobrar + r3_inventarios + r7_total_inmobiliario + r10_total_mobiliarios + r11_otros_activos, 2)
@@ -258,7 +325,7 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
         {"renglon": 8, "descripcion": "Parque Vehicular", "importe": r8_parque_vehicular, "cuentas": "", "tipo": "Manual"},
         {"renglon": 9, "descripcion": "Otros Bienes Mobiliarios", "importe": r9_otros_mobiliarios, "cuentas": "1.2.01, 1.2.02, 1.2.03", "tipo": "Contable"},
         {"renglon": 10, "descripcion": "Total Activos Mobiliarios (Renglón 8+9)", "importe": r10_total_mobiliarios, "cuentas": "Calculado", "tipo": "Calculado"},
-        {"renglon": 11, "descripcion": "Otros activos", "importe": r11_otros_activos, "cuentas": "1.1.05", "tipo": "Contable"},
+        {"renglon": 11, "descripcion": "Otros activos", "importe": r11_otros_activos, "cuentas": "1.1.05, 1.1.06", "tipo": "Contable"},
         {"renglon": 12, "descripcion": "Total Activos (suma 1+2+3+7+10+11)", "importe": r12_total_activos, "cuentas": "Calculado", "tipo": "Calculado", "destacado": True},
         {"renglon": 13, "descripcion": "Cuentas y documentos por pagar", "importe": r13_cuentas_pagar, "cuentas": "2.1.01, 2.1.02", "tipo": "Contable"},
         {"renglon": 14, "descripcion": "Dividendos Pagados a Residentes en el País", "importe": r14_dividendos_pagados_res, "cuentas": "", "tipo": "Manual"},
@@ -305,6 +372,13 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
     )
 
     utilidad_neta_contable = round(utilidad_bruta - total_gastos_operativos, 2)
+    # Resultados anteriores sin asiento de cierre también forman parte del patrimonio.
+    # Si ya fueron cerrados, sus saldos son cero y quedan en la cuenta 3.1.02.
+    resultado_acumulado = sum(float(v.get('saldo', 0)) *
+                             (1 if v.get('clasificacion') == 'Ingresos' else -1)
+                             for v in cb.values()
+                             if v.get('clasificacion') in ('Ingresos', 'Costo', 'Gasto'))
+    utilidades_acumuladas = round(utilidades_acumuladas + resultado_acumulado - utilidad_neta_contable, 2)
     patrimonio_total = round(capital_social + utilidades_acumuladas + utilidad_neta_contable, 2)
 
     renglones_resultados = [
@@ -330,24 +404,22 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
     gastos_no_deducibles = sum(float(a.get("importe", 0)) for a in ajustes if a.get("tipo_ajuste") == "Gasto No Deducible" or a.get("efecto") == "Aumenta Renta")
     ingresos_no_gravables = sum(float(a.get("importe", 0)) for a in ajustes if a.get("tipo_ajuste") == "Ingreso No Gravable" or a.get("efecto") == "Disminuye Renta")
 
-    renta_neta_gravable = round(utilidad_neta_contable + gastos_no_deducibles - ingresos_no_gravables, 2)
+    renta_neta_gravable = max(0, round(utilidad_neta_contable + gastos_no_deducibles - ingresos_no_gravables, 2))
     renta_gravable_positiva = max(0.00, renta_neta_gravable)
 
     # Reglas fiscales DGI
-    tasa_ir_general = 0.30
-    ir_calculado_30 = round(renta_gravable_positiva * tasa_ir_general, 2)
-
-    tasa_pmd = 0.01
-    pmd_calculado_1 = round(total_ingresos_brutos * tasa_pmd, 2)
+    calculo = calcular_ir_anual(total_ingresos_brutos, renta_gravable_positiva)
+    ir_calculado_30 = calculo['ir_calculado']  # Clave histórica, puede aplicar tarifa art. 52.
+    pmd_calculado_1 = calculo['pmd_calculado']
 
     # Rige el mayor entre el 30% del IR o el 1% del PMD (Art. 59 Ley 822)
     ir_determinado = max(ir_calculado_30, pmd_calculado_1)
-    metodo_aplicado = "IR por Actividades Económicas (30%)" if ir_calculado_30 >= pmd_calculado_1 else "Pago Mínimo Definitivo - PMD (1% de Ingresos Brutos)"
+    metodo_aplicado = f"IR por Actividades Económicas ({calculo['tasa_ir']:g}%)" if ir_calculado_30 >= pmd_calculado_1 else "Pago Mínimo Definitivo - PMD (1% de Ingresos Brutos)"
 
     # =========================================================================
     # SECCIÓN F: LIQUIDACIÓN DEL IMPUESTO (Acreditamientos y Saldo Final)
     # =========================================================================
-    acreds = acreditamientos or []
+    acreds = [ac for ac in (acreditamientos or []) if ac.get('estado') != 'Anulado']
     retenciones_sufridas = sum(float(ac.get("importe_total", 0)) for ac in acreds if ac.get("tipo") == "RETENCION_SUFRIDA")
     anticipos_mensuales = sum(float(ac.get("importe_total", 0)) for ac in acreds if ac.get("tipo") == "ANTICIPO_PAGADO")
     creditos_fiscales_ant = sum(float(ac.get("importe_total", 0)) for ac in acreds if ac.get("tipo") == "CREDITO_FISCAL")
@@ -367,7 +439,7 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
     validaciones = []
     if not balance_cuadrado:
         validaciones.append({
-            "tipo": "Advertencia",
+            "tipo": "Error",
             "codigo": "VAL_DESCUADRE_BALANCE",
             "renglon": 12,
             "motivo": f"El Balance General presenta una diferencia de C$ {diferencia_cuadre:,.2f} entre Activos ({r12_total_activos:,.2f}) y Pasivo + Patrimonio ({(total_pasivos + patrimonio_total):,.2f})."
@@ -389,6 +461,7 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
 
     return {
         "anio": datos_contables["anio"],
+        "datos_demostracion": datos_contables.get('datos_demostracion', False),
         "fecha_corte": datos_contables["fecha_fin"],
         "balance": {
             "renglones": renglones_balance,
@@ -412,6 +485,8 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
             "ingresos_no_gravables": ingresos_no_gravables,
             "renta_neta_gravable": renta_neta_gravable,
             "ir_calculado_30": ir_calculado_30,
+            "tasa_ir": calculo['tasa_ir'],
+            "tasa_pmd": calculo['tasa_pmd'],
             "pmd_calculado_1": pmd_calculado_1,
             "ir_determinado": ir_determinado,
             "metodo_aplicado": metodo_aplicado
@@ -429,7 +504,8 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
         "acreditamientos": acreds,
         "validaciones": validaciones,
         "cuentas_balance": {k: float(v["saldo"]) for k, v in cb.items()},
-        "cuentas_resultados": {k: float(v["saldo"]) for k, v in cr.items()}
+        "cuentas_resultados": {k: float(v["saldo"]) for k, v in cr.items()},
+        "utilidades_acumuladas": utilidades_acumuladas
     }
 
 def obtener_acreditamientos_ejercicio(cursor, anio):
@@ -476,6 +552,12 @@ def guardar_acreditamiento(cursor, data, usuario_id):
     porcentaje = float(data.get("porcentaje_aplicado", 0.0))
     importe_total = float(data.get("importe_total", 0.0))
     doc_url = data.get("documento_respaldo_url", "")
+
+    if tipo not in ('RETENCION_SUFRIDA', 'ANTICIPO_PAGADO', 'CREDITO_FISCAL'):
+        raise ValueError('Tipo de acreditamiento inválido.')
+    if (not all(math.isfinite(v) for v in (monto_base, porcentaje, importe_total))
+            or monto_base < 0 or not 0 <= porcentaje <= 100):
+        raise ValueError('Base, porcentaje o importe de acreditamiento inválidos.')
 
     if not concepto:
         concepto = f"{tipo} Ref: {numero_referencia}".strip()
@@ -578,6 +660,12 @@ def guardar_declaracion_completa(cursor, simulacion, usuario_id, es_aprobada=Fal
     """
     anio = simulacion["anio"]
     estado = "Aprobada" if es_aprobada else "Borrador"
+    errores = [v for v in simulacion.get('validaciones', []) if v['tipo'] == 'Error']
+    if es_aprobada:
+        if errores or not simulacion['balance']['balance_cuadrado']:
+            raise ValueError('No se puede aprobar una declaración con balance descuadrado.')
+        if simulacion.get('fecha_corte', '') < f'{anio}-12-31':
+            raise ValueError('El ejercicio todavía no ha terminado. Guarde un borrador.')
     
     calc = simulacion["calculo_ir"]
     liq = simulacion["liquidacion"]
@@ -585,14 +673,14 @@ def guardar_declaracion_completa(cursor, simulacion, usuario_id, es_aprobada=Fal
     
     # Verificar si ya existe una versión previa para este año
     cursor.execute("""
-        SELECT id, version FROM declaraciones_ir
-        WHERE ejercicio_fiscal = ?
-        ORDER BY version DESC
+        SELECT TOP 1 id, version FROM declaraciones_ir WITH (UPDLOCK, HOLDLOCK)
+        WHERE ejercicio_fiscal = ? AND estado = 'Presentada'
+        ORDER BY version DESC, id DESC
     """, (anio,))
     row_prev = cursor.fetchone()
-    version = (row_prev.version + 1) if (row_prev and es_aprobada) else (row_prev.version if row_prev else 1)
-    decl_ant_id = row_prev.id if (row_prev and es_aprobada) else None
-    es_sustitutiva = 1 if (row_prev and es_aprobada) else 0
+    version = row_prev.version + 1 if row_prev else 1
+    decl_ant_id = row_prev.id if row_prev else None
+    es_sustitutiva = 1 if row_prev else 0
 
     # Insertar o actualizar cabecera
     cursor.execute("""
@@ -603,15 +691,15 @@ def guardar_declaracion_completa(cursor, simulacion, usuario_id, es_aprobada=Fal
             renta_neta_gravable, ir_calculado, pago_minimo_definitivo, ir_determinado,
             total_acreditamientos, saldo_a_pagar, saldo_a_favor,
             tiene_errores_bloqueantes, observaciones, usuario_elaboro_id, usuario_aprobo_id,
-            fecha_aprobacion
-        ) VALUES (
+            fecha_aprobacion, datos_fiscales_snapshot
+        ) OUTPUT INSERTED.id VALUES (
             ?, ?, ?, ?,
             ?, 'Régimen General',
             ?, ?, ?,
             ?, ?, ?, ?,
             ?, ?, ?,
-            0, ?, ?, ?,
-            ?
+            ?, ?, ?, ?,
+            ?, ?
         )
     """, (
         anio, version, es_sustitutiva, decl_ant_id,
@@ -619,11 +707,13 @@ def guardar_declaracion_completa(cursor, simulacion, usuario_id, es_aprobada=Fal
         res["total_ingresos_brutos"], res["total_costos"], res["total_gastos"],
         calc["renta_neta_gravable"], calc["ir_calculado_30"], calc["pmd_calculado_1"], calc["ir_determinado"],
         liq["total_acreditamientos"], liq["saldo_a_pagar"], liq["saldo_a_favor"],
+        int(bool(errores)),
+        ('[DEMO-FISCAL] Datos de demostración, sin validez oficial. ' if simulacion.get('datos_demostracion') else '') +
         f"Simulación generada automáticamente desde contabilidad. Método: {calc['metodo_aplicado']}",
         usuario_id, (usuario_id if es_aprobada else None),
-        (datetime.now() if es_aprobada else None)
+        (datetime.now() if es_aprobada else None),
+        json.dumps(simulacion.get('negocio', {}), ensure_ascii=False)
     ))
-    cursor.execute("SELECT @@IDENTITY AS id")
     declaracion_id = cursor.fetchone()[0]
 
     # Insertar renglones de Balance General
@@ -698,6 +788,32 @@ def listar_declaraciones_guardadas(cursor):
         })
     return filas
 
+
+def obtener_respaldo_demostracion(cursor, anio):
+    """Relación entre documentos operativos DEMO y sus asientos, sin sumarlos dos veces."""
+    cursor.execute("SELECT OBJECT_ID('demo_fiscal_origenes','U')")
+    if not cursor.fetchone()[0]:
+        return []
+    cursor.execute("""
+        SELECT d.clave,d.tabla_origen,d.documento_id,d.asiento_id,d.fecha,
+               COALESCE(v.codigo_venta,c.codigo_compra,p.numero_referencia,d.clave) referencia,
+               COALESCE(v.total,c.total,n.total_ingresos,p.monto_pagado) importe_documento,
+               d.importe importe_asiento
+        FROM demo_fiscal_origenes d
+        LEFT JOIN ventas v ON d.tabla_origen='ventas' AND v.id=d.documento_id
+        LEFT JOIN compras c ON d.tabla_origen='compras' AND c.id=d.documento_id
+        LEFT JOIN nomina n ON d.tabla_origen='nomina' AND n.id=d.documento_id
+        LEFT JOIN pagos_nomina p ON d.tabla_origen='pagos_nomina' AND p.id=d.documento_id
+        WHERE YEAR(d.fecha)=? AND d.asiento_id IS NOT NULL
+          AND d.clave NOT LIKE 'ANTES-%' AND d.clave NOT LIKE 'APERTURA-%'
+        ORDER BY d.fecha,d.clave
+    """,(anio,))
+    return [{'tipo':r.tabla_origen,'referencia':r.referencia,'documento_id':r.documento_id,
+             'asiento_id':r.asiento_id,'fecha':str(r.fecha)[:10],
+             'importe_documento':float(r.importe_documento or 0),
+             'importe_asiento':float(r.importe_asiento),'concepto':r.clave}
+            for r in cursor.fetchall()]
+
 def eliminar_declaracion(cursor, decl_id):
     cursor.execute("SELECT id, estado, version, ejercicio_fiscal FROM declaraciones_ir WHERE id = ?", (decl_id,))
     row = cursor.fetchone()
@@ -761,6 +877,7 @@ def obtener_declaracion_detalle(cursor, decl_id):
         "saldo_a_pagar": float(d.saldo_a_pagar or 0),
         "saldo_a_favor": float(d.saldo_a_favor or 0),
         "observaciones": d.observaciones or "",
+        "negocio": json.loads(d.datos_fiscales_snapshot or '{}'),
         "fecha_creacion": fecha_str,
         "created_at": fecha_str,
         "usuario_elaboro": d.usuario_elaboro or "Sistema",
@@ -768,20 +885,25 @@ def obtener_declaracion_detalle(cursor, decl_id):
     }
 
 def registrar_presentacion_dgi(cursor, data, usuario_id):
-    decl_id = int(data.get("declaracion_id"))
-    cursor.execute("SELECT id FROM declaraciones_ir WHERE id = ?", (decl_id,))
+    decl_id = int(data.get("declaracion_id", 0))
+    cursor.execute("SELECT id, estado FROM declaraciones_ir WITH (UPDLOCK, HOLDLOCK) WHERE id = ?", (decl_id,))
     declaration = cursor.fetchone()
     if not declaration:
         raise ValueError('No se encontró la declaración especificada.')
-    num_referencia = data.get("numero_referencia_dgi", "").strip()
-    fecha_evento = data.get("fecha_evento") or fecha_hoy_nicaragua()
+    if declaration.estado != 'Aprobada':
+        raise ValueError('Solo se puede registrar la presentación de una declaración aprobada una vez.')
+    num_referencia = str(data.get("numero_referencia_dgi") or data.get('numero_transaccion_dgi') or '').strip()
+    fecha_evento = data.get("fecha_evento") or data.get('fecha_presentacion') or fecha_hoy_nicaragua()
     importe_pagado = float(data.get("importe_pagado", 0.0))
-    banco = data.get("banco_caja", "Ventanilla DGI").strip()
+    banco = str(data.get("banco_caja") or data.get('banco_recaudador') or 'Ventanilla DGI').strip()
     medio_pago = data.get("medio_pago", "Transferencia / Débito Bancario").strip()
     obs = data.get("observaciones", "").strip()
 
     if not num_referencia:
         raise ValueError("El número de referencia o confirmación de la DGI es obligatorio.")
+    if not math.isfinite(importe_pagado) or importe_pagado < 0:
+        raise ValueError('El importe pagado debe ser un número finito no negativo.')
+    datetime.strptime(fecha_evento, '%Y-%m-%d')
 
     cursor.execute("""
         INSERT INTO declaracion_presentacion_pagos (

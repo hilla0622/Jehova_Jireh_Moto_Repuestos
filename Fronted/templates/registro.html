@@ -12,6 +12,8 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v=1.3">
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');</script>
     <style>
         /* Ajustes específicos para que el modal de registro no sea tan largo */
         .login-card {
@@ -19,7 +21,7 @@
         }
     </style>
 </head>
-<body class="login-body">
+<body class="login-body gestion-ui auth-ui">
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">

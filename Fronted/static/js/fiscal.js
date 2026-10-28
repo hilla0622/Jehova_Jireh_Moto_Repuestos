@@ -10,6 +10,21 @@ let anioFiscalSeleccionado = 2026;
 let simulacionFiscalActual = null;
 let declaracionGuardadaId = null;
 
+function tasaIrAnual(ingresos, renta) {
+    if (ingresos > 12000000) return 30;
+    if (renta <= 100000) return 10;
+    if (renta <= 200000) return 15;
+    if (renta <= 350000) return 20;
+    if (renta <= 500000) return 25;
+    return 30;
+}
+
+function escaparFiscal(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[ch]);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const anioSelect = document.getElementById('fiscal-select-anio');
     if (anioSelect) {
@@ -66,14 +81,27 @@ async function cargarInfoTributaria() {
  * Carga y mapea los saldos contables reales en el Formulario 106
  */
 async function cargarSimulacionFiscal(mostrarNotif = false) {
+    const anioSolicitado = anioFiscalSeleccionado;
+    simulacionFiscalActual = null;
+    declaracionGuardadaId = null;
     const loadingState = document.getElementById('fiscal-loading-state');
     if (loadingState) loadingState.style.display = 'block';
 
     try {
-        const res = await fetch(`/api/fiscal/simulacion/${anioFiscalSeleccionado}`);
+        const res = await fetch(`/api/fiscal/simulacion/${anioSolicitado}`);
         if (!res.ok) throw new Error('Error al generar la liquidación contable.');
         const sim = await res.json();
+        if (anioSolicitado !== anioFiscalSeleccionado) return;
         simulacionFiscalActual = sim;
+        if (sim.negocio) {
+            for (const [campo, id] of [['ruc', 'ruc'], ['razon_social', 'razon'], ['actividad_economica', 'actividad']]) {
+                const input = document.getElementById(`vet-cta-${id}`);
+                if (input) input.value = sim.negocio[campo] || '';
+                setVal(`vet-resumen-${id}`, sim.negocio[campo] || '');
+            }
+        }
+        const avisoDemo = document.getElementById('fiscal-demo-aviso');
+        if (avisoDemo) avisoDemo.style.display = sim.datos_demostracion ? 'block' : 'none';
 
         // Actualizar fecha y periodo
         const hoy = new Date().toLocaleDateString('es-NI', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -81,55 +109,55 @@ async function cargarSimulacionFiscal(mostrarNotif = false) {
         setVal('vet-resumen-fecha', hoy);
         setVal('vet-cta-periodo', '12');
         setVal('vet-resumen-periodo', '12');
-        setVal('vet-resumen-no-decl', `106-${anioFiscalSeleccionado}-001`);
+        setVal('vet-resumen-no-decl', `SIM-${anioFiscalSeleccionado}`);
 
         const cb = sim.cuentas_balance || {};
         const cr = sim.cuentas_resultados || {};
 
         // 1. Llenar inputs de cuentas individuales de Jehová Jireh (Activos)
-        setIn('cta-1101', cb['1.1.01'] || 106499.20);
-        setIn('cta-1102', cb['1.1.02'] || 185000.00);
-        setIn('cta-1103', cb['1.1.03'] || 60000.00);
-        setIn('cta-1104', cb['1.1.04'] || 410662.75);
-        setIn('cta-1105', cb['1.1.05'] || 18000.00);
+        setIn('cta-1101', cb['1.1.01'] ?? 0);
+        setIn('cta-1102', cb['1.1.02'] ?? 0);
+        setIn('cta-1103', cb['1.1.03'] ?? 0);
+        setIn('cta-1104', cb['1.1.04'] ?? 0);
+        setIn('cta-1105', cb['1.1.05'] ?? 0);
 
-        setIn('cta-1201', cb['1.2.01'] || 90000.00);
-        setIn('cta-1202', cb['1.2.02'] || 55000.00);
-        setIn('cta-1203', -Math.abs(cb['1.2.03'] || 12000.00));
-        setIn('cta-otros-act', 0.00);
+        setIn('cta-1201', cb['1.2.01'] ?? 0);
+        setIn('cta-1202', cb['1.2.02'] ?? 0);
+        setIn('cta-1203', -Math.abs(cb['1.2.03'] ?? 0));
+        setIn('cta-otros-act', cb['1.1.06'] ?? 0);
 
         // 2. Pasivos individuales
-        setIn('cta-2101', cb['2.1.01'] || 284590.75);
-        setIn('cta-2102', cb['2.1.02'] || 60000.00);
-        setIn('cta-2103', cb['2.1.03'] || 22000.00);
-        setIn('cta-2104', cb['2.1.04'] || 110969.94);
-        setIn('cta-2105', cb['2.1.05'] || 5000.00);
-        setIn('cta-2106', cb['2.1.06'] || 29894.25);
-        setIn('cta-2107', cb['2.1.07'] || 3238.55);
-        setIn('cta-2108', cb['2.1.08'] || 17241.63);
-        setIn('cta-2110', cb['2.1.10'] || 1658.00);
+        setIn('cta-2101', cb['2.1.01'] ?? 0);
+        setIn('cta-2102', cb['2.1.02'] ?? 0);
+        setIn('cta-2103', cb['2.1.03'] ?? 0);
+        setIn('cta-2104', cb['2.1.04'] ?? 0);
+        setIn('cta-2105', cb['2.1.05'] ?? 0);
+        setIn('cta-2106', cb['2.1.06'] ?? 0);
+        setIn('cta-2107', cb['2.1.07'] ?? 0);
+        setIn('cta-2108', cb['2.1.08'] ?? 0);
+        setIn('cta-2110', cb['2.1.10'] ?? 0);
 
         // 3. Patrimonio
-        setIn('cta-3101', cb['3.1.01'] || 250000.00);
-        setIn('cta-3102', cb['3.1.02'] || 51000.00);
+        setIn('cta-3101', cb['3.1.01'] ?? 0);
+        setIn('cta-3102', sim.utilidades_acumuladas ?? cb['3.1.02'] ?? 0);
 
         // 4. Resultados (Ingresos, Costos, Gastos)
-        setIn('cta-4101', cr['4.1.01'] || 1011499.20);
-        setIn('cta-4102', cr['4.1.02'] || 80000.00);
-        setIn('cta-5101', cr['5.1.01'] || 693928.00);
+        setIn('cta-4101', cr['4.1.01'] ?? 0);
+        setIn('cta-4102', cr['4.1.02'] ?? 0);
+        setIn('cta-5101', cr['5.1.01'] ?? 0);
 
-        setIn('cta-6101', cr['6.1.01'] || 173449.99);
-        setIn('cta-6102', cr['6.1.02'] || 30000.00);
-        setIn('cta-6103', cr['6.1.03'] || 12000.00);
-        setIn('cta-6104', cr['6.1.04'] || 3000.00);
-        setIn('cta-6105', cr['6.1.05'] || 5000.00);
-        setIn('cta-6106', cr['6.1.06'] || 10000.00);
-        setIn('cta-6107', cr['6.1.07'] || 8000.00);
-        setIn('cta-6108', cr['6.1.08'] || 3000.00);
-        setIn('cta-6109', cr['6.1.09'] || 12000.00);
-        setIn('cta-6110', cr['6.1.10'] || 22000.00);
-        setIn('cta-6111', cr['6.1.11'] || 24310.75);
-        setIn('cta-6112', cr['6.1.12'] || 17241.63);
+        setIn('cta-6101', cr['6.1.01'] ?? 0);
+        setIn('cta-6102', cr['6.1.02'] ?? 0);
+        setIn('cta-6103', cr['6.1.03'] ?? 0);
+        setIn('cta-6104', cr['6.1.04'] ?? 0);
+        setIn('cta-6105', cr['6.1.05'] ?? 0);
+        setIn('cta-6106', cr['6.1.06'] ?? 0);
+        setIn('cta-6107', cr['6.1.07'] ?? 0);
+        setIn('cta-6108', cr['6.1.08'] ?? 0);
+        setIn('cta-6109', cr['6.1.09'] ?? 0);
+        setIn('cta-6110', cr['6.1.10'] ?? 0);
+        setIn('cta-6111', cr['6.1.11'] ?? 0);
+        setIn('cta-6112', cr['6.1.12'] ?? 0);
 
         // 5. Ajustes y Conciliación Fiscal
         if (sim.calculo_ir) {
@@ -139,7 +167,7 @@ async function cargarSimulacionFiscal(mostrarNotif = false) {
 
         // 6. Liquidación y Acreditamientos
         if (sim.liquidacion) {
-            setIn('liq-anticipos-1', sim.liquidacion.anticipos_mensuales || 10914.99);
+            setIn('liq-anticipos-1', sim.liquidacion.anticipos_mensuales ?? 0);
             setIn('liq-retenciones-sufridas', sim.liquidacion.retenciones_sufridas || 0);
             setIn('liq-creditos-anteriores', sim.liquidacion.creditos_fiscales_ant || 0);
         }
@@ -302,11 +330,12 @@ function recalcularFormularioCuentas() {
     setR('ir-renta-gravable', rentaGravable);
 
     // Renglón 53: IR 30%
-    const ir30 = round2(rentaGravable * 0.30);
+    const tasaIr = tasaIrAnual(totIngresos, rentaGravable);
+    const ir30 = round2(rentaGravable * tasaIr / 100);
     setR('ir-calculado-30', ir30);
 
     // Renglón 54: PMD 1% sobre Ingresos Brutos (R32)
-    const pmd1 = round2(totIngresos * 0.01);
+    const pmd1 = round2(Math.max(0, totIngresos) * 0.01);
     setR('ir-pmd-1', pmd1);
 
     // Renglón 55: IR Determinado Oficial (El mayor entre 53 y 54)
@@ -316,7 +345,7 @@ function recalcularFormularioCuentas() {
     const lblMetodo = document.getElementById('ir-lbl-metodo-cta');
     if (lblMetodo) {
         if (ir30 >= pmd1) {
-            lblMetodo.textContent = 'Aplica IR 30% sobre Renta Neta (Art. 52 Ley 822)';
+            lblMetodo.textContent = `Aplica IR ${tasaIr}% sobre Renta Neta (Art. 52 Ley 822)`;
         } else {
             lblMetodo.textContent = 'Aplica Pago Mínimo Definitivo 1% sobre Ingresos Brutos (Art. 59 Ley 822)';
         }
@@ -589,7 +618,7 @@ function recopilarPayloadSimulacion() {
             ir_calculado_30: ir30,
             pmd_calculado_1: pmd1,
             ir_determinado: irDeterminado,
-            metodo_aplicado: ir30 >= pmd1 ? "IR por Actividades Económicas (30%)" : "Pago Mínimo Definitivo - PMD (1% de Ingresos Brutos)"
+            metodo_aplicado: ir30 >= pmd1 ? `IR por Actividades Económicas (${tasaIrAnual(totIngresos, rentaGravable)}%)` : "Pago Mínimo Definitivo - PMD (1% de Ingresos Brutos)"
         },
         liquidacion: {
             ir_determinado: irDeterminado,
@@ -607,6 +636,10 @@ function recopilarPayloadSimulacion() {
  * Guarda el formulario como Borrador en base de datos
  */
 async function guardarDeclaracionBorrador() {
+    if (!simulacionFiscalActual) {
+        alert('Espere a que cargue Contabilidad antes de guardar.');
+        return;
+    }
     recalcularFormularioCuentas();
     const payload = recopilarPayloadSimulacion();
 
@@ -656,6 +689,10 @@ function abrirModalPresentacion() {
  */
 async function guardarPresentacionDGI(e) {
     if (e) e.preventDefault();
+    if (!simulacionFiscalActual) {
+        alert('Espere a que cargue Contabilidad antes de guardar.');
+        return;
+    }
     recalcularFormularioCuentas();
     const payload = recopilarPayloadSimulacion();
 
@@ -667,26 +704,14 @@ async function guardarPresentacionDGI(e) {
     const obs = document.getElementById('pres-observaciones')?.value.trim();
 
     try {
-        // 1. Guardar y aprobar declaración
-        const res = await fetch('/api/fiscal/guardar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ simulacion: payload, es_aprobada: true })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al aprobar la declaración.');
-
-        const declId = data.declaracion_id;
-
-        // 2. Registrar presentación y pago
         const resPago = await fetch('/api/fiscal/presentar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                declaracion_id: declId,
-                numero_transaccion_dgi: ref,
-                fecha_presentacion: fecha,
-                banco_recaudador: banco,
+                simulacion: payload,
+                numero_referencia_dgi: ref,
+                fecha_evento: fecha,
+                banco_caja: banco,
                 medio_pago: medio,
                 importe_pagado: monto,
                 observaciones: obs
@@ -697,9 +722,9 @@ async function guardarPresentacionDGI(e) {
 
         closeModal('modal-presentacion-dgi');
         if (typeof mostrarNotificacion === 'function') {
-            mostrarNotificacion('¡Declaración Anual IR presentada y registrada oficialmente en VET DGI!', 'success');
+            mostrarNotificacion('Constancia de presentación ante la DGI registrada en el sistema.', 'success');
         } else {
-            alert('¡Declaración Anual IR presentada y registrada exitosamente!');
+            alert('Constancia de presentación ante la DGI registrada en el sistema.');
         }
         cargarHistorialDeclaraciones();
     } catch (err) {
@@ -1200,6 +1225,7 @@ async function imprimirDeclaracionEspecifica(id) {
                 </style>
             </head>
             <body>
+                ${d.observaciones?.includes('[DEMO-FISCAL]') ? '<p><strong>DEMOSTRACIÓN — Sin validez oficial.</strong></p>' : ''}
                 <div class="no-print" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px;">
                     <div><strong>Declaración #${d.id} (${d.estado})</strong> · Registrada: ${fechaFmt} · Versión: v${d.version}</div>
                     <button onclick="window.print()" style="background: #005fa8; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; font-weight: bold; cursor: pointer;">
@@ -1235,7 +1261,7 @@ async function imprimirDeclaracionEspecifica(id) {
                 <table>
                     <tr>
                         <td style="width: 20%; font-weight: bold;">Número RUC:</td>
-                        <td style="width: 30%;">J0310000000001</td>
+                        <td style="width: 30%;">${escaparFiscal(d.negocio?.ruc || 'SIN CONFIGURAR')}</td>
                         <td style="width: 25%; font-weight: bold;">Razón Social:</td>
                         <td>Jehová Jireh Moto Repuestos y Servicios</td>
                     </tr>
@@ -1282,7 +1308,7 @@ async function imprimirDeclaracionEspecifica(id) {
                         <td class="text-right" style="font-weight: bold; width: 30%;">C$ ${fmt(d.renta_neta_gravable)}</td>
                     </tr>
                     <tr>
-                        <td>IR por Actividades Económicas (30%)</td>
+                        <td>IR por Actividades Económicas (tarifa Art. 52)</td>
                         <td class="text-right">C$ ${fmt(d.ir_calculado)}</td>
                     </tr>
                     <tr>
@@ -1331,6 +1357,14 @@ window.imprimirDeclaracionEspecifica = imprimirDeclaracionEspecifica;
  * Imprimir Formulario Oficial 106
  */
 function imprimirFormulario106() {
+    if (!simulacionFiscalActual) {
+        alert('Cargue Contabilidad antes de imprimir.');
+        return;
+    }
+    if (!simulacionFiscalActual) {
+        alert('Espere a que cargue Contabilidad antes de guardar.');
+        return;
+    }
     recalcularFormularioCuentas();
     const payload = recopilarPayloadSimulacion();
     const printWin = window.open('', '_blank', 'width=950,height=1050');
@@ -1364,6 +1398,7 @@ function imprimirFormulario106() {
             </style>
         </head>
         <body>
+            ${simulacionFiscalActual?.datos_demostracion ? '<p><strong>DEMOSTRACIÓN — Sin validez oficial.</strong></p>' : ''}
             <div class="dgi-hdr">
                 <div>
                     <strong>Gobierno de Reconciliación y Unidad Nacional</strong><br>
@@ -1391,7 +1426,7 @@ function imprimirFormulario106() {
             <table>
                 <tr>
                     <td style="width: 20%; font-weight: bold;">Número RUC:</td>
-                    <td style="width: 30%;">J0310000000001</td>
+                    <td style="width: 30%;">${escaparFiscal(document.getElementById('vet-cta-ruc')?.value || 'SIN CONFIGURAR')}</td>
                     <td style="width: 25%; font-weight: bold;">Razón Social:</td>
                     <td>Jehová Jireh Moto Repuestos y Servicios</td>
                 </tr>
@@ -1454,7 +1489,7 @@ function imprimirFormulario106() {
             <div class="sec-head">E. CÁLCULO DEL IR Y F. LIQUIDACIÓN</div>
             <table>
                 <tr><td style="width: 70%;">Renta Neta Gravable Oficial</td><td class="text-right" style="font-weight: bold;">C$ ${fmt(val('ir-renta-gravable'))}</td></tr>
-                <tr><td>IR Actividades Económicas (30%)</td><td class="text-right">C$ ${fmt(val('ir-calculado-30'))}</td></tr>
+                <tr><td>IR Actividades Económicas (tarifa Art. 52)</td><td class="text-right">C$ ${fmt(val('ir-calculado-30'))}</td></tr>
                 <tr><td>Pago Mínimo Definitivo (1% de Ingresos)</td><td class="text-right">C$ ${fmt(val('ir-pmd-1'))}</td></tr>
                 <tr class="total-row" style="background: #e0f2fe;"><td><strong>IR DETERMINADO OFICIAL (El Mayor)</strong></td><td class="text-right"><strong>C$ ${fmt(val('ir-determinado'))}</strong></td></tr>
                 <tr><td>(-) Anticipos Mensuales Pagados del 1% PMD</td><td class="text-right" style="color: #16a34a;">- C$ ${fmt(val('liq-anticipos-1'))}</td></tr>
@@ -1479,6 +1514,10 @@ window.imprimirFormulario106 = imprimirFormulario106;
  * Imprimir Vista Resumen Ejecutivo (Formato Imagen 1)
  */
 function imprimirResumenEjecutivo() {
+    if (!simulacionFiscalActual) {
+        alert('Cargue Contabilidad antes de imprimir.');
+        return;
+    }
     recalcularFormularioCuentas();
 
     const anio = anioFiscalSeleccionado || 2026;
@@ -1544,6 +1583,7 @@ function imprimirResumenEjecutivo() {
             </style>
         </head>
         <body>
+            ${simulacionFiscalActual?.datos_demostracion ? '<p><strong>DEMOSTRACIÓN — Sin validez oficial.</strong></p>' : ''}
             <div class="no-print">
                 <div><strong>Vista Resumen Ejecutivo — Declaración Anual IR ${anio}</strong></div>
                 <button onclick="window.print()" style="background: #005fa8; color: #fff; border: none; padding: 6px 16px; border-radius: 4px; font-weight: bold; cursor: pointer;">
@@ -1579,7 +1619,7 @@ function imprimirResumenEjecutivo() {
             <table class="general-table">
                 <tr>
                     <td style="width: 20%; font-weight: bold; background: #f8fafc;">Número RUC:</td>
-                    <td style="width: 30%; font-family: monospace; font-weight: bold; color: #005fa8;">J0310000000001</td>
+                    <td style="width: 30%; font-family: monospace; font-weight: bold; color: #005fa8;">${escaparFiscal(document.getElementById('vet-cta-ruc')?.value || 'SIN CONFIGURAR')}</td>
                     <td style="width: 25%; font-weight: bold; background: #f8fafc;">Razón Social:</td>
                     <td style="font-weight: bold;">Jehová Jireh Moto Repuestos y Servicios</td>
                 </tr>
@@ -1636,7 +1676,7 @@ function imprimirResumenEjecutivo() {
                     <div class="kpi-val">${rentaNeta}</div>
                 </div>
                 <div class="kpi-box">
-                    <div class="kpi-label">IR 30% (Art. 52 Ley 822)</div>
+                    <div class="kpi-label">IR según tarifa (Art. 52 Ley 822)</div>
                     <div class="kpi-val">${ir30}</div>
                 </div>
                 <div class="kpi-box">

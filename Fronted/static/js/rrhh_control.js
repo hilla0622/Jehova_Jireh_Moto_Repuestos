@@ -300,7 +300,7 @@ function mostrarSaldoPago() {
     if (!row) { document.getElementById('pago-saldo').textContent = ''; return; }
     const pagado = pagosControl.filter(p => String(p.nomina_id) === form.elements.nomina_id.value && p.empleado_id === row.empleado_id && p.estado === 'Confirmado').reduce((n,p) => n+Number(p.monto_pagado),0);
     const saldo = Math.max(0, Number(row.neto_pagar)-pagado).toFixed(2);
-    document.getElementById('pago-saldo').textContent = `Saldo pendiente: C$ ${saldo}`;
+    document.getElementById('pago-saldo').textContent = `Saldo pendiente: ${formatMoneda(saldo, 'C$ ')}`;
     form.elements.monto_pagado.max = saldo; form.elements.monto_pagado.value = saldo;
 }
 function guardarPagoControl(event) {

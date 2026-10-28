@@ -18,17 +18,18 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/rrhh_control.css') }}?v=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/conciliacion.css') }}?v=3.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v=1.4">
     <script>
-        const savedTheme = localStorage.getItem('theme') || 'dark';
+        const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
         window.usuarioRol = '{{ usuario.rol }}';
     </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fiscal_106.css') }}?v=1.0">
 </head>
-<body>
+<body class="gestion-ui">
     <div class="app-layout">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="workspace-sidebar" aria-label="Navegación principal">
             <div class="brand">
                 <div class="brand-logo-wrapper">
                     <img src="{{ url_for('static', filename='img/logo.jpg') }}" alt="Logo Jehová Jireh" class="brand-logo-img">
@@ -115,24 +116,24 @@
         <main class="main-content">
             <!-- Header -->
             <header class="top-header">
-                <div class="header-search">
-                    <i class="ph-bold ph-magnifying-glass"></i>
-                    <input type="text" id="global-search" placeholder="Buscar repuesto, código de venta o proveedor...">
-                </div>
+                <button type="button" id="sidebar-toggle" class="shell-menu-toggle" aria-label="Contraer menú" aria-controls="workspace-sidebar" aria-expanded="true">
+                    <i class="ph-bold ph-list" aria-hidden="true"></i>
+                </button>
                 <div class="header-actions">
                     <button id="theme-toggle" class="btn btn-secondary" title="Alternar tema">
                         <i class="ph-bold ph-sun" id="theme-icon"></i>
                     </button>
-                    <div class="user-pill">
-                        <i class="ph-bold ph-user-circle"></i>
-                        <span>{{ usuario.nombre }} ({{ usuario.rol }})</span>
-                    </div>
+                    <a class="user-pill" href="{{ url_for('perfil') }}" title="Ver mi perfil">
+                        <span class="shell-avatar">{{ usuario.nombre[:2].upper() }}</span>
+                        <span class="shell-user-details"><strong>{{ usuario.nombre }}</strong><small>{{ usuario.rol }}</small></span>
+                    </a>
                     <a href="{{ url_for('logout') }}" class="btn btn-secondary icon-btn-text" title="Cerrar Sesión">
                         <i class="ph-bold ph-sign-out"></i>
                         <span>Salir</span>
                     </a>
                 </div>
             </header>
+            <button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Cerrar menú" hidden></button>
 
             <!-- Dashboard Content Area -->
             <div class="content-body">
@@ -670,7 +671,6 @@
                                     <option value="12">Diciembre</option>
                                 </select>
                                 <select id="rep-select-anio" class="form-control" style="height: 32px; font-size: 0.8rem; padding: 0 6px;" onchange="cambiarMesAnioDirecto()">
-                                    <option value="2027">2027</option>
                                     <option value="2026" selected>2026</option>
                                     <option value="2025">2025</option>
                                     <option value="2024">2024</option>
@@ -880,7 +880,7 @@
 
                         <!-- ═══ SECCIÓN 2: VENTAS Y TENDENCIAS ═══ -->
                         <div class="rep-tab-panel active" id="rep-ventas" role="tabpanel">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                                 <!-- Gráfico 1: Tendencia de Ventas (con Empty State limpio) -->
                                 <div class="card">
                                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -949,7 +949,7 @@
 
                         <!-- ═══ SECCIÓN 3: RENTABILIDAD Y MÁRGENES ═══ -->
                         <div class="rep-tab-panel active" id="rep-rentabilidad" role="tabpanel">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                                 <!-- Gráfico Rentabilidad por Categoría -->
                                 <div class="card">
                                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1086,7 +1086,7 @@
                             </div>
 
                             <!-- SECCIÓN: RANKING POR UNIDADES Y REPUESTOS SIN MOVIMIENTO -->
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                                 <!-- Ranking por Unidades Vendidas -->
                                 <div class="card">
                                     <div class="card-header">
@@ -1377,7 +1377,7 @@
                 <section id="tab-finanzas" class="tab-content">
                     <div class="section-header">
                         <div>
-                            <h2>Módulo de Estados Financieros</h2>
+                            <h2>Estados Financieros</h2>
                             <p>Contabilidad por partida doble, catálogo de cuentas, asientos y reportes financieros.</p>
                         </div>
                         <div class="header-actions-group" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -1398,16 +1398,13 @@
                                     <i class="ph-bold ph-calendar-check"></i> Año Actual
                                 </button>
                             </div>
-                            <button class="btn btn-primary" onclick="openModal('modal-asiento')">
-                                <i class="ph-bold ph-plus"></i> Nuevo Asiento
-                            </button>
                             <button class="btn btn-secondary" onclick="cargarDatosFinanzas()">
                                 <i class="ph-bold ph-funnel"></i> Filtrar / Refrescar
                             </button>
                         </div>
                     </div>
 
-                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+                    <div class="fin-export-tools" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
                         <label>Exportar estado <select id="fin-exportar-tipo" class="form-control"><option value="flujo">Flujo de Efectivo</option><option value="resultados">Estado de Resultados</option><option value="balance">Balance General</option><option value="comprobacion">Balance de Comprobación</option></select></label>
                         <button class="btn btn-secondary" onclick="exportarEstadoFinanciero(false)">Imprimir / Guardar PDF</button>
                         <button class="btn btn-secondary" onclick="exportarEstadoFinanciero(true)">Descargar HTML</button>
@@ -1442,7 +1439,8 @@
                     <div id="fin-catalogo" class="fin-tab-content active">
                         <div class="card">
                             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <h3>Catálogo de Cuentas Contables</h3>
+                                <div><h3><i class="ph-bold ph-notebook" aria-hidden="true"></i> Catálogo de Cuentas Contables</h3>
+                                    <p class="shell-card-description">Consulta y organiza las cuentas del plan contable de la empresa.</p></div>
                                 {% if usuario.rol != 'Contador' %}
 {% if usuario.rol != 'Contador' %}
 {% if usuario.rol != 'Contador' %}
@@ -1454,6 +1452,10 @@
 {% endif %}
                             </div>
                             <div class="card-body">
+                                <div class="shell-account-filters">
+                                    <label><span class="shell-sr-only">Buscar cuenta por código o nombre</span><input id="shell-account-search" class="form-control" type="search" placeholder="Buscar por código, nombre o clasificación…"></label>
+                                    <label><span class="shell-sr-only">Clasificación de la cuenta</span><select id="shell-account-class" class="form-control"><option value="">Todas las clasificaciones</option></select></label>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="data-table">
                                         <thead>
@@ -1470,6 +1472,11 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                <div class="shell-table-footer"><span id="shell-account-count" aria-live="polite"></span>
+                                    <div><button type="button" class="btn btn-secondary" id="shell-account-prev" disabled>Anterior</button>
+                                        <span id="shell-account-page"></span>
+                                        <button type="button" class="btn btn-secondary" id="shell-account-next" disabled>Siguiente</button></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1479,6 +1486,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <h3>Historial de Asientos Contables</h3>
+                                <button class="btn btn-primary" onclick="openModal('modal-asiento')"><i class="ph-bold ph-plus"></i> Nuevo Asiento</button>
                             </div>
                             <div class="card-body">
                                 <div id="container-asientos" style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -5483,15 +5491,16 @@
     {% include 'rrhh_control_modales.html' %}
 
     <!-- Script Principal SPA del Sistema -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=5.3"></script>
-    <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.0"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=5.5"></script>
+    <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.1"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
-    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.5"></script>
+    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.6"></script>
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
     <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=3.0"></script>
     <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>
     <script src="{{ url_for('static', filename='js/conciliacion.js') }}?v=3.0"></script>
     <!-- Script Módulo Tributario y Declaración DGI Formulario 106 (RF129 - RF139) -->
-    <script src="{{ url_for('static', filename='js/fiscal.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='js/fiscal.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/workspace.js') }}?v=1.1"></script>
 </body>
 </html>

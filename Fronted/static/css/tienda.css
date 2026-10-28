@@ -23,6 +23,20 @@ body {
     flex-direction: column;
 }
 
+@media screen and (max-width: 768px) {
+    body .navbar { flex-wrap: wrap; gap: 16px; padding: 14px 5%; }
+    body .navbar .logo-text { width: 100%; font-size: 1rem !important; line-height: 1.5; }
+    body .navbar .nav-right { width: 100%; min-width: 0; gap: 12px !important; flex-wrap: wrap; }
+    body .nav-links { flex-wrap: wrap; gap: 12px; min-width: 0; }
+    body .nav-actions { flex-wrap: wrap; gap: 12px; min-width: 0; max-width: 100%; padding-right: 10px; }
+    body .slide-content { min-width: 0; padding: 20px; }
+    body .slide-content h1 { font-size: 1.8rem !important; }
+    body .slide-expert { font-size: 1rem; }
+    body .catalog-container { min-width: 0; }
+    body .grid { grid-template-columns: minmax(0,1fr); gap: 18px; }
+    body .card { min-width: 0; }
+}
+
 /* Navbar */
 .navbar {
     display: flex;

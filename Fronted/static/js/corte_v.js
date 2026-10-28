@@ -33,6 +33,7 @@ var _filtroPresetActivo = window._filtroPresetActivo;
 var _criterioABCActual = window._criterioABCActual;
 var _currentReportesTab = window._currentReportesTab;
 var _demandaViewActual = window._demandaViewActual;
+var _ultimaConsultaReporte = 0;
 
 // Instancias globales para gráficos de Chart.js
 if (typeof window.chartTendenciaInstance === 'undefined') window.chartTendenciaInstance = null;
@@ -380,10 +381,12 @@ async function ejecutarConsultaReportes() {
     }
 
     params.append('criterio_abc', _criterioABCActual || 'inversion');
+    const consulta = ++_ultimaConsultaReporte;
 
     try {
         const res = await fetch(url + params.toString());
         const data = await res.json();
+        if (consulta !== _ultimaConsultaReporte) return;
         if (data.error) {
             if (typeof Swal !== 'undefined') {
                 Swal.fire('Error', data.error, 'error');
@@ -749,13 +752,13 @@ function renderDesgloseMeses(desglose) {
     const mesesNombres = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     tbody.innerHTML = desglose.map(m => `
         <tr>
-            <td><strong>${m.nombre_mes || mesesNombres[m.mes] || ('Mes ' + m.mes)}</strong></td>
+            <td><strong>${m.mes_nombre || m.nombre_mes || mesesNombres[m.mes_numero ?? m.mes] || 'Mes no disponible'}</strong></td>
             <td style="text-align: center;">${formatCantidad(m.transacciones)}</td>
             <td style="text-align: center;">${formatCantidad(m.unidades)}</td>
             <td style="text-align: right; font-weight: 700; color: var(--text-main);">${formatMoneda(m.ventas)}</td>
             <td style="text-align: right; color: var(--text-muted);">${formatMoneda(m.costo)}</td>
             <td style="text-align: right; font-weight: 700; color: var(--accent-green);">${formatMoneda(m.utilidad)}</td>
-            <td style="text-align: right; font-weight: 700; color: ${(m.margen_porcentaje >= 20 ? 'var(--accent-green)' : 'var(--warning)')};">${(m.margen_porcentaje || 0).toFixed(2)}%</td>
+            <td style="text-align: right; font-weight: 700; color: ${((m.margen_pct ?? m.margen_porcentaje ?? 0) >= 20 ? 'var(--accent-green)' : 'var(--warning)')};">${Number(m.margen_pct ?? m.margen_porcentaje ?? 0).toFixed(2)}%</td>
         </tr>
     `).join('');
 }

@@ -233,6 +233,7 @@ function switchTab(tabId) {
     const tabSection = document.getElementById(tabId);
     if (tabSection) {
         tabSection.classList.add('active');
+        window.dispatchEvent(new CustomEvent('workspace:tab-change', { detail: { tabId } }));
 
         // Cargar datos según la pestaña activa
         if (tabId === 'tab-inventario') loadInventario();
@@ -437,7 +438,7 @@ async function submitCierreCaja() {
             }
         } else {
             let dif = Number(data.diferencia !== undefined ? data.diferencia : 0);
-            let msg = `Diferencia encontrada: <strong>C$ ${dif.toFixed(2)}</strong>`;
+            let msg = `Diferencia encontrada: <strong>C$ ${formatMoneda(dif, '')}</strong>`;
             if (dif < 0) {
                 msg += "<br><br><span style='color: #ef4444; font-weight: 600;'><i class='ph-bold ph-warning'></i> ¡FALTANTE DE DINERO! Debes reportarlo.</span>";
             } else if (dif > 0) {
@@ -610,18 +611,18 @@ async function loadDashboardStats() {
         if (Array.isArray(resVentas)) ventasCache = resVentas;
 
         const elTotalProds = document.getElementById('stat-total-productos');
-        if (elTotalProds) elTotalProds.textContent = resProds.length || 0;
+        if (elTotalProds) elTotalProds.textContent = formatCantidad(resProds.length || 0);
 
         const totalVentasSum = Array.isArray(resVentas) ? resVentas.reduce((acc, v) => acc + (v.total || 0), 0) : 0;
         const elTotalVentas = document.getElementById('stat-total-ventas');
-        if (elTotalVentas) elTotalVentas.textContent = `$${totalVentasSum.toFixed(2)}`;
+        if (elTotalVentas) elTotalVentas.textContent = `$${formatMoneda(totalVentasSum, '')}`;
 
         const elConteoVentas = document.getElementById('stat-conteo-ventas');
-        if (elConteoVentas) elConteoVentas.textContent = `${resVentas.length || 0} transacciones`;
+        if (elConteoVentas) elConteoVentas.textContent = `${formatCantidad(resVentas.length || 0)} transacciones`;
 
         const stockBajoCount = Array.isArray(resProds) ? resProds.filter(p => p.stock <= p.min_stock).length : 0;
         const elStockBajo = document.getElementById('stat-stock-bajo');
-        if (elStockBajo) elStockBajo.textContent = stockBajoCount;
+        if (elStockBajo) elStockBajo.textContent = formatCantidad(stockBajoCount);
 
         renderRecentSalesList(resVentas);
 
@@ -650,7 +651,7 @@ function renderRecentSalesList(ventas) {
                 </div>
                 <div style="text-align: right; display: flex; align-items: center; gap: 0.75rem;">
                     <div>
-                        <span style="color: var(--accent-green); font-weight: 700;">$${v.total.toFixed(2)}</span>
+                        <span style="color: var(--accent-green); font-weight: 700;">$${formatMoneda(v.total, '')}</span>
                         <div style="font-size: 0.75rem; color: var(--text-dim);">${v.fecha}</div>
                     </div>
                     <button class="btn btn-secondary icon-btn-text" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;" onclick="verComprobanteVenta(${v.id})" title="Ver Ticket">
@@ -713,8 +714,8 @@ function renderInventarioTable(productos) {
                 <td><strong>${p.codigo}</strong></td>
                 <td><strong>${p.nombre}</strong></td>
                 <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.25rem 0.5rem; border-radius: 4px;">${p.categoria}</span></td>
-                <td style="font-weight: 700; color: var(--accent-green);">$${p.precio.toFixed(2)}</td>
-                <td style="color: var(--text-muted);">$${p.costo.toFixed(2)}</td>
+                <td style="font-weight: 700; color: var(--accent-green);">$${formatMoneda(p.precio, '')}</td>
+                <td style="color: var(--text-muted);">$${formatMoneda(p.costo, '')}</td>
                 <td><strong>${p.stock}</strong> unid</td>
                 <td><span class="stock-badge ${badgeClass}">${badgeText}</span></td>
                 ${actionTd}
@@ -1032,7 +1033,7 @@ function renderPOSProductsGrid(productos) {
                     <h4 class="pos-prod-name">${p.nombre}</h4>
                 </div>
                 <div>
-                    <div class="pos-prod-price">$${p.precio.toFixed(2)}</div>
+                    <div class="pos-prod-price">$${formatMoneda(p.precio, '')}</div>
                     <div class="pos-prod-stock" style="${sinStock ? 'color: #ef4444; font-weight: bold;' : ''}">${sinStock ? '❌ AGOTADO' : `Stock: ${stockDisponible}`}</div>
                 </div>
             </div>
@@ -1133,8 +1134,8 @@ function renderCartPOS() {
                 <td>
                     <input type="number" class="cart-qty-input" value="${item.cantidad}" min="1" max="${item.stock_max}" onchange="updateCartQtyPOS(${item.producto_id}, this.value)">
                 </td>
-                <td>$${item.precio.toFixed(2)}</td>
-                <td style="font-weight: 700; color: var(--accent-green);">$${subtotal.toFixed(2)}</td>
+                <td>$${formatMoneda(item.precio, '')}</td>
+                <td style="font-weight: 700; color: var(--accent-green);">$${formatMoneda(subtotal, '')}</td>
                 <td>
                     <button class="btn-remove-item" onclick="removeFromCartPOS(${item.producto_id})" title="Eliminar">&times;</button>
                 </td>
@@ -1142,7 +1143,7 @@ function renderCartPOS() {
         `;
     }).join('');
 
-    totalEl.textContent = `$${totalSum.toFixed(2)}`;
+    totalEl.textContent = `$${formatMoneda(totalSum, '')}`;
 }
 
 async function procesarVentaPOS() {
@@ -1216,7 +1217,7 @@ function renderHistorialVentasTable(ventas) {
             <td>${v.cliente || 'Invitado'}</td>
             <td>${v.vendedor || 'Sistema Automático'}</td>
             <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${v.forma_pago}</span></td>
-            <td style="font-weight: 700; color: var(--accent-green);">$${v.total.toFixed(2)}</td>
+            <td style="font-weight: 700; color: var(--accent-green);">$${formatMoneda(v.total, '')}</td>
             <td style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="verComprobanteVenta(${v.id})">
                     <i class="ph-bold ph-receipt"></i> Ticket
@@ -1284,7 +1285,7 @@ function renderPedidosWebTable(pedidos) {
                     ${direccionTexto}
                 </td>
                 <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${p.metodo || 'Efectivo'}</span></td>
-                <td style="font-weight: 700; color: var(--accent-green); font-size: 0.95rem;">$${p.total.toFixed(2)}</td>
+                <td style="font-weight: 700; color: var(--accent-green); font-size: 0.95rem;">$${formatMoneda(p.total, '')}</td>
                 <td>${estadoBadge}</td>
                 <td style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                     <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="verComprobantePedidoWeb(${p.id})">
@@ -1386,7 +1387,7 @@ async function abrirModalDevolucion(ventaId) {
     document.getElementById('dev-venta-id').value = ventaId;
     document.getElementById('dev-codigo-venta').textContent = venta.codigo_venta;
     document.getElementById('dev-cliente').textContent = venta.cliente || 'Invitado';
-    document.getElementById('dev-total-original').textContent = `$${venta.total.toFixed(2)}`;
+    document.getElementById('dev-total-original').textContent = `$${formatMoneda(venta.total, '')}`;
     document.getElementById('dev-motivo-select').value = '';
     document.getElementById('dev-motivo-texto').value = '';
     document.getElementById('dev-actualiza-stock-check').checked = true;
@@ -1489,13 +1490,13 @@ function calcularTotalDevolucion() {
             if (qty > maxQty) { qty = maxQty; qtyInput.value = maxQty; }
             if (qty < 1) { qty = 1; qtyInput.value = 1; }
             const subtotal = precio * qty;
-            subtotalCell.textContent = `$${subtotal.toFixed(2)}`;
+            subtotalCell.textContent = `$${formatMoneda(subtotal, '')}`;
             total += subtotal;
         } else {
             subtotalCell.textContent = '$0.00';
         }
     });
-    document.getElementById('dev-total-devolver').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('dev-total-devolver').textContent = `$${formatMoneda(total, '')}`;
 }
 
 async function procesarDevolucion() {
@@ -1597,15 +1598,15 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
     if (esNuevaVenta) {
         bannerExito = `
             <div class="ticket-no-print" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; text-align: center; font-size: 0.92rem;">
-                <i class="ph-bold ph-check-circle" style="font-size: 1.2rem; vertical-align: middle;"></i> ¡Venta ${v.codigo_venta} procesada exitosamente por un total de $${v.total.toFixed(2)}!
+                <i class="ph-bold ph-check-circle" style="font-size: 1.2rem; vertical-align: middle;"></i> ¡Venta ${v.codigo_venta} procesada exitosamente por un total de $${formatMoneda(v.total, '')}!
             </div>
         `;
     }
 
     let itemsHtml = '';
     v.detalles.forEach(d => {
-        const pu = typeof d.precio_unitario === 'number' ? d.precio_unitario.toFixed(2) : Number(d.precio_unitario || 0).toFixed(2);
-        const st = typeof d.subtotal === 'number' ? d.subtotal.toFixed(2) : Number(d.subtotal || 0).toFixed(2);
+        const pu = formatMoneda(d.precio_unitario, '');
+        const st = formatMoneda(d.subtotal, '');
         itemsHtml += `
             <tr style="border-bottom: 1px dashed #cbd5e1;">
                 <td style="padding: 0.4rem 0; font-size: 0.85rem; color: #1e293b;">
@@ -1651,7 +1652,7 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
             </table>
 
             <div style="border-top: 2px dashed #94a3b8; padding-top: 0.5rem; text-align: right; font-size: 1.1rem; font-weight: 800; color: #0f172a;">
-                TOTAL TOTAL: $${typeof v.total === 'number' ? v.total.toFixed(2) : Number(v.total || 0).toFixed(2)}
+                TOTAL TOTAL: $${formatMoneda(v.total, '')}
             </div>
 
             <div style="text-align: center; font-size: 0.75rem; color: #64748b; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 0.5rem;">
@@ -1696,8 +1697,8 @@ function imprimirTicketActual() {
     if (v && v.detalles && Array.isArray(v.detalles) && v.detalles.length > 0) {
         let itemsRows = '';
         v.detalles.forEach(d => {
-            const pu = typeof d.precio_unitario === 'number' ? d.precio_unitario.toFixed(2) : Number(d.precio_unitario || 0).toFixed(2);
-            const st = typeof d.subtotal === 'number' ? d.subtotal.toFixed(2) : Number(d.subtotal || 0).toFixed(2);
+            const pu = formatMoneda(d.precio_unitario, '');
+            const st = formatMoneda(d.subtotal, '');
             itemsRows += `
                 <tr>
                     <td style="padding: 4px 2px; font-size: 11px; text-align: left; vertical-align: top; word-break: break-word;">
@@ -1710,7 +1711,7 @@ function imprimirTicketActual() {
             `;
         });
 
-        const totalFormatted = typeof v.total === 'number' ? v.total.toFixed(2) : Number(v.total || 0).toFixed(2);
+        const totalFormatted = formatMoneda(v.total, '');
 
         ticketHtml = `<!DOCTYPE html>
 <html lang="es">
@@ -1947,7 +1948,7 @@ async function loadComprasYProveedores() {
                         <td><strong>COM-#${c.id}</strong></td>
                         <td>${c.fecha}</td>
                         <td>${c.proveedor_nombre}</td>
-                        <td style="font-weight: 700; color: var(--primary);">$${c.total.toFixed(2)}</td>
+                        <td style="font-weight: 700; color: var(--primary);">$${formatMoneda(c.total, '')}</td>
                     </tr>
                 `).join('');
             }
@@ -3419,13 +3420,13 @@ function calcularTotalAsiento() {
     document.querySelectorAll('input[name="asiento-debe"]').forEach(i => tDebe += parseFloat(i.value || 0));
     document.querySelectorAll('input[name="asiento-haber"]').forEach(i => tHaber += parseFloat(i.value || 0));
     
-    document.getElementById('asiento-total-debe').innerText = '$' + tDebe.toFixed(2);
-    document.getElementById('asiento-total-haber').innerText = '$' + tHaber.toFixed(2);
+    document.getElementById('asiento-total-debe').innerText = '$' + formatMoneda(tDebe, '');
+    document.getElementById('asiento-total-haber').innerText = '$' + formatMoneda(tHaber, '');
     
     const errDiv = document.getElementById('asiento-error');
     if (Math.abs(tDebe - tHaber) > 0.01) {
         errDiv.style.display = 'block';
-        errDiv.innerText = `El asiento no cuadra. Diferencia: $${Math.abs(tDebe - tHaber).toFixed(2)}`;
+        errDiv.innerText = `El asiento no cuadra. Diferencia: $${formatMoneda(Math.abs(tDebe - tHaber), '')}`;
     } else {
         errDiv.style.display = 'none';
     }
@@ -3554,13 +3555,13 @@ async function verReporteCaja(id) {
         document.getElementById('rep-caja-apertura').textContent = data.fecha_apertura;
         document.getElementById('rep-caja-cierre').textContent = data.fecha_cierre || 'N/A';
         
-        document.getElementById('rep-caja-monto-inicial').textContent = `C$ ${parseFloat(data.monto_inicial).toFixed(2)}`;
-        document.getElementById('rep-caja-ventas-efectivo').textContent = `C$ ${parseFloat(data.ventas_efectivo).toFixed(2)}`;
-        document.getElementById('rep-caja-monto-esperado').textContent = `C$ ${parseFloat(data.monto_final_esperado).toFixed(2)}`;
-        document.getElementById('rep-caja-monto-real').textContent = `C$ ${parseFloat(data.monto_final_real).toFixed(2)}`;
+        document.getElementById('rep-caja-monto-inicial').textContent = `C$ ${formatMoneda(parseFloat(data.monto_inicial), '')}`;
+        document.getElementById('rep-caja-ventas-efectivo').textContent = `C$ ${formatMoneda(parseFloat(data.ventas_efectivo), '')}`;
+        document.getElementById('rep-caja-monto-esperado').textContent = `C$ ${formatMoneda(parseFloat(data.monto_final_esperado), '')}`;
+        document.getElementById('rep-caja-monto-real').textContent = `C$ ${formatMoneda(parseFloat(data.monto_final_real), '')}`;
         
         let difColor = data.diferencia < 0 ? '#ef4444' : (data.diferencia > 0 ? '#f59e0b' : '#10b981');
-        document.getElementById('rep-caja-diferencia').innerHTML = `<span style="color: ${difColor};">C$ ${parseFloat(data.diferencia).toFixed(2)}</span>`;
+        document.getElementById('rep-caja-diferencia').innerHTML = `<span style="color: ${difColor};">C$ ${formatMoneda(parseFloat(data.diferencia), '')}</span>`;
         
         document.getElementById('rep-caja-obs').textContent = data.observaciones || 'Sin observaciones.';
         

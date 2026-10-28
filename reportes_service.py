@@ -227,10 +227,14 @@ def procesar_reporte_completo(cursor, filtro, criterio_abc='inversion', agrupar_
                 MONTH(v.fecha_venta) AS mes,
                 COUNT(v.id) AS transacciones,
                 ISNULL(SUM(v.total), 0) AS ventas,
-                ISNULL(SUM(dv.cantidad * dv.costo_historico), 0) AS costo,
-                ISNULL(SUM(dv.cantidad), 0) AS unidades
+                ISNULL(SUM(dv.costo), 0) AS costo,
+                ISNULL(SUM(dv.unidades), 0) AS unidades
             FROM ventas v
-            LEFT JOIN detalle_ventas dv ON v.id = dv.venta_id
+            LEFT JOIN (
+                SELECT venta_id, SUM(cantidad * costo_historico) AS costo,
+                       SUM(cantidad) AS unidades
+                FROM detalle_ventas GROUP BY venta_id
+            ) dv ON v.id = dv.venta_id
             WHERE v.estado = 'Completada' AND YEAR(v.fecha_venta) = ?
             GROUP BY MONTH(v.fecha_venta)
             ORDER BY mes ASC

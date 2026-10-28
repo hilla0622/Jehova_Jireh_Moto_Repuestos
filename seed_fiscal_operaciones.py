@@ -21,6 +21,7 @@ PARAMETROS = {'INSS_LABORAL': 7, 'INSS_PATRONAL': 21.5,
 
 def cargar(conn):
     cur = conn.cursor()
+    cur.execute('SET DATEFORMAT ymd')
     cur.execute("""IF OBJECT_ID('demo_fiscal_origenes','U') IS NULL
         CREATE TABLE demo_fiscal_origenes (
             clave VARCHAR(100) PRIMARY KEY, tabla_origen VARCHAR(50) NOT NULL,
@@ -81,7 +82,8 @@ def cargar(conn):
 
     cat=insertar('categorias',dict(nombre='Demostración histórica IR',descripcion=MARK+' Muestras académicas 2024/2025'))
     cliente=insertar('clientes',dict(nombre_completo='Cliente DEMO histórico (ficticio)',
-        identificacion='DEMO-CLIENTE-IR',tipo_cliente='General',direccion='Datos de demostración'))
+        identificacion='DEMO-CLIENTE-IR',tipo_cliente='General',direccion='Datos de demostración',
+        email='demo.historico@ficticio.com',password_hash='DEMO_SIN_ACCESO'))
     proveedor=insertar('proveedores',dict(nombre_empresa='Proveedor DEMO repuestos y servicios',
         contacto_nombre='Contacto ficticio',identificacion_fiscal='DEMO-SIN-RUC',telefono='00000000',
         direccion='Datos de demostración',activo=1))

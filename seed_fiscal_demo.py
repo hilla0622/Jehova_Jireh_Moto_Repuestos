@@ -21,6 +21,7 @@ TABLES = ('negocio_info_tributaria', 'reglas_tributarias',
 
 def cargar(conn):
     cur = conn.cursor()
+    cur.execute('SET DATEFORMAT ymd')
     schema = Path(__file__).with_name('database.sql').read_text(encoding='utf-8-sig')
     bloques = re.split(r'^GO\s*$', schema, flags=re.M | re.I)
     for tabla in TABLES:

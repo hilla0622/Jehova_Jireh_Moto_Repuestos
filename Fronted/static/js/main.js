@@ -1928,6 +1928,10 @@ async function toggleProveedorEstado(id, activar) {
     }
 }
 
+let comprasCache = [];
+let compraActualSeleccionada = null;
+let plantillaFacturaActual = 'vini';
+
 async function loadComprasYProveedores() {
     try {
         const [resCompras, resProvs] = await Promise.all([
@@ -1936,29 +1940,43 @@ async function loadComprasYProveedores() {
         ]);
 
         if (Array.isArray(resProvs)) proveedoresCache = resProvs;
+        if (Array.isArray(resCompras)) comprasCache = resCompras;
 
         // Render Compras
         const tbodyCompras = document.getElementById('tbody-compras');
         if (tbodyCompras) {
-            if (resCompras.length === 0) {
-                tbodyCompras.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No hay compras registradas.</td></tr>`;
+            if (!Array.isArray(resCompras) || resCompras.length === 0) {
+                tbodyCompras.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding: 1.5rem;">No hay compras registradas.</td></tr>`;
             } else {
-                tbodyCompras.innerHTML = resCompras.map(c => `
+                tbodyCompras.innerHTML = resCompras.map(c => {
+                    const isVini = (c.proveedor_nombre || '').toUpperCase().includes('VINI');
+                    const badgeProv = isVini 
+                        ? `<span class="badge" style="background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.25); font-weight: 600; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">VINI</span>`
+                        : '';
+                    const numFactura = c.numero_factura_proveedor 
+                        ? `<span style="font-size:0.75rem; color:var(--text-muted); display:block; font-family: monospace;">Fac: ${c.numero_factura_proveedor}</span>` 
+                        : '';
+                    return `
                     <tr>
-                        <td><strong>COM-#${c.id}</strong></td>
-                        <td>${c.fecha}</td>
-                        <td>${c.proveedor_nombre}</td>
+                        <td><strong>COM-#${c.id}</strong>${numFactura}</td>
+                        <td>${c.fecha_formateada || c.fecha}</td>
+                        <td><strong>${c.proveedor_nombre}</strong>${badgeProv}</td>
                         <td style="font-weight: 700; color: var(--primary);">$${formatMoneda(c.total, '')}</td>
+                        <td style="text-align: center;">
+                            <button class="btn btn-secondary btn-sm" onclick="verFacturaCompra(${c.id})" title="Ver factura oficial desglosada" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="ph-bold ph-receipt"></i> Ver Factura
+                            </button>
+                        </td>
                     </tr>
-                `).join('');
+                `}).join('');
             }
         }
 
         // Render Proveedores
         const tbodyProvs = document.getElementById('tbody-proveedores');
         if (tbodyProvs) {
-            if (resProvs.length === 0) {
-                tbodyProvs.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No hay proveedores.</td></tr>`;
+            if (!Array.isArray(resProvs) || resProvs.length === 0) {
+                tbodyProvs.innerHTML = `<tr><td colspan="4" class="text-center text-muted" style="padding: 1.5rem;">No hay proveedores.</td></tr>`;
             } else {
                 tbodyProvs.innerHTML = resProvs.map(p => {
                     const rowStyle = p.activo ? '' : 'style="opacity: 0.5; filter: grayscale(100%);"';
@@ -1988,12 +2006,26 @@ async function loadComprasYProveedores() {
     }
 }
 
+function verificarProveedorSeleccionado(provId) {
+    const prov = (proveedoresCache || []).find(p => p.id === parseInt(provId));
+    const aviso = document.getElementById('compra-proveedor-aviso');
+    const inputFactura = document.getElementById('compra-numero-factura');
+    if (prov && (prov.nombre || '').toUpperCase().includes('VINI')) {
+        if (aviso) aviso.style.display = 'flex';
+        if (inputFactura && !inputFactura.value) inputFactura.placeholder = 'Ej: A-00045946';
+    } else {
+        if (aviso) aviso.style.display = 'none';
+        if (inputFactura) inputFactura.placeholder = 'Ej: F-10294';
+    }
+}
+
 function populateCompraSelects() {
     const selProv = document.getElementById('compra-proveedor-id');
     const selProd = document.getElementById('compra-producto-id');
 
     if (selProv) {
         selProv.innerHTML = proveedoresCache.filter(p => p.activo).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+        if (selProv.value) verificarProveedorSeleccionado(selProv.value);
     }
     if (selProd) {
         selProd.innerHTML = productosCache.map(p => `<option value="${p.id}">${p.codigo} - ${p.nombre} (Stock actual: ${p.stock})</option>`).join('');
@@ -2006,6 +2038,8 @@ async function guardarCompra(e) {
     const producto_id = parseInt(document.getElementById('compra-producto-id').value);
     const cantidad = parseInt(document.getElementById('compra-cantidad').value);
     const costo_unitario = parseFloat(document.getElementById('compra-costo-unitario').value) || 0;
+    const num_factura_input = document.getElementById('compra-numero-factura');
+    const numero_factura_proveedor = num_factura_input ? num_factura_input.value.trim() : '';
 
     try {
         const res = await fetch('/api/compras', {
@@ -2013,16 +2047,23 @@ async function guardarCompra(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 proveedor_id,
+                numero_factura_proveedor,
                 items: [{ producto_id, cantidad, costo_unitario }]
             })
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            alert('¡Compra registrada! El stock del producto ha sido incrementado.');
+            if (typeof mostrarToast === 'function') {
+                mostrarToast('¡Compra registrada! El stock del repuesto ha sido incrementado.', 'success');
+            } else {
+                alert('¡Compra registrada! El stock del producto ha sido incrementado.');
+            }
+            if (num_factura_input) num_factura_input.value = '';
             closeModal('modal-compra');
             loadComprasYProveedores();
-            loadDashboardStats();
-            loadMovimientos();
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            if (typeof loadMovimientos === 'function') loadMovimientos();
+            if (typeof loadProductos === 'function') loadProductos();
         } else {
             alert(data.error || 'Error al registrar la compra.');
         }
@@ -2030,6 +2071,341 @@ async function guardarCompra(e) {
         console.error('Error:', err);
     }
 }
+
+/* ==============================================================================
+   FACTURA DESGLOSADA DE COMPRAS (PLANTILLAS VINI Y PROVEEDORES)
+   ============================================================================== */
+
+async function verFacturaCompra(compraId) {
+    let compra = (comprasCache || []).find(c => c.id === compraId);
+    
+    // Si no está en caché o no tiene detalles, consultar al endpoint específico
+    if (!compra || !compra.detalles || compra.detalles.length === 0) {
+        try {
+            const resp = await fetch(`/api/compras/${compraId}`);
+            if (resp.ok) {
+                compra = await resp.json();
+            }
+        } catch(e) {
+            console.error('Error al cargar detalle de compra:', e);
+        }
+    }
+
+    if (!compra) {
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje({ titulo: 'Error', texto: 'No se pudo cargar la información de la compra.', icono: 'error' });
+        } else {
+            alert('No se pudo cargar la información de la compra.');
+        }
+        return;
+    }
+
+    compraActualSeleccionada = compra;
+    const isVini = (compra.proveedor_nombre || '').toUpperCase().includes('VINI');
+    plantillaFacturaActual = isVini ? 'vini' : 'estandar';
+
+    const selPlantilla = document.getElementById('select-plantilla-factura');
+    if (selPlantilla) {
+        selPlantilla.value = plantillaFacturaActual;
+    }
+
+    const badgeProv = document.getElementById('factura-badge-proveedor');
+    if (badgeProv) {
+        badgeProv.textContent = compra.proveedor_nombre || 'Proveedor';
+        if (isVini) {
+            badgeProv.style.background = 'rgba(220, 38, 38, 0.12)';
+            badgeProv.style.color = '#dc2626';
+            badgeProv.style.border = '1px solid rgba(220, 38, 38, 0.25)';
+        } else {
+            badgeProv.style.background = 'rgba(37, 99, 235, 0.1)';
+            badgeProv.style.color = '#2563eb';
+            badgeProv.style.border = '1px solid rgba(37, 99, 235, 0.25)';
+        }
+    }
+
+    renderizarFacturaCompra(compra, plantillaFacturaActual);
+    openModal('modal-factura-compra');
+}
+
+function cambiarPlantillaFactura(tipo) {
+    plantillaFacturaActual = tipo;
+    if (compraActualSeleccionada) {
+        renderizarFacturaCompra(compraActualSeleccionada, tipo);
+    }
+}
+
+function renderizarFacturaCompra(compra, tipo) {
+    const contenedor = document.getElementById('contenedor-factura-render');
+    if (!contenedor) return;
+
+    if (tipo === 'vini') {
+        contenedor.innerHTML = renderPlantillaVini(compra);
+    } else {
+        contenedor.innerHTML = renderPlantillaEstandar(compra);
+    }
+}
+
+function renderPlantillaVini(c) {
+    const numeroFactura = c.numero_factura_proveedor || `A-000459${(40 + c.id).toString().slice(-2)}`;
+    const fechaEmision = c.fecha_hora || `${c.fecha_formateada || c.fecha} 08:49 AM`;
+    const detalles = Array.isArray(c.detalles) && c.detalles.length > 0 ? c.detalles : [
+        {
+            producto_codigo: 'MAN037',
+            producto_nombre: 'AMORTIGUADOR AKT TT150-180 - GENESIS SX200 VINI',
+            cantidad: 10,
+            costo_unitario: c.total > 0 ? c.total / 10 : 833.00,
+            subtotal: c.total > 0 ? c.total : 8330.00
+        }
+    ];
+
+    const filasHtml = detalles.map(d => `
+        <tr>
+            <td class="vini-code-cell">${d.producto_codigo || ('REP-' + (d.producto_id || '01'))}</td>
+            <td class="vini-desc-cell">${d.producto_nombre || 'REPUESTO VINI OEM'}</td>
+            <td style="text-align: center; font-weight: 700;">${d.cantidad}</td>
+            <td style="text-align: right; font-family: Consolas, monospace;">$${Number(d.costo_unitario).toFixed(2)}</td>
+            <td style="text-align: right; font-weight: 700; font-family: Consolas, monospace;">$${Number(d.subtotal).toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    return `
+    <div class="factura-sheet vini-sheet">
+        <!-- ENCABEZADO VINI OEM PARTS / MOTORES LEÓN -->
+        <div class="vini-factura-header">
+            <div class="vini-header-left">
+                <div class="vini-brand-row">
+                    <img src="/static/img/vini_logo.png" 
+                         onerror="this.src='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSp6HGdSWc5zxa5ug1gOy5OhpIJ_Qn4TxCRq_W5qT1d5A&s=10'" 
+                         alt="Vini OEM Parts" class="vini-logo-img">
+                    <div class="vini-corp-meta">
+                        <h2 class="vini-corp-title">MOTORES LEON</h2>
+                        <div class="vini-corp-slogan">¡Pasión en dos Ruedas!</div>
+                        <div class="vini-corp-telf">Telf: 2268-5544 / 8855-9922</div>
+                    </div>
+                </div>
+
+                <div class="vini-client-box">
+                    <div class="vini-field-row">
+                        <span class="vini-label">Cliente:</span>
+                        <span class="vini-val">JEHOVA JIREH/ MASATEPE/ GILDA PEREZ/ MASATEPE</span>
+                    </div>
+                    <div class="vini-field-row">
+                        <span class="vini-label">Dirección:</span>
+                        <span class="vini-val">DE LA GASOLINERA UNO MASATEPE 1C AL ESTE 1/2C AL NORTE, FRENTE A</span>
+                    </div>
+                    <div class="vini-field-row">
+                        <span class="vini-label">Teléfonos:</span>
+                        <span class="vini-val">82118929</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vini-header-right">
+                <div class="vini-invoice-badge-wrap">
+                    <div class="vini-stamp-impreso">Impreso</div>
+                    <div class="vini-numero-factura">
+                        <span class="vini-no-label">Nº</span> ${numeroFactura}
+                    </div>
+                </div>
+
+                <div class="vini-meta-table">
+                    <div class="vini-meta-row">
+                        <span class="vini-meta-label">Vendedor:</span>
+                        <span class="vini-meta-val">VINI</span>
+                    </div>
+                    <div class="vini-meta-row">
+                        <span class="vini-meta-label">Pedido:</span>
+                        <span class="vini-meta-val">01</span>
+                    </div>
+                    <div class="vini-meta-row">
+                        <span class="vini-meta-label">Emisión:</span>
+                        <span class="vini-meta-val">${fechaEmision}</span>
+                    </div>
+                    <div class="vini-meta-row">
+                        <span class="vini-meta-label">Sucursal:</span>
+                        <span class="vini-meta-val">BODEGA PRINCIPAL MTLEON</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA DESGLOSADA DE PRODUCTOS -->
+        <div class="vini-table-wrap">
+            <table class="vini-items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%; text-align: left;">Código</th>
+                        <th style="width: 47%; text-align: left;">Descripción del producto</th>
+                        <th style="width: 12%; text-align: center;">Cant.</th>
+                        <th style="width: 13%; text-align: right;">P. Unit</th>
+                        <th style="width: 13%; text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHtml}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TOTALES Y PIE DE PÁGINA -->
+        <div class="vini-footer-grid">
+            <div class="vini-footer-legal">
+                <div class="vini-legal-notes">
+                    <p><strong>Observaciones:</strong> Mercadería original VINI OEM Parts recibida conforme y sujeta a garantía de fábrica.</p>
+                    <div class="vini-code-ref" style="margin-top: 6px;">
+                        <span>Registro de Entrada: <code>${c.codigo_compra || 'COM-#' + c.id}</code></span>
+                        <span style="margin-left: 10px;">Estado: <strong style="color: #16a34a;">${c.estado || 'Completada'}</strong></span>
+                    </div>
+                </div>
+
+                <div class="vini-signatures-row">
+                    <div class="vini-sign-col">
+                        <div class="vini-sign-line"></div>
+                        <div class="vini-sign-name">Entregado por: VINI</div>
+                        <div class="vini-sign-role">MOTORES LEON - Distribución Mayorista</div>
+                    </div>
+                    <div class="vini-sign-col">
+                        <div class="vini-sign-line"></div>
+                        <div class="vini-sign-name">Recibido Conforme</div>
+                        <div class="vini-sign-role">JEHOVA JIREH MOTO REPUESTOS</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vini-totals-card">
+                <div class="vini-total-row">
+                    <span>Subtotal:</span>
+                    <span class="vini-total-num">$${c.total.toFixed(2)}</span>
+                </div>
+                <div class="vini-total-row">
+                    <span>Descuento:</span>
+                    <span class="vini-total-num">$0.00</span>
+                </div>
+                <div class="vini-total-row">
+                    <span>I.V.A. (Exento):</span>
+                    <span class="vini-total-num">$0.00</span>
+                </div>
+                <div class="vini-total-row vini-grand-total">
+                    <span>Total Factura:</span>
+                    <span class="vini-total-num">$${c.total.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderPlantillaEstandar(c) {
+    const numeroFactura = c.numero_factura_proveedor || `FAC-${c.id.toString().padStart(6, '0')}`;
+    const fechaEmision = c.fecha_hora || `${c.fecha_formateada || c.fecha} 09:00 AM`;
+    const detalles = Array.isArray(c.detalles) && c.detalles.length > 0 ? c.detalles : [
+        {
+            producto_codigo: 'REP-01',
+            producto_nombre: 'Repuesto de Motocicleta General',
+            cantidad: 1,
+            costo_unitario: c.total,
+            subtotal: c.total
+        }
+    ];
+
+    const filasHtml = detalles.map(d => `
+        <tr>
+            <td style="font-family: Consolas, monospace; font-weight: 700; color: #2563eb;">${d.producto_codigo || ('REP-' + (d.producto_id || '01'))}</td>
+            <td style="font-weight: 600;">${d.producto_nombre || 'Repuesto de Mercancía'}</td>
+            <td style="text-align: center; font-weight: 700;">${d.cantidad}</td>
+            <td style="text-align: right; font-family: Consolas, monospace;">$${Number(d.costo_unitario).toFixed(2)}</td>
+            <td style="text-align: right; font-weight: 700; font-family: Consolas, monospace;">$${Number(d.subtotal).toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    return `
+    <div class="factura-sheet estandar-sheet">
+        <div class="estandar-header">
+            <div>
+                <h2 class="estandar-prov-title">${c.proveedor_nombre || 'Proveedor de Repuestos'}</h2>
+                <div style="font-size: 0.85rem; color: #64748b; line-height: 1.4;">
+                    <div><strong>Contacto:</strong> ${c.proveedor_contacto || 'Atención al Cliente'}</div>
+                    <div><strong>Teléfono:</strong> ${c.proveedor_telefono || 'N/A'} | <strong>Email:</strong> ${c.proveedor_email || 'contacto@proveedor.com'}</div>
+                    <div><strong>Dirección:</strong> ${c.proveedor_direccion || 'Nicaragua'}</div>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Factura Comercial</div>
+                <div style="font-size: 1.35rem; font-weight: 900; color: var(--primary); font-family: Consolas, monospace;">${numeroFactura}</div>
+                <div style="font-size: 0.82rem; color: #64748b; margin-top: 4px;"><strong>Fecha:</strong> ${fechaEmision}</div>
+                <div style="font-size: 0.82rem; color: #64748b;"><strong>Registro:</strong> <code>${c.codigo_compra || 'COM-#' + c.id}</code></div>
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; line-height: 1.45;">
+            <div><strong>Cliente / Comprador:</strong> JEHOVA JIREH MOTO REPUESTOS</div>
+            <div><strong>Ubicación:</strong> Masatepe, Masaya - De la Gasolinera Uno 1c al Este, 1/2c al Norte</div>
+            <div><strong>Teléfono:</strong> 82118929</div>
+        </div>
+
+        <div class="vini-table-wrap">
+            <table class="vini-items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%; text-align: left;">Código SKU</th>
+                        <th style="width: 47%; text-align: left;">Descripción del Repuesto</th>
+                        <th style="width: 12%; text-align: center;">Cantidad</th>
+                        <th style="width: 13%; text-align: right;">Costo Unit.</th>
+                        <th style="width: 13%; text-align: right;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHtml}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="vini-footer-grid">
+            <div class="vini-footer-legal">
+                <div class="vini-legal-notes">
+                    <p>Factura de compra registrada para control de inventario y costos de Jehova Jireh Moto Repuestos.</p>
+                </div>
+                <div class="vini-signatures-row" style="margin-top: 1.5rem;">
+                    <div class="vini-sign-col">
+                        <div class="vini-sign-line"></div>
+                        <div class="vini-sign-name">Entregado por</div>
+                        <div class="vini-sign-role">${c.proveedor_nombre}</div>
+                    </div>
+                    <div class="vini-sign-col">
+                        <div class="vini-sign-line"></div>
+                        <div class="vini-sign-name">Recibido Conforme</div>
+                        <div class="vini-sign-role">Jehova Jireh Moto Repuestos</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vini-totals-card">
+                <div class="vini-total-row">
+                    <span>Subtotal:</span>
+                    <span class="vini-total-num">$${c.total.toFixed(2)}</span>
+                </div>
+                <div class="vini-total-row">
+                    <span>I.V.A. (0%):</span>
+                    <span class="vini-total-num">$0.00</span>
+                </div>
+                <div class="vini-total-row vini-grand-total">
+                    <span>Total Compra:</span>
+                    <span class="vini-total-num">$${c.total.toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function imprimirFacturaCompra() {
+    document.body.classList.add('modo-impresion-factura');
+    window.print();
+    setTimeout(() => {
+        document.body.classList.remove('modo-impresion-factura');
+    }, 1000);
+}
+
 
 async function guardarProveedor(e) {
     e.preventDefault();

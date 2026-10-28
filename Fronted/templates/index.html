@@ -571,6 +571,7 @@
                                                 <th>Fecha</th>
                                                 <th>Proveedor</th>
                                                 <th>Total Compra</th>
+                                                <th style="text-align: center; width: 140px;">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tbody-compras">
@@ -2703,9 +2704,16 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Proveedor:</label>
-                        <select id="compra-proveedor-id" class="form-control">
+                        <select id="compra-proveedor-id" class="form-control" onchange="verificarProveedorSeleccionado(this.value)">
                             <!-- Carga dinámica -->
                         </select>
+                        <div id="compra-proveedor-aviso" style="display: none; align-items: center; gap: 6px; margin-top: 6px; padding: 6px 10px; background: rgba(220, 38, 38, 0.08); border-left: 3px solid #dc2626; border-radius: 4px; font-size: 0.8rem; color: #b91c1c;">
+                            <i class="ph-bold ph-sparkle"></i> <span>Formato de factura <strong>VINI OEM Parts (Motores León)</strong> asignado automáticamente.</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>No. Factura de Proveedor (Opcional):</label>
+                        <input type="text" id="compra-numero-factura" class="form-control" placeholder="Ej: A-00045946">
                     </div>
                     <div class="form-group">
                         <label>Repuesto Aumentar Stock:</label>
@@ -2729,6 +2737,52 @@
                     <button type="submit" class="btn btn-primary">Registrar Compra y Aumentar Stock</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: FACTURA DESGLOSADA DE COMPRA (PLANTILLAS VINI Y PROVEEDORES) -->
+    <div class="modal" id="modal-factura-compra">
+        <div class="modal-content modal-factura-dialog" style="max-width: 960px; width: 95%;">
+            <div class="modal-header factura-header-bar no-print" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; color: var(--text-main);">
+                        <i class="ph-bold ph-receipt" style="color: var(--primary);"></i> Factura Desglosada de Compra
+                    </h3>
+                    <span id="factura-badge-proveedor" class="badge" style="background: rgba(37, 99, 235, 0.1); color: #2563eb; font-weight: 600; padding: 4px 8px; border-radius: 6px; font-size: 0.78rem;">
+                        VINI OEM Parts
+                    </span>
+                </div>
+                
+                <div class="factura-modal-actions" style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <label for="select-plantilla-factura" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin: 0;">Plantilla:</label>
+                        <select id="select-plantilla-factura" class="form-control form-control-sm" style="padding: 0.25rem 0.6rem; font-size: 0.82rem; height: auto; border-radius: 6px; width: auto;" onchange="cambiarPlantillaFactura(this.value)">
+                            <option value="vini">VINI OEM Parts (Motores León)</option>
+                            <option value="estandar">Formato Estándar Corporativo</option>
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="imprimirFacturaCompra()" style="padding: 0.35rem 0.8rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <i class="ph-bold ph-printer"></i> Imprimir / PDF
+                    </button>
+                    <button class="modal-close" onclick="closeModal('modal-factura-compra')">&times;</button>
+                </div>
+            </div>
+
+            <div class="modal-body" style="background: #f4f6f9; padding: 1.5rem; max-height: 82vh; overflow-y: auto;">
+                <div id="contenedor-factura-render" class="factura-render-container">
+                    <!-- Renderizado dinámico de la factura -->
+                </div>
+            </div>
+            
+            <div class="modal-footer no-print" style="justify-content: space-between; align-items: center; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color);">
+                <div style="font-size: 0.82rem; color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
+                    <i class="ph-bold ph-shield-check" style="color: #10b981;"></i> Factura respaldada en el inventario y contabilidad general.
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-factura-compra')">Cerrar</button>
+                </div>
+            </div>
         </div>
     </div>
 

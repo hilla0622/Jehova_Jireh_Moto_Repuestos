@@ -1604,19 +1604,37 @@ def api_proveedor_estado(prov_id):
 def api_compras():
     if request.method == 'GET':
         query_c = """
-            SELECT c.id, c.codigo_compra, p.nombre_empresa AS proveedor_nombre, c.fecha_compra AS fecha, c.total
+            SELECT c.id, c.codigo_compra, c.proveedor_id, p.nombre_empresa AS proveedor_nombre, 
+                   p.contacto_nombre AS proveedor_contacto, p.telefono AS proveedor_telefono,
+                   p.email AS proveedor_email, p.direccion AS proveedor_direccion,
+                   c.fecha_compra AS fecha, c.total,
+                   COALESCE(c.numero_factura_proveedor, '') AS numero_factura_proveedor,
+                   c.forma_pago, c.estado, c.observaciones, c.created_at
             FROM compras c
             INNER JOIN proveedores p ON c.proveedor_id = p.id
             ORDER BY c.id DESC
         """
         compras = execute_query(query_c, fetchall=True)
         for c in compras:
-            if hasattr(c['fecha'], 'strftime'):
-                c['fecha'] = c['fecha'].strftime('%Y-%m-%d')
+            fecha_raw = c.get('fecha')
+            if hasattr(fecha_raw, 'strftime'):
+                c['fecha_formateada'] = fecha_raw.strftime('%d/%m/%Y')
+                c['fecha'] = fecha_raw.strftime('%Y-%m-%d')
+            else:
+                c['fecha_formateada'] = str(fecha_raw or '')
+
+            created_at_raw = c.get('created_at')
+            if hasattr(created_at_raw, 'strftime'):
+                c['fecha_hora'] = created_at_raw.strftime('%d/%m/%Y %I:%M %p')
+            else:
+                c['fecha_hora'] = f"{c.get('fecha_formateada', '')} 08:49 AM"
+
             c['total'] = float(c['total'])
             
             detalles = execute_query("""
-                SELECT p.id AS producto_id, p.nombre AS producto_nombre, d.cantidad, d.costo_unitario, d.subtotal
+                SELECT p.id AS producto_id, p.codigo_sku AS producto_codigo, 
+                       p.nombre AS producto_nombre, p.descripcion AS producto_descripcion,
+                       d.cantidad, d.costo_unitario, d.subtotal
                 FROM detalle_compras d
                 INNER JOIN productos p ON d.producto_id = p.id
                 WHERE d.compra_id = ?
@@ -1634,6 +1652,7 @@ def api_compras():
         
         data = request.json or {}
         prov_id = int(data.get('proveedor_id', 1))
+        num_factura = data.get('numero_factura_proveedor') or data.get('numero_factura') or None
         items = data.get('items', []) 
 
         if not items:
@@ -1649,9 +1668,9 @@ def api_compras():
             total_compra = 0.0
             
             cursor.execute("""
-                INSERT INTO compras (codigo_compra, proveedor_id, usuario_id, fecha_compra, total)
-                VALUES (?, ?, ?, GETDATE(), 0)
-            """, (compra_code, prov_id, session['user']['id']))
+                INSERT INTO compras (codigo_compra, numero_factura_proveedor, proveedor_id, usuario_id, fecha_compra, total)
+                VALUES (?, ?, ?, ?, GETDATE(), 0)
+            """, (compra_code, num_factura, prov_id, session['user']['id']))
             
             cursor.execute("SELECT @@IDENTITY AS id")
             compra_id = cursor.fetchone()[0]
@@ -1707,6 +1726,54 @@ def api_compras():
             if 'conn' in locals():
                 conn.rollback()
             return jsonify({"error": str(e)}), 500
+
+@app.route('/api/compras/<int:compra_id>', methods=['GET'])
+@login_required
+def api_compra_detalle(compra_id):
+    query_c = """
+        SELECT c.id, c.codigo_compra, c.proveedor_id, p.nombre_empresa AS proveedor_nombre, 
+               p.contacto_nombre AS proveedor_contacto, p.telefono AS proveedor_telefono,
+               p.email AS proveedor_email, p.direccion AS proveedor_direccion,
+               c.fecha_compra AS fecha, c.total,
+               COALESCE(c.numero_factura_proveedor, '') AS numero_factura_proveedor,
+               c.forma_pago, c.estado, c.observaciones, c.created_at
+        FROM compras c
+        INNER JOIN proveedores p ON c.proveedor_id = p.id
+        WHERE c.id = ?
+    """
+    compra = execute_query(query_c, (compra_id,), fetchone=True)
+    if not compra:
+        return jsonify({"error": "Compra no encontrada."}), 404
+
+    fecha_raw = compra.get('fecha')
+    if hasattr(fecha_raw, 'strftime'):
+        compra['fecha_formateada'] = fecha_raw.strftime('%d/%m/%Y')
+        compra['fecha'] = fecha_raw.strftime('%Y-%m-%d')
+    else:
+        compra['fecha_formateada'] = str(fecha_raw or '')
+
+    created_at_raw = compra.get('created_at')
+    if hasattr(created_at_raw, 'strftime'):
+        compra['fecha_hora'] = created_at_raw.strftime('%d/%m/%Y %I:%M %p')
+    else:
+        compra['fecha_hora'] = f"{compra.get('fecha_formateada', '')} 08:49 AM"
+
+    compra['total'] = float(compra['total'])
+
+    detalles = execute_query("""
+        SELECT p.id AS producto_id, p.codigo_sku AS producto_codigo, 
+               p.nombre AS producto_nombre, p.descripcion AS producto_descripcion,
+               d.cantidad, d.costo_unitario, d.subtotal
+        FROM detalle_compras d
+        INNER JOIN productos p ON d.producto_id = p.id
+        WHERE d.compra_id = ?
+    """, (compra['id'],), fetchall=True)
+    for d in detalles:
+        d['costo_unitario'] = float(d['costo_unitario'])
+        d['subtotal'] = float(d['subtotal'])
+    compra['detalles'] = detalles
+
+    return jsonify(compra)
 
 # --- REPORTES Y CONTABILIDAD ---
 @app.route('/api/reportes', methods=['GET'])

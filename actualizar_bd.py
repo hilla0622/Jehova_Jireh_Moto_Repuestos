@@ -66,6 +66,13 @@ def migrate():
     """)
     print("   -> comprobantes actualizado.")
 
+    print("3.1 Verificando y agregando columnas a 'compras'...")
+    cursor.execute("""
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='compras' AND COLUMN_NAME='numero_factura_proveedor')
+        ALTER TABLE compras ADD numero_factura_proveedor VARCHAR(50) NULL;
+    """)
+    print("   -> compras actualizado.")
+
     print("4. Verificando y creando vistas faltantes...")
     cursor.execute("""
     CREATE OR ALTER VIEW vista_resumen_rrhh AS

@@ -1023,6 +1023,8 @@ body {
 .pos-cart-card {
     display: flex;
     flex-direction: column;
+    align-self: start;
+    height: fit-content;
 }
 
 .cart-items-wrapper {
@@ -1151,6 +1153,49 @@ body {
     min-height: 0;
     overflow: hidden;
     height: 100%;
+}
+
+/* Modal de Compras Multi-Repuestos con Scroll Garantizado */
+#modal-compra .modal-content {
+    max-width: 980px !important;
+    width: 96% !important;
+    height: min(92vh, 700px);
+    max-height: 92vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#modal-compra form {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    height: 100% !important;
+}
+
+#modal-compra .modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding: 1.25rem !important;
+}
+
+.modal-compra-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.4fr);
+    gap: 1.25rem;
+    align-items: stretch;
+}
+
+@media (max-width: 840px) {
+    .modal-compra-grid {
+        grid-template-columns: 1fr !important;
+    }
+    #modal-compra .modal-content {
+        height: auto !important;
+        max-height: 92vh !important;
+    }
 }
 
 @keyframes modalIn {
@@ -2838,6 +2883,106 @@ body.dark-mode .vet-section-header {
     body.modo-impresion-factura .no-print {
         display: none !important;
     }
+}
+
+/* ==============================================================================
+   MÓDULO COMPRAS & PROVEEDORES: PANELES BALANCEADOS CON SCROLL ELEGANTE
+   ============================================================================== */
+.compras-grid-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.95fr);
+    gap: 1.5rem;
+    align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+    .compras-grid-container {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.compras-card-scroll {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 560px !important;
+    max-height: 580px !important;
+    overflow: hidden !important;
+    border-radius: var(--radius-lg, 12px);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.compras-card-scroll .card-header {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+
+.compras-card-scroll .card-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.compras-table-scroll-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(160, 160, 160, 0.35) transparent;
+}
+
+.compras-table-scroll-wrap::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.compras-table-scroll-wrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+.compras-table-scroll-wrap::-webkit-scrollbar-thumb {
+    background: rgba(160, 160, 160, 0.35);
+    border-radius: 4px;
+}
+.compras-table-scroll-wrap::-webkit-scrollbar-thumb:hover {
+    background: var(--primary, #dc2626);
+}
+
+.compras-table-scroll-wrap table {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.compras-table-scroll-wrap thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Insignia compacta y estilizada para la categoría de repuestos */
+.badge-categoria {
+    font-size: 0.70rem !important;
+    font-weight: 500;
+    line-height: 1.25;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(100, 116, 139, 0.1);
+    color: var(--text-muted, #64748b);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    display: inline-block;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
 }
 
 

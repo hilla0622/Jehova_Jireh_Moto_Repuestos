@@ -780,6 +780,7 @@ def listar_declaraciones_guardadas(cursor):
             "renta_gravable": float(r.renta_neta_gravable or 0),
             "ir_determinado": float(r.ir_determinado or 0),
             "acreditamientos": float(r.total_acreditamientos or 0),
+            "total_acreditamientos": float(r.total_acreditamientos or 0),
             "saldo_a_pagar": float(r.saldo_a_pagar or 0),
             "saldo_a_favor": float(r.saldo_a_favor or 0),
             "fecha_creacion": fecha_str,

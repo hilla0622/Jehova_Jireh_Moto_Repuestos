@@ -751,7 +751,7 @@ function renderInventarioTable(productos) {
             <tr>
                 <td><strong>${p.codigo}</strong></td>
                 <td><strong>${p.nombre}</strong></td>
-                <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.25rem 0.5rem; border-radius: 4px;">${p.categoria}</span></td>
+                <td><span class="badge-categoria" style="font-size: 0.70rem; font-weight: 500; line-height: 1.2; background: rgba(100, 116, 139, 0.1); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.25); padding: 2px 7px; border-radius: 4px; display: inline-block; white-space: nowrap;">${p.categoria}</span></td>
                 <td style="font-weight: 700; color: var(--accent-green);">$${formatMoneda(p.precio, '')}</td>
                 <td style="color: var(--text-muted);">$${formatMoneda(p.costo, '')}</td>
                 <td><strong>${p.stock}</strong> unid</td>
@@ -1247,8 +1247,9 @@ function renderHistorialVentasTable(ventas) {
         return;
     }
 
-    const reversed = [...ventas].reverse();
-    tbody.innerHTML = reversed.map(v => `
+    // Ordenar de más reciente a más antigua (ID descendente) para que las recientes salgan de primero
+    const ordenadas = [...ventas].sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    tbody.innerHTML = ordenadas.map(v => `
         <tr>
             <td><strong>${v.codigo_venta}</strong></td>
             <td>${v.fecha}</td>
@@ -1969,6 +1970,7 @@ async function toggleProveedorEstado(id, activar) {
 let comprasCache = [];
 let compraActualSeleccionada = null;
 let plantillaFacturaActual = 'vini';
+let compraItemsActuales = [];
 
 async function loadComprasYProveedores() {
     try {
@@ -1994,15 +1996,19 @@ async function loadComprasYProveedores() {
                     const numFactura = c.numero_factura_proveedor 
                         ? `<span style="font-size:0.75rem; color:var(--text-muted); display:block; font-family: monospace;">Fac: ${c.numero_factura_proveedor}</span>` 
                         : '';
+                    const codigoVisual = c.codigo_compra || `COM-#${c.id}`;
                     return `
                     <tr>
-                        <td><strong>COM-#${c.id}</strong>${numFactura}</td>
+                        <td><strong>${codigoVisual}</strong>${numFactura}</td>
                         <td>${c.fecha_formateada || c.fecha}</td>
                         <td><strong>${c.proveedor_nombre}</strong>${badgeProv}</td>
                         <td style="font-weight: 700; color: var(--primary);">$${formatMoneda(c.total, '')}</td>
-                        <td style="text-align: center;">
+                        <td style="text-align: center; white-space: nowrap;">
                             <button class="btn btn-secondary btn-sm" onclick="verFacturaCompra(${c.id})" title="Ver factura oficial desglosada" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px;">
                                 <i class="ph-bold ph-receipt"></i> Ver Factura
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="eliminarCompra(${c.id}, '${codigoVisual}')" title="Eliminar compra registrada por error y revertir stock" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px; margin-left: 5px;">
+                                <i class="ph-bold ph-trash"></i> Eliminar
                             </button>
                         </td>
                     </tr>
@@ -2039,8 +2045,67 @@ async function loadComprasYProveedores() {
             }
         }
 
+        // Actualizar badges de conteo
+        const badgeCompras = document.getElementById('compras-badge-conteo');
+        if (badgeCompras) {
+            const n = Array.isArray(resCompras) ? resCompras.length : 0;
+            badgeCompras.textContent = `${n} compra${n === 1 ? '' : 's'}`;
+        }
+        const badgeProvs = document.getElementById('proveedores-badge-conteo');
+        if (badgeProvs) {
+            const m = Array.isArray(resProvs) ? resProvs.length : 0;
+            badgeProvs.textContent = `${m} proveedor${m === 1 ? '' : 'es'}`;
+        }
+
     } catch (err) {
         console.error('Error compras y proveedores:', err);
+    }
+}
+
+async function eliminarCompra(compraId, codigoCompra) {
+    const cod = codigoCompra || `COM-#${compraId}`;
+    const confirmado = await confirmarAccion({
+        titulo: '¿Eliminar compra?',
+        texto: `¿Estás seguro de que deseas eliminar la compra <b>${cod}</b>?<br><br><span style="color:#dc2626;">⚠️ Esta acción descontará automáticamente del inventario el stock de todos los repuestos que ingresaron en esta compra y cancelará el asiento contable asociado.</span>`,
+        icono: 'warning',
+        textoConfirmar: 'Sí, eliminar y revertir',
+        textoCancelar: 'Cancelar',
+        esPeligroso: true
+    });
+
+    if (!confirmado) return;
+
+    try {
+        const res = await fetch(`/api/compras/${compraId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (typeof mostrarToast === 'function') {
+                mostrarToast(`Compra ${cod} eliminada y stock revertido correctamente.`, 'success');
+            } else {
+                alert(`Compra ${cod} eliminada y stock revertido correctamente.`);
+            }
+            loadComprasYProveedores();
+            if (typeof loadDashboardStats === 'function') loadDashboardStats();
+            if (typeof loadMovimientos === 'function') loadMovimientos();
+            if (typeof loadProductos === 'function') loadProductos();
+            if (typeof loadInventario === 'function') loadInventario();
+        } else {
+            if (typeof mostrarMensaje === 'function') {
+                mostrarMensaje({ titulo: 'No se pudo eliminar la compra', texto: data.error || 'Ocurrió un error inesperado al eliminar.', icono: 'error' });
+            } else {
+                alert(data.error || 'Error al eliminar la compra.');
+            }
+        }
+    } catch (err) {
+        console.error('Error al eliminar compra:', err);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje({ titulo: 'Error de red', texto: 'No se pudo conectar con el servidor para eliminar la compra.', icono: 'error' });
+        } else {
+            alert('Error de red al eliminar la compra.');
+        }
     }
 }
 
@@ -2057,6 +2122,24 @@ function verificarProveedorSeleccionado(provId) {
     }
 }
 
+function onCompraProductoSeleccionado(prodId) {
+    const selProd = document.getElementById('compra-producto-id');
+    const inputCosto = document.getElementById('compra-costo-unitario');
+    if (!selProd || !inputCosto) return;
+
+    const opt = selProd.selectedOptions && selProd.selectedOptions[0];
+    if (opt && opt.dataset && opt.dataset.costo !== undefined) {
+        const costo = parseFloat(opt.dataset.costo);
+        inputCosto.value = (!isNaN(costo) && costo > 0) ? costo.toFixed(2) : '';
+    } else {
+        const prod = (productosCache || []).find(p => p.id === parseInt(prodId));
+        if (prod && prod.costo !== undefined) {
+            const costo = parseFloat(prod.costo);
+            inputCosto.value = (!isNaN(costo) && costo > 0) ? costo.toFixed(2) : '';
+        }
+    }
+}
+
 function populateCompraSelects() {
     const selProv = document.getElementById('compra-proveedor-id');
     const selProd = document.getElementById('compra-producto-id');
@@ -2065,19 +2148,219 @@ function populateCompraSelects() {
         selProv.innerHTML = proveedoresCache.filter(p => p.activo).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
         if (selProv.value) verificarProveedorSeleccionado(selProv.value);
     }
-    if (selProd) {
-        selProd.innerHTML = productosCache.map(p => `<option value="${p.id}">${p.codigo} - ${p.nombre} (Stock actual: ${p.stock})</option>`).join('');
+
+    const llenarSelectProductos = (lista) => {
+        if (!selProd) return;
+        if (!Array.isArray(lista) || lista.length === 0) {
+            selProd.innerHTML = '<option value="">No hay repuestos disponibles</option>';
+            return;
+        }
+        selProd.innerHTML = lista.map(p => {
+            const costoRef = typeof p.costo === 'number' ? p.costo : (parseFloat(p.costo) || 0);
+            return `<option value="${p.id}" data-costo="${costoRef}" data-stock="${p.stock}" data-codigo="${p.codigo || ''}" data-nombre="${p.nombre}">${p.codigo ? p.codigo + ' - ' : ''}${p.nombre} (Stock actual: ${p.stock})</option>`;
+        }).join('');
+        if (selProd.value) {
+            onCompraProductoSeleccionado(selProd.value);
+        }
+    };
+
+    if (productosCache && productosCache.length > 0) {
+        llenarSelectProductos(productosCache);
+    } else {
+        fetch('/api/productos')
+            .then(r => r.json())
+            .then(prods => {
+                if (Array.isArray(prods)) {
+                    productosCache = prods;
+                    llenarSelectProductos(prods);
+                }
+            })
+            .catch(e => console.error('Error al cargar repuestos para modal de compra:', e));
+    }
+
+    // Reiniciar lista de repuestos seleccionados al abrir
+    compraItemsActuales = [];
+    renderTablaCompraItems();
+}
+
+function agregarItemACompra() {
+    const selProd = document.getElementById('compra-producto-id');
+    const inputCant = document.getElementById('compra-cantidad');
+    const inputCosto = document.getElementById('compra-costo-unitario');
+
+    if (!selProd || !selProd.value) {
+        if (typeof mostrarToast === 'function') {
+            mostrarToast('Por favor selecciona un repuesto válido.', 'warning');
+        } else {
+            alert('Por favor selecciona un repuesto válido.');
+        }
+        return;
+    }
+
+    const prodId = parseInt(selProd.value);
+    const cantidad = parseInt(inputCant.value);
+    if (isNaN(cantidad) || cantidad <= 0) {
+        if (typeof mostrarToast === 'function') {
+            mostrarToast('La cantidad debe ser mayor a 0.', 'warning');
+        } else {
+            alert('La cantidad debe ser mayor a 0.');
+        }
+        if (inputCant) inputCant.focus();
+        return;
+    }
+
+    let costo_unitario = parseFloat(inputCosto.value);
+    const prodInfo = (productosCache || []).find(p => p.id === prodId);
+    const prodNombre = prodInfo ? prodInfo.nombre : (selProd.options[selProd.selectedIndex]?.text || 'Repuesto');
+    const prodCodigo = prodInfo ? (prodInfo.codigo || '') : '';
+    const stockActual = prodInfo ? parseInt(prodInfo.stock || 0) : 0;
+
+    if (isNaN(costo_unitario) || costo_unitario < 0) {
+        costo_unitario = prodInfo && prodInfo.costo ? parseFloat(prodInfo.costo) : 0;
+    }
+
+    // Si ya existe en la lista, sumar la cantidad
+    const itemExistente = compraItemsActuales.find(item => item.producto_id === prodId);
+    if (itemExistente) {
+        itemExistente.cantidad += cantidad;
+        if (costo_unitario > 0) itemExistente.costo_unitario = costo_unitario;
+        itemExistente.subtotal = itemExistente.cantidad * itemExistente.costo_unitario;
+        if (typeof mostrarToast === 'function') {
+            mostrarToast(`Se sumaron +${cantidad} unidades a ${prodNombre}.`, 'info');
+        }
+    } else {
+        compraItemsActuales.push({
+            producto_id: prodId,
+            codigo: prodCodigo,
+            nombre: prodNombre,
+            stock_actual: stockActual,
+            cantidad: cantidad,
+            costo_unitario: costo_unitario,
+            subtotal: cantidad * costo_unitario
+        });
+        if (typeof mostrarToast === 'function') {
+            mostrarToast(`Añadido: ${prodNombre}`, 'success');
+        }
+    }
+
+    renderTablaCompraItems();
+
+    // Mantener cantidad en 1 para la siguiente selección
+    if (inputCant) inputCant.value = 1;
+}
+
+function eliminarItemDeCompra(index) {
+    if (index >= 0 && index < compraItemsActuales.length) {
+        const item = compraItemsActuales[index];
+        compraItemsActuales.splice(index, 1);
+        renderTablaCompraItems();
+        if (typeof mostrarToast === 'function') {
+            mostrarToast(`Se quitó ${item.nombre} de la compra.`, 'info');
+        }
     }
 }
 
+function actualizarCantidadItemCompra(index, nuevaCantidad) {
+    const cant = parseInt(nuevaCantidad);
+    if (index >= 0 && index < compraItemsActuales.length && !isNaN(cant) && cant > 0) {
+        compraItemsActuales[index].cantidad = cant;
+        compraItemsActuales[index].subtotal = cant * compraItemsActuales[index].costo_unitario;
+        renderTablaCompraItems();
+    }
+}
+
+function actualizarCostoItemCompra(index, nuevoCosto) {
+    const costo = parseFloat(nuevoCosto);
+    if (index >= 0 && index < compraItemsActuales.length && !isNaN(costo) && costo >= 0) {
+        compraItemsActuales[index].costo_unitario = costo;
+        compraItemsActuales[index].subtotal = compraItemsActuales[index].cantidad * costo;
+        renderTablaCompraItems();
+    }
+}
+
+function renderTablaCompraItems() {
+    const tbody = document.getElementById('tbody-compra-items');
+    const totalEl = document.getElementById('compra-total-calculado');
+    const badgeCantEl = document.getElementById('compra-articulos-conteo');
+
+    let totalCompra = 0;
+    let totalUnidades = 0;
+
+    if (!tbody) return;
+
+    if (compraItemsActuales.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted" style="padding: 1.5rem;">
+                    <i class="ph-bold ph-shopping-bag-open" style="font-size: 1.5rem; display: block; margin-bottom: 6px; opacity: 0.5;"></i>
+                    No hay repuestos agregados a esta compra todavía.<br>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Selecciona un repuesto arriba, define la cantidad y haz clic en <strong>Añadir a la Lista</strong>.</span>
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = compraItemsActuales.map((item, idx) => {
+            const subt = item.cantidad * item.costo_unitario;
+            totalCompra += subt;
+            totalUnidades += item.cantidad;
+            const stockNuevo = item.stock_actual + item.cantidad;
+            return `
+                <tr>
+                    <td>
+                        <strong>${item.codigo ? `[${item.codigo}] ` : ''}${item.nombre}</strong>
+                        <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
+                            Stock actual: ${item.stock_actual} &rarr; <span style="color: #16a34a; font-weight: 600;">Nuevo stock: ${stockNuevo}</span>
+                        </div>
+                    </td>
+                    <td style="text-align: center; width: 65px;">
+                        <input type="number" min="1" class="form-control form-control-sm" value="${item.cantidad}" onchange="actualizarCantidadItemCompra(${idx}, this.value)" style="width: 58px; display: inline-block; text-align: center; padding: 4px 2px;">
+                    </td>
+                    <td style="text-align: right; width: 85px;">
+                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" value="${item.costo_unitario.toFixed(2)}" onchange="actualizarCostoItemCompra(${idx}, this.value)" style="width: 78px; display: inline-block; text-align: right; padding: 4px 2px;">
+                    </td>
+                    <td style="text-align: right; font-weight: 700; color: var(--primary); vertical-align: middle; width: 90px; white-space: nowrap;">
+                        $${formatMoneda(subt, '')}
+                    </td>
+                    <td style="text-align: center; vertical-align: middle; width: 45px;">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="eliminarItemDeCompra(${idx})" title="Quitar repuesto de la lista" style="padding: 4px 7px; font-size: 0.8rem;">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    if (totalEl) totalEl.textContent = `$${formatMoneda(totalCompra, '')}`;
+    if (badgeCantEl) badgeCantEl.textContent = `${compraItemsActuales.length} ítem(s) (${totalUnidades} piezas)`;
+}
+
 async function guardarCompra(e) {
-    e.preventDefault();
-    const proveedor_id = parseInt(document.getElementById('compra-proveedor-id').value);
-    const producto_id = parseInt(document.getElementById('compra-producto-id').value);
-    const cantidad = parseInt(document.getElementById('compra-cantidad').value);
-    const costo_unitario = parseFloat(document.getElementById('compra-costo-unitario').value) || 0;
+    if (e) e.preventDefault();
+
+    if (compraItemsActuales.length === 0) {
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje({
+                titulo: 'Lista vacía',
+                texto: 'Debes añadir al menos un repuesto a la lista de compra antes de registrarla.',
+                icono: 'warning'
+            });
+        } else {
+            alert('Debes añadir al menos un repuesto a la lista de compra antes de registrarla.');
+        }
+        return;
+    }
+
+    const selProv = document.getElementById('compra-proveedor-id');
+    const proveedor_id = selProv ? parseInt(selProv.value) : 1;
     const num_factura_input = document.getElementById('compra-numero-factura');
     const numero_factura_proveedor = num_factura_input ? num_factura_input.value.trim() : '';
+
+    const items = compraItemsActuales.map(item => ({
+        producto_id: item.producto_id,
+        cantidad: item.cantidad,
+        costo_unitario: item.costo_unitario
+    }));
 
     try {
         const res = await fetch('/api/compras', {
@@ -2086,29 +2369,51 @@ async function guardarCompra(e) {
             body: JSON.stringify({
                 proveedor_id,
                 numero_factura_proveedor,
-                items: [{ producto_id, cantidad, costo_unitario }]
+                items
             })
         });
         const data = await res.json();
         if (res.ok && data.success) {
+            const numItems = items.length;
             if (typeof mostrarToast === 'function') {
-                mostrarToast('¡Compra registrada! El stock del repuesto ha sido incrementado.', 'success');
+                mostrarToast(`¡Compra registrada! Se incrementó el inventario de ${numItems} repuesto(s).`, 'success');
             } else {
-                alert('¡Compra registrada! El stock del producto ha sido incrementado.');
+                alert(`¡Compra registrada! Se incrementó el inventario de ${numItems} repuesto(s).`);
             }
             if (num_factura_input) num_factura_input.value = '';
+            compraItemsActuales = [];
+            renderTablaCompraItems();
             closeModal('modal-compra');
             loadComprasYProveedores();
             if (typeof loadDashboardStats === 'function') loadDashboardStats();
             if (typeof loadMovimientos === 'function') loadMovimientos();
             if (typeof loadProductos === 'function') loadProductos();
+            if (typeof loadInventario === 'function') loadInventario();
         } else {
-            alert(data.error || 'Error al registrar la compra.');
+            if (typeof mostrarMensaje === 'function') {
+                mostrarMensaje({ titulo: 'Error al registrar la compra', texto: data.error || 'Ocurrió un error inesperado al registrar.', icono: 'error' });
+            } else {
+                alert(data.error || 'Error al registrar la compra.');
+            }
         }
     } catch (err) {
-        console.error('Error:', err);
+        console.error('Error al guardar compra:', err);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje({ titulo: 'Error de red', texto: 'No se pudo conectar con el servidor para registrar la compra.', icono: 'error' });
+        } else {
+            alert('Error de conexión al registrar la compra.');
+        }
     }
 }
+
+// Exponer funciones en window para invocación desde HTML
+window.eliminarCompra = eliminarCompra;
+window.agregarItemACompra = agregarItemACompra;
+window.eliminarItemDeCompra = eliminarItemDeCompra;
+window.actualizarCantidadItemCompra = actualizarCantidadItemCompra;
+window.actualizarCostoItemCompra = actualizarCostoItemCompra;
+window.onCompraProductoSeleccionado = onCompraProductoSeleccionado;
+window.renderTablaCompraItems = renderTablaCompraItems;
 
 /* ==============================================================================
    FACTURA DESGLOSADA DE COMPRAS (PLANTILLAS VINI Y PROVEEDORES)
@@ -2828,7 +3133,7 @@ function renderFilasTablaABC(productos) {
                 <td>${badgeClase}</td>
                 <td><code style="font-size: 0.82rem;">${p.codigo || '-'}</code></td>
                 <td><strong>${p.nombre}</strong></td>
-                <td><span style="font-size: 0.82rem; color: var(--text-muted);">${p.categoria || '-'}</span></td>
+                <td><span class="badge-categoria" style="font-size: 0.70rem; font-weight: 500; line-height: 1.2; background: rgba(100, 116, 139, 0.1); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.25); padding: 2px 7px; border-radius: 4px; display: inline-block; white-space: nowrap;">${p.categoria || '-'}</span></td>
                 <td style="text-align: right; ${stockStyle}">${formatCantidad(p.stock)} ${stockCritico ? '⚠️' : ''}</td>
                 <td style="text-align: right; color: var(--text-muted);">${formatCantidad(p.min_stock)}</td>
                 <td style="text-align: right; font-weight: 700; color: var(--primary);">${formatCantidad(p.unidades_vendidas, 'unid')}</td>
@@ -3436,11 +3741,14 @@ function inicializarFechasFinanzas(forzar = false) {
     const inputFin = document.getElementById('fin-fecha-fin');
     if (!inputInicio || !inputFin) return;
 
+    if (inputInicio.dataset.iniciado && !forzar) return;
+
     const hoy = obtenerFechaHoyLocal();
     const inicioMes = hoy.substring(0, 7) + '-01';
 
     if (forzar || !inputInicio.value) inputInicio.value = inicioMes;
     if (forzar || !inputFin.value) inputFin.value = hoy;
+    inputInicio.dataset.iniciado = 'true';
 
     // Sincronizar selectores de conciliación si están disponibles
     const d = new Date();
@@ -3474,6 +3782,8 @@ function aplicarPeriodoFinanzas(preset) {
         const hoy = obtenerFechaHoyLocal();
         inputInicio.value = hoy.substring(0, 7) + '-01';
         inputFin.value = hoy;
+        inputInicio.dataset.iniciado = 'true';
+        window.balanceModoPreferencia = 'periodo';
         sincronizarConciliacionConFechas(anioActual, mesActual + 1);
     } else if (preset === 'mes-anterior') {
         const primerDiaAnt = new Date(anioActual, mesActual - 1, 1);
@@ -3483,11 +3793,22 @@ function aplicarPeriodoFinanzas(preset) {
         const fDiaFin = String(ultimoDiaAnt.getDate()).padStart(2, '0');
         inputInicio.value = `${fAnio}-${fMes}-01`;
         inputFin.value = `${fAnio}-${fMes}-${fDiaFin}`;
+        inputInicio.dataset.iniciado = 'true';
+        window.balanceModoPreferencia = 'periodo';
         sincronizarConciliacionConFechas(fAnio, primerDiaAnt.getMonth() + 1);
     } else if (preset === 'este-anio') {
         const hoy = obtenerFechaHoyLocal();
         inputInicio.value = `${anioActual}-01-01`;
         inputFin.value = hoy;
+        inputInicio.dataset.iniciado = 'true';
+        window.balanceModoPreferencia = 'periodo';
+        sincronizarConciliacionConFechas(anioActual, mesActual + 1);
+    } else if (preset === 'general' || preset === 'historico-general') {
+        const hoy = obtenerFechaHoyLocal();
+        inputInicio.value = '';
+        inputFin.value = hoy;
+        inputInicio.dataset.iniciado = 'true';
+        window.balanceModoPreferencia = 'general';
         sincronizarConciliacionConFechas(anioActual, mesActual + 1);
     }
 
@@ -3684,28 +4005,30 @@ async function loadEstadoResultados() {
             return;
         }
 
-        let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        let formatC = (val) => '$' + parseFloat(val || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
         const pStart = (data.periodo && data.periodo.start) || start;
         const pEnd = (data.periodo && data.periodo.end) || end;
-        let subtitle = (pStart && pEnd) ? `Del ${pStart} al ${pEnd}` : (pEnd ? `Hasta el ${pEnd}` : "Período actual");
+        let subtitle = (pStart && pEnd && pStart !== 'Inicio histórico') 
+            ? `Del ${pStart} al ${pEnd}` 
+            : (pEnd ? `Histórico acumulado hasta el ${pEnd}` : "Período actual");
         
-        let html = `<div style="max-width: 800px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;
+        let html = `<div style="max-width: 850px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ  JIREH MOTO REPUESTOS</h2>`;
         html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE RESULTADOS INTEGRAL<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
         
         html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
         
         // INGRESOS
         html += `<tr><td colspan="2" style="font-weight: bold; font-size: 1.1rem; padding-bottom: 0.5rem;">Ingresos Operativos</td></tr>`;
-        data.ingresos.forEach(i => {
+        (data.ingresos || []).forEach(i => {
             html += `<tr><td style="padding-left: 2rem;">${i.cuenta}</td><td class="text-right">${formatC(i.saldo)}</td></tr>`;
         });
         html += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="font-weight: bold; padding-top: 0.5rem;">Total Ingresos</td><td class="text-right" style="font-weight: bold; padding-top: 0.5rem;">${formatC(data.total_ingresos)}</td></tr>`;
         
         // COSTOS
         html += `<tr><td colspan="2" style="font-weight: bold; font-size: 1.1rem; padding-top: 1.5rem; padding-bottom: 0.5rem;">Costo de Ventas</td></tr>`;
-        data.costos.forEach(c => {
+        (data.costos || []).forEach(c => {
             html += `<tr><td style="padding-left: 2rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`;
         });
         html += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="font-weight: bold; padding-top: 0.5rem;">Total Costo de Ventas</td><td class="text-right" style="font-weight: bold; padding-top: 0.5rem;">${formatC(data.total_costos)}</td></tr>`;
@@ -3715,27 +4038,39 @@ async function loadEstadoResultados() {
 
         // GASTOS
         html += `<tr><td colspan="2" style="font-weight: bold; font-size: 1.1rem; padding-top: 1.5rem; padding-bottom: 0.5rem;">Gastos Operativos</td></tr>`;
-        data.gastos.forEach(g => {
+        (data.gastos || []).forEach(g => {
             html += `<tr><td style="padding-left: 2rem;">${g.cuenta}</td><td class="text-right">${formatC(g.saldo)}</td></tr>`;
         });
         html += `<tr style="border-bottom: 1px solid var(--border-color);"><td style="font-weight: bold; padding-top: 0.5rem;">Total Gastos Operativos</td><td class="text-right" style="font-weight: bold; padding-top: 0.5rem;">${formatC(data.total_gastos)}</td></tr>`;
         
         // UTILIDAD NETA
-        let isProfit = data.utilidad_neta >= 0;
+        let isProfit = (data.utilidad_neta || 0) >= 0;
         let color = isProfit ? '#10b981' : '#ef4444';
-        html += `<tr style="background: ${isProfit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${color};"><td style="font-weight: bold; font-size: 1.2rem; padding: 1rem;">UTILIDAD NETA DEL EJERCICIO</td><td class="text-right" style="font-weight: bold; font-size: 1.2rem; padding: 1rem;">${formatC(data.utilidad_neta)}</td></tr>`;
+        html += `<tr style="background: ${isProfit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; color: ${color};"><td style="font-weight: bold; font-size: 1.15rem; padding: 0.85rem 1rem;">UTILIDAD NETA DEL EJERCICIO</td><td class="text-right" style="font-weight: bold; font-size: 1.15rem; padding: 0.85rem 1rem;">${formatC(data.utilidad_neta)}</td></tr>`;
         
         html += `</tbody></table></div>`;
         container.innerHTML = html;
     } catch (e) { console.error(e); }
 }
 
-async function loadBalanceGeneral() {
+async function loadBalanceGeneral(modoForzado = null) {
     try {
+        let finInicio = document.getElementById('fin-fecha-inicio');
         let finFin3 = document.getElementById('fin-fecha-fin');
+        const start = finInicio ? finInicio.value : '';
         const end = finFin3 ? finFin3.value : '';
+
+        if (modoForzado) {
+            window.balanceModoPreferencia = modoForzado;
+        }
+        const modo = window.balanceModoPreferencia || (start ? 'periodo' : 'general');
+
         let url = '/api/finanzas/balance_general';
-        if (end) url += `?end=${end}`;
+        let queryParams = [];
+        if (start) queryParams.push(`start=${start}`);
+        if (end) queryParams.push(`end=${end}`);
+        if (modo) queryParams.push(`modo=${modo}`);
+        if (queryParams.length > 0) url += '?' + queryParams.join('&');
 
         const resp = await fetch(url);
         const data = await resp.json();
@@ -3747,13 +4082,20 @@ async function loadBalanceGeneral() {
             return;
         }
 
-        let formatC = (val) => '$' + parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        let formatC = (val) => '$' + parseFloat(val || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
         const corte = data.fecha_corte || end;
-        let subtitle = corte ? `Al ${corte}` : "A la fecha de corte actual";
+        const pStart = (data.periodo && data.periodo.start) || start;
+        const pEnd = (data.periodo && data.periodo.end) || end;
+        const esPeriodo = (data.modo === 'periodo');
+        const anioTexto = pStart ? pStart.substring(0, 4) : '';
+
+        let subtitle = esPeriodo 
+            ? `EJERCICIO ${anioTexto ? anioTexto + ' ' : ''}(Del ${pStart} al ${pEnd})` 
+            : (pStart ? `Al ${corte} (Histórico Acumulado con Desglose ${anioTexto})` : `Al ${corte} (Histórico Acumulado General)`);
         
         let html = `<div style="max-width: 900px; margin: 0 auto; background: var(--bg-color); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ JIREH MOTO REPUESTOS</h2>`;
+        html += `<h2 style="text-align: center; margin-bottom: 0;">JEHOVÁ  JIREH MOTO REPUESTOS</h2>`;
         html += `<h4 style="text-align: center; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ESTADO DE SITUACIÓN FINANCIERA<br><span style="font-size: 0.9rem; font-weight: normal;">${subtitle}</span></h4>`;
         
         html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">`;
@@ -3764,14 +4106,14 @@ async function loadBalanceGeneral() {
         html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
         
         html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 0.5rem; color: var(--text-muted);">Activos Corrientes</td></tr>`;
-        data.activos.corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        (data.activos && data.activos.corrientes || []).forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
         
         html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 1rem; color: var(--text-muted);">Activos No Corrientes</td></tr>`;
-        data.activos.no_corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        (data.activos && data.activos.no_corrientes || []).forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
         
         html += `</tbody></table>`;
         html += `<div style="margin-top: 2rem; padding: 1rem; background: rgba(15, 32, 39, 0.05); border-radius: 4px; display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem;">
-                    <span>TOTAL ACTIVOS</span><span>${formatC(data.activos.total)}</span>
+                    <span>TOTAL ACTIVOS</span><span>${formatC(data.activos && data.activos.total)}</span>
                  </div>`;
         html += `</div>`;
 
@@ -3781,25 +4123,27 @@ async function loadBalanceGeneral() {
         html += `<table style="width: 100%; border-collapse: collapse;"><tbody>`;
         
         html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 0.5rem; color: var(--text-muted);">Pasivos Corrientes</td></tr>`;
-        data.pasivos.corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        (data.pasivos && data.pasivos.corrientes || []).forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
         
-        if (data.pasivos.no_corrientes.length > 0) {
+        if (data.pasivos && data.pasivos.no_corrientes && data.pasivos.no_corrientes.length > 0) {
             html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 1rem; color: var(--text-muted);">Pasivos No Corrientes</td></tr>`;
             data.pasivos.no_corrientes.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
         }
         
         html += `<tr><td colspan="2" style="font-weight: bold; padding-top: 1.5rem; color: var(--text-muted);">Patrimonio</td></tr>`;
-        data.patrimonio.cuentas.forEach(c => { html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; });
+        (data.patrimonio && data.patrimonio.cuentas || []).forEach(c => { 
+            html += `<tr><td style="padding-left: 1rem;">${c.cuenta}</td><td class="text-right">${formatC(c.saldo)}</td></tr>`; 
+        });
 
         html += `</tbody></table>`;
         html += `<div style="margin-top: 2rem; padding: 1rem; background: rgba(15, 32, 39, 0.05); border-radius: 4px; display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem;">
                     <span>TOTAL PASIVO Y PATR.</span><span>${formatC(data.total_pasivo_patrimonio)}</span>
                  </div>`;
         
-        let cuadra = Math.abs(data.activos.total - data.total_pasivo_patrimonio) < 0.01;
+        let cuadra = data.cuadra !== undefined ? data.cuadra : (Math.abs((data.activos && data.activos.total || 0) - (data.total_pasivo_patrimonio || 0)) < 0.01);
         html += `<div style="margin-top: 1rem; text-align: right;">
             ${cuadra ? '<span style="color: #10b981; font-weight: bold;"><i class="ph-bold ph-check-circle"></i> Balance Cuadrado</span>' : '<span style="color: #ef4444; font-weight: bold;"><i class="ph-bold ph-warning"></i> Diferencia detectada</span>'}
-        </div>`
+        </div>`;
 
         html += `</div>`; // Fin col derecha
         html += `</div>`; // Fin grid
@@ -3807,6 +4151,9 @@ async function loadBalanceGeneral() {
         container.innerHTML = html;
     } catch (e) { console.error(e); }
 }
+
+window.loadBalanceGeneral = loadBalanceGeneral;
+window.aplicarPeriodoFinanzas = aplicarPeriodoFinanzas;
 
 // LOGICA MODAL NUEVO ASIENTO
 function agregarFilaAsiento() {

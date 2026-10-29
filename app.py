@@ -1705,31 +1705,98 @@ def api_compras():
 
             # --- ASIENTO CONTABLE AUTOMÁTICO DE COMPRA ---
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.04'") # Inventario
-            cta_inv = cursor.fetchone()[0]
+            row_inv = cursor.fetchone()
+            cta_inv = row_inv[0] if row_inv else None
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '2.1.01'") # Proveedores
-            cta_prov = cursor.fetchone()[0]
+            row_prov = cursor.fetchone()
+            cta_prov = row_prov[0] if row_prov else None
 
-            cursor.execute("""
-                INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
-                VALUES (GETDATE(), ?, 'COMPRAS', ?, ?)
-            """, (f"Compra {compra_code}", compra_id, session['user']['id']))
-            cursor.execute("SELECT @@IDENTITY AS id")
-            asiento_c_id = cursor.fetchone()[0]
+            if cta_inv and cta_prov and total_compra > 0:
+                cursor.execute("""
+                    INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                    VALUES (GETDATE(), ?, 'COMPRAS', ?, ?)
+                """, (f"Compra {compra_code}", compra_id, session['user']['id']))
+                cursor.execute("SELECT @@IDENTITY AS id")
+                asiento_c_id = cursor.fetchone()[0]
 
-            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_c_id, cta_inv, total_compra))
-            cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_c_id, cta_prov, total_compra))
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_c_id, cta_inv, total_compra))
+                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_c_id, cta_prov, total_compra))
 
             conn.commit()
-            return jsonify({"success": True, "mensaje": "Compra registrada."}), 201
+            return jsonify({"success": True, "mensaje": "Compra registrada.", "id": compra_id, "codigo": compra_code}), 201
 
         except Exception as e:
             if 'conn' in locals():
                 conn.rollback()
             return jsonify({"error": str(e)}), 500
 
-@app.route('/api/compras/<int:compra_id>', methods=['GET'])
+@app.route('/api/compras/<int:compra_id>', methods=['GET', 'DELETE'])
+@app.route('/api/compras/<int:compra_id>/eliminar', methods=['POST'])
 @login_required
 def api_compra_detalle(compra_id):
+    if request.method == 'DELETE' or (request.method == 'POST' and request.path.endswith('/eliminar')):
+        if session['user']['rol'] not in ['Administrador', 'Encargado de Inventario', 'Gerente de Operaciones', 'Encargado de Compras y Proveedores']:
+            return jsonify({"error": "No tienes permiso para eliminar compras."}), 403
+
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT id, codigo_compra, total, estado FROM compras WHERE id = ?", (compra_id,))
+            compra = cursor.fetchone()
+            if not compra:
+                return jsonify({"error": "La compra no existe o ya fue eliminada."}), 404
+
+            compra_code = (compra.codigo_compra if hasattr(compra, 'codigo_compra') else compra[1]) or f"COM-#{compra_id}"
+
+            # 1. Obtener detalles de la compra para revertir el stock de cada repuesto
+            cursor.execute("SELECT producto_id, cantidad, costo_unitario FROM detalle_compras WHERE compra_id = ?", (compra_id,))
+            detalles = cursor.fetchall()
+
+            for det in detalles:
+                p_id = det.producto_id if hasattr(det, 'producto_id') else det[0]
+                cant = int(det.cantidad if hasattr(det, 'cantidad') else det[1])
+
+                cursor.execute("SELECT stock_actual, nombre FROM productos WHERE id = ?", (p_id,))
+                prod = cursor.fetchone()
+                if not prod:
+                    continue
+
+                stock_ant = int(prod.stock_actual if hasattr(prod, 'stock_actual') else prod[0])
+                stock_post = max(0, stock_ant - cant)
+
+                cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (stock_post, p_id))
+
+                cursor.execute("""
+                    INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, referencia_origen, motivo, usuario_id)
+                    VALUES (?, 'SALIDA_AJUSTE', ?, ?, ?, ?, ?, ?)
+                """, (p_id, cant, stock_ant, stock_post, f"Anulación {compra_code}", f"Reversión de stock por eliminación de compra {compra_code}", session['user']['id']))
+
+            # 2. Eliminar asientos contables vinculados
+            cursor.execute("SELECT id FROM asientos_contables WHERE modulo_origen = 'COMPRAS' AND referencia_id = ?", (compra_id,))
+            asientos = cursor.fetchall()
+            for a in asientos:
+                asiento_id = a.id if hasattr(a, 'id') else a[0]
+                cursor.execute("DELETE FROM demo_fiscal_origenes WHERE asiento_id = ?", (asiento_id,))
+                cursor.execute("DELETE FROM flujo_reclasificaciones_auditoria WHERE asiento_id = ?", (asiento_id,))
+                cursor.execute("DELETE FROM movimientos_contables WHERE asiento_id = ?", (asiento_id,))
+                cursor.execute("DELETE FROM asientos_contables WHERE id = ?", (asiento_id,))
+
+            # 3. Eliminar recepciones vinculadas si existen
+            cursor.execute("DELETE FROM recepciones_compra WHERE compra_id = ?", (compra_id,))
+
+            # 4. Eliminar detalles de la compra y la cabecera
+            cursor.execute("DELETE FROM detalle_compras WHERE compra_id = ?", (compra_id,))
+            cursor.execute("DELETE FROM compras WHERE id = ?", (compra_id,))
+
+            conn.commit()
+            return jsonify({"success": True, "mensaje": f"Compra {compra_code} eliminada exitosamente y stock revertido."})
+
+        except Exception as e:
+            if 'conn' in locals():
+                conn.rollback()
+            return jsonify({"error": str(e)}), 500
+
     query_c = """
         SELECT c.id, c.codigo_compra, c.proveedor_id, p.nombre_empresa AS proveedor_nombre, 
                p.contacto_nombre AS proveedor_contacto, p.telefono AS proveedor_telefono,
@@ -2183,12 +2250,19 @@ def api_estado_resultados():
     try:
         hoy = obtener_fecha_hoy_nicaragua()
         end_date = request.args.get('end') or hoy
-        start_date = request.args.get('start') or f"{end_date[:7]}-01"
-        if start_date > end_date:
-            start_date = min(start_date, end_date)
+        start_date = request.args.get('start')
         
-        where_clause = "AND CAST(a.fecha AS DATE) >= ? AND CAST(a.fecha AS DATE) <= ?"
-        params = [start_date, end_date]
+        if not start_date:
+            # Modo histórico general
+            where_clause = "AND CAST(a.fecha AS DATE) <= ?"
+            params = [end_date]
+            start_date_display = "Inicio histórico"
+        else:
+            if start_date > end_date:
+                start_date = min(start_date, end_date)
+            where_clause = "AND CAST(a.fecha AS DATE) >= ? AND CAST(a.fecha AS DATE) <= ?"
+            params = [start_date, end_date]
+            start_date_display = start_date
 
         query = f"""
             SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
@@ -2229,7 +2303,7 @@ def api_estado_resultados():
 
         return jsonify({
             "periodo": {
-                "start": start_date,
+                "start": start_date_display,
                 "end": end_date
             },
             "ingresos": ingresos,
@@ -2252,96 +2326,256 @@ def api_balance_general():
     try:
         hoy = obtener_fecha_hoy_nicaragua()
         end_date = request.args.get('end') or hoy
-        
-        where_clause_a = "AND CAST(a.fecha AS DATE) <= ?"
-        params_a = [end_date]
+        start_date = request.args.get('start') or ''
+        modo = request.args.get('modo')
+        if not modo:
+            modo = 'periodo' if start_date else 'general'
 
-        # Calcular Utilidad Neta acumulada hasta la fecha de corte (para integrarla en Patrimonio)
-        query_er = f"""
-            SELECT c.clasificacion, c.naturaleza, SUM(m.debe) AS d, SUM(m.haber) AS h
-            FROM cuentas_contables c
-            INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
-            INNER JOIN asientos_contables a ON a.id = m.asiento_id
-            WHERE c.clasificacion IN ('Ingresos', 'Costo', 'Gasto') {where_clause_a}
-            GROUP BY c.clasificacion, c.naturaleza
-        """
-        filas_er = execute_query(query_er, params=tuple(params_a), fetchall=True)
-        utilidad_neta = 0
-        for f in filas_er:
-            saldo = (float(f['h'])-float(f['d'])) if f['naturaleza'] == 'Acreedora' else (float(f['d'])-float(f['h']))
-            if f['clasificacion'] == 'Ingresos': utilidad_neta += saldo
-            else: utilidad_neta -= saldo
+        if modo == 'periodo' and start_date:
+            if start_date > end_date:
+                start_date = min(start_date, end_date)
+            where_clause = "AND CAST(a.fecha AS DATE) >= ? AND CAST(a.fecha AS DATE) <= ?"
+            params = [start_date, end_date]
 
-        # Obtener cuentas de balance
-        query_bg = f"""
-            SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
-                   SUM(m.debe) AS d, SUM(m.haber) AS h
-            FROM cuentas_contables c
-            INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
-            INNER JOIN asientos_contables a ON a.id = m.asiento_id
-            WHERE c.clasificacion NOT IN ('Ingresos', 'Costo', 'Gasto') {where_clause_a}
-            GROUP BY c.codigo, c.nombre, c.clasificacion, c.naturaleza
-            ORDER BY c.clasificacion ASC, c.codigo ASC
-        """
-        filas_bg = execute_query(query_bg, params=tuple(params_a), fetchall=True)
-        
-        activos_corrientes = []
-        activos_no_corrientes = []
-        pasivos_corrientes = []
-        pasivos_no_corrientes = []
-        patrimonio = []
-        
-        total_activos = 0
-        total_pasivos = 0
-        total_patrimonio = utilidad_neta # Inicializamos con la utilidad acumulada
-        
-        for f in filas_bg:
-            debe = float(f['d'] or 0)
-            haber = float(f['h'] or 0)
-            saldo = (haber - debe) if f['naturaleza'] == 'Acreedora' else (debe - haber)
-            
-            # Ajuste para cuentas contra-activo (ej. Depreciación acumulada) que son naturaleza Acreedora pero van en Activos
-            if f['clasificacion'] == 'Activo no corriente - contraactivo':
-                saldo = -abs(saldo) # Se resta del activo
-                
-            obj = {"cuenta": f['nombre'], "saldo": saldo}
-            
-            if 'Activo corriente' in f['clasificacion']:
-                activos_corrientes.append(obj)
-                total_activos += saldo
-            elif 'Activo no corriente' in f['clasificacion']:
-                activos_no_corrientes.append(obj)
-                total_activos += saldo
-            elif 'Pasivo corriente' in f['clasificacion']:
-                pasivos_corrientes.append(obj)
-                total_pasivos += saldo
-            elif 'Pasivo no corriente' in f['clasificacion']:
-                pasivos_no_corrientes.append(obj)
-                total_pasivos += saldo
-            elif 'Patrimonio' in f['clasificacion']:
-                patrimonio.append(obj)
-                total_patrimonio += saldo
+            query_er = f"""
+                SELECT c.clasificacion, c.naturaleza, SUM(m.debe) AS d, SUM(m.haber) AS h
+                FROM cuentas_contables c
+                INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+                INNER JOIN asientos_contables a ON a.id = m.asiento_id
+                WHERE c.clasificacion IN ('Ingresos', 'Costo', 'Gasto') {where_clause}
+                GROUP BY c.clasificacion, c.naturaleza
+            """
+            filas_er = execute_query(query_er, params=tuple(params), fetchall=True)
+            utilidad_periodo = 0
+            for f in filas_er:
+                saldo = (float(f['h'])-float(f['d'])) if f['naturaleza'] == 'Acreedora' else (float(f['d'])-float(f['h']))
+                if f['clasificacion'] == 'Ingresos': utilidad_periodo += saldo
+                else: utilidad_periodo -= saldo
 
-        patrimonio.append({"cuenta": "Utilidad neta acumulada a la fecha", "saldo": utilidad_neta})
+            query_bg = f"""
+                SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
+                       SUM(m.debe) AS d, SUM(m.haber) AS h
+                FROM cuentas_contables c
+                INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+                INNER JOIN asientos_contables a ON a.id = m.asiento_id
+                WHERE c.clasificacion NOT IN ('Ingresos', 'Costo', 'Gasto') {where_clause}
+                GROUP BY c.codigo, c.nombre, c.clasificacion, c.naturaleza
+                ORDER BY c.clasificacion ASC, c.codigo ASC
+            """
+            filas_bg = execute_query(query_bg, params=tuple(params), fetchall=True)
 
-        return jsonify({
-            "fecha_corte": end_date,
-            "activos": {
-                "corrientes": activos_corrientes,
-                "no_corrientes": activos_no_corrientes,
-                "total": total_activos
-            },
-            "pasivos": {
-                "corrientes": pasivos_corrientes,
-                "no_corrientes": pasivos_no_corrientes,
-                "total": total_pasivos
-            },
-            "patrimonio": {
-                "cuentas": patrimonio,
-                "total": total_patrimonio
-            },
-            "total_pasivo_patrimonio": total_pasivos + total_patrimonio
-        })
+            activos_corrientes = []
+            activos_no_corrientes = []
+            pasivos_corrientes = []
+            pasivos_no_corrientes = []
+            patrimonio = []
+
+            total_activos = 0
+            total_pasivos = 0
+            total_patrimonio = utilidad_periodo
+
+            for f in filas_bg:
+                debe = float(f['d'] or 0)
+                haber = float(f['h'] or 0)
+                saldo = (haber - debe) if f['naturaleza'] == 'Acreedora' else (debe - haber)
+                if f['clasificacion'] == 'Activo no corriente - contraactivo':
+                    saldo = -abs(saldo)
+                obj = {"cuenta": f['nombre'], "saldo": saldo}
+
+                if 'Activo corriente' in f['clasificacion']:
+                    activos_corrientes.append(obj)
+                    total_activos += saldo
+                elif 'Activo no corriente' in f['clasificacion']:
+                    activos_no_corrientes.append(obj)
+                    total_activos += saldo
+                elif 'Pasivo corriente' in f['clasificacion']:
+                    pasivos_corrientes.append(obj)
+                    total_pasivos += saldo
+                elif 'Pasivo no corriente' in f['clasificacion']:
+                    pasivos_no_corrientes.append(obj)
+                    total_pasivos += saldo
+                elif 'Patrimonio' in f['clasificacion']:
+                    patrimonio.append(obj)
+                    total_patrimonio += saldo
+
+            anio_str = start_date[:4] if len(start_date) >= 4 else "Actual"
+            patrimonio.append({
+                "cuenta": f"Utilidad neta del ejercicio ({anio_str})",
+                "saldo": utilidad_periodo,
+                "es_utilidad_periodo": True,
+                "comparable": True
+            })
+
+            return jsonify({
+                "modo": "periodo",
+                "periodo": {
+                    "start": start_date,
+                    "end": end_date
+                },
+                "fecha_corte": end_date,
+                "utilidad_periodo": utilidad_periodo,
+                "activos": {
+                    "corrientes": activos_corrientes,
+                    "no_corrientes": activos_no_corrientes,
+                    "total": total_activos
+                },
+                "pasivos": {
+                    "corrientes": pasivos_corrientes,
+                    "no_corrientes": pasivos_no_corrientes,
+                    "total": total_pasivos
+                },
+                "patrimonio": {
+                    "cuentas": patrimonio,
+                    "total": total_patrimonio
+                },
+                "total_pasivo_patrimonio": total_pasivos + total_patrimonio,
+                "cuadra": abs(total_activos - (total_pasivos + total_patrimonio)) < 0.01
+            })
+        else:
+            where_clause_corte = "AND CAST(a.fecha AS DATE) <= ?"
+            params_corte = [end_date]
+
+            util_anterior = 0
+            util_actual = 0
+            tiene_desglose = bool(start_date)
+
+            if tiene_desglose:
+                q_ant = """
+                    SELECT c.clasificacion, c.naturaleza, SUM(m.debe) AS d, SUM(m.haber) AS h
+                    FROM cuentas_contables c
+                    INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+                    INNER JOIN asientos_contables a ON a.id = m.asiento_id
+                    WHERE c.clasificacion IN ('Ingresos', 'Costo', 'Gasto') AND CAST(a.fecha AS DATE) < ?
+                    GROUP BY c.clasificacion, c.naturaleza
+                """
+                filas_ant = execute_query(q_ant, params=(start_date,), fetchall=True)
+                for f in filas_ant:
+                    saldo = (float(f['h'])-float(f['d'])) if f['naturaleza'] == 'Acreedora' else (float(f['d'])-float(f['h']))
+                    if f['clasificacion'] == 'Ingresos': util_anterior += saldo
+                    else: util_anterior -= saldo
+
+                q_act = """
+                    SELECT c.clasificacion, c.naturaleza, SUM(m.debe) AS d, SUM(m.haber) AS h
+                    FROM cuentas_contables c
+                    INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+                    INNER JOIN asientos_contables a ON a.id = m.asiento_id
+                    WHERE c.clasificacion IN ('Ingresos', 'Costo', 'Gasto') AND CAST(a.fecha AS DATE) >= ? AND CAST(a.fecha AS DATE) <= ?
+                    GROUP BY c.clasificacion, c.naturaleza
+                """
+                filas_act = execute_query(q_act, params=(start_date, end_date), fetchall=True)
+                for f in filas_act:
+                    saldo = (float(f['h'])-float(f['d'])) if f['naturaleza'] == 'Acreedora' else (float(f['d'])-float(f['h']))
+                    if f['clasificacion'] == 'Ingresos': util_actual += saldo
+                    else: util_actual -= saldo
+
+                utilidad_neta_total = util_anterior + util_actual
+            else:
+                query_er = f"""
+                    SELECT c.clasificacion, c.naturaleza, SUM(m.debe) AS d, SUM(m.haber) AS h
+                    FROM cuentas_contables c
+                    INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+                    INNER JOIN asientos_contables a ON a.id = m.asiento_id
+                    WHERE c.clasificacion IN ('Ingresos', 'Costo', 'Gasto') {where_clause_corte}
+                    GROUP BY c.clasificacion, c.naturaleza
+                """
+                filas_er = execute_query(query_er, params=tuple(params_corte), fetchall=True)
+                utilidad_neta_total = 0
+                for f in filas_er:
+                    saldo = (float(f['h'])-float(f['d'])) if f['naturaleza'] == 'Acreedora' else (float(f['d'])-float(f['h']))
+                    if f['clasificacion'] == 'Ingresos': utilidad_neta_total += saldo
+                    else: utilidad_neta_total -= saldo
+
+            query_bg = f"""
+                SELECT c.codigo, c.nombre, c.clasificacion, c.naturaleza,
+                       SUM(m.debe) AS d, SUM(m.haber) AS h
+                FROM cuentas_contables c
+                INNER JOIN movimientos_contables m ON c.id = m.cuenta_id
+                INNER JOIN asientos_contables a ON a.id = m.asiento_id
+                WHERE c.clasificacion NOT IN ('Ingresos', 'Costo', 'Gasto') {where_clause_corte}
+                GROUP BY c.codigo, c.nombre, c.clasificacion, c.naturaleza
+                ORDER BY c.clasificacion ASC, c.codigo ASC
+            """
+            filas_bg = execute_query(query_bg, params=tuple(params_corte), fetchall=True)
+
+            activos_corrientes = []
+            activos_no_corrientes = []
+            pasivos_corrientes = []
+            pasivos_no_corrientes = []
+            patrimonio = []
+
+            total_activos = 0
+            total_pasivos = 0
+            total_patrimonio = utilidad_neta_total
+
+            for f in filas_bg:
+                debe = float(f['d'] or 0)
+                haber = float(f['h'] or 0)
+                saldo = (haber - debe) if f['naturaleza'] == 'Acreedora' else (debe - haber)
+                if f['clasificacion'] == 'Activo no corriente - contraactivo':
+                    saldo = -abs(saldo)
+                obj = {"cuenta": f['nombre'], "saldo": saldo}
+
+                if 'Activo corriente' in f['clasificacion']:
+                    activos_corrientes.append(obj)
+                    total_activos += saldo
+                elif 'Activo no corriente' in f['clasificacion']:
+                    activos_no_corrientes.append(obj)
+                    total_activos += saldo
+                elif 'Pasivo corriente' in f['clasificacion']:
+                    pasivos_corrientes.append(obj)
+                    total_pasivos += saldo
+                elif 'Pasivo no corriente' in f['clasificacion']:
+                    pasivos_no_corrientes.append(obj)
+                    total_pasivos += saldo
+                elif 'Patrimonio' in f['clasificacion']:
+                    patrimonio.append(obj)
+                    total_patrimonio += saldo
+
+            if tiene_desglose:
+                anio_str = start_date[:4] if len(start_date) >= 4 else "Actual"
+                patrimonio.append({
+                    "cuenta": f"Utilidades acumuladas de periodos anteriores (< {start_date})",
+                    "saldo": util_anterior
+                })
+                patrimonio.append({
+                    "cuenta": f"Utilidad neta del ejercicio actual ({anio_str})",
+                    "saldo": util_actual,
+                    "es_utilidad_periodo": True,
+                    "comparable": True
+                })
+            else:
+                patrimonio.append({
+                    "cuenta": "Utilidad neta acumulada histórica a la fecha",
+                    "saldo": utilidad_neta_total
+                })
+
+            return jsonify({
+                "modo": "general",
+                "periodo": {
+                    "start": start_date or None,
+                    "end": end_date
+                },
+                "fecha_corte": end_date,
+                "utilidad_anterior": util_anterior if tiene_desglose else None,
+                "utilidad_periodo": util_actual if tiene_desglose else None,
+                "utilidad_total_acumulada": utilidad_neta_total,
+                "activos": {
+                    "corrientes": activos_corrientes,
+                    "no_corrientes": activos_no_corrientes,
+                    "total": total_activos
+                },
+                "pasivos": {
+                    "corrientes": pasivos_corrientes,
+                    "no_corrientes": pasivos_no_corrientes,
+                    "total": total_pasivos
+                },
+                "patrimonio": {
+                    "cuentas": patrimonio,
+                    "total": total_patrimonio
+                },
+                "total_pasivo_patrimonio": total_pasivos + total_patrimonio,
+                "cuadra": abs(total_activos - (total_pasivos + total_patrimonio)) < 0.01
+            })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

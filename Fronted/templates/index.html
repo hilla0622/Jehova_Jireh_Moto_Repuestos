@@ -185,7 +185,7 @@
                                         <tr>
                                             <th>Código</th>
                                             <th>Nombre del Repuesto</th>
-                                            <th>Categoría</th>
+                                            <th style="min-width: 140px;">Categoría</th>
                                             <th>Precio Venta</th>
                                             <th>Costo Compra</th>
                                             <th>Existencias</th>
@@ -303,7 +303,7 @@
                             </div>
 
                             <!-- Carrito de Venta -->
-                            <div class="card pos-cart-card">
+                            <div class="card pos-cart-card" style="align-self: start; height: fit-content;">
                                 <div class="card-header">
                                     <h3><i class="ph-bold ph-receipt"></i> Carrito de Venta</h3>
                                 </div>
@@ -434,14 +434,15 @@
                         {% endif %}
                     </div>
 
-                    <div class="grid-2col">
-                        <!-- Lista de Compras -->
-                        <div class="card">
+                    <div class="compras-grid-container">
+                        <!-- Lista de Compras con Scroll -->
+                        <div class="card compras-card-scroll">
                             <div class="card-header">
                                 <h3><i class="ph-bold ph-arrow-down-left"></i> Historial de Compras de Mercancía</h3>
+                                <span id="compras-badge-conteo" class="badge" style="background: rgba(220, 38, 38, 0.1); color: var(--primary); font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 12px;">0 compras</span>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
+                                <div class="compras-table-scroll-wrap">
                                     <table class="data-table">
                                         <thead>
                                             <tr>
@@ -449,7 +450,7 @@
                                                 <th>Fecha</th>
                                                 <th>Proveedor</th>
                                                 <th>Total Compra</th>
-                                                <th style="text-align: center; width: 140px;">Acciones</th>
+                                                <th style="text-align: center; min-width: 190px;">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tbody-compras">
@@ -460,13 +461,14 @@
                             </div>
                         </div>
 
-                        <!-- Lista de Proveedores -->
-                        <div class="card">
+                        <!-- Lista de Proveedores con Scroll -->
+                        <div class="card compras-card-scroll">
                             <div class="card-header">
                                 <h3><i class="ph-bold ph-truck"></i> Directorio de Proveedores</h3>
+                                <span id="proveedores-badge-conteo" class="badge" style="background: rgba(37, 99, 235, 0.1); color: #2563eb; font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 12px;">0 proveedores</span>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
+                                <div class="compras-table-scroll-wrap">
                                     <table class="data-table">
                                         <thead>
                                             <tr>
@@ -1275,6 +1277,9 @@
                                 </button>
                                 <button type="button" class="btn btn-outline btn-sm" onclick="aplicarPeriodoFinanzas('este-anio')" title="Del 1ro de enero a hoy" style="display: flex; align-items: center; gap: 0.3rem;">
                                     <i class="ph-bold ph-calendar-check"></i> Año Actual
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="aplicarPeriodoFinanzas('general')" title="Histórico general de todos los años que ha laborado la empresa" style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <i class="ph-bold ph-globe"></i> General
                                 </button>
                             </div>
                             <button class="btn btn-secondary" onclick="cargarDatosFinanzas()">
@@ -2571,48 +2576,113 @@
         </div>
     </div>
 
-    <!-- MODAL: REGISTRAR COMPRA -->
-    <div class="modal" id="modal-compra">
-        <div class="modal-content">
-            <div class="modal-header">
+    <!-- MODAL: REGISTRAR COMPRA (MULTI-REPUESTOS) -->
+    <div class="modal" id="modal-compra" style="overflow-y: auto;">
+        <div class="modal-content" style="max-width: 980px; width: 96%; height: min(92vh, 700px); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;">
+            <div class="modal-header" style="flex-shrink: 0;">
                 <h3><i class="ph-bold ph-truck"></i> Registrar Entrada de Mercadería / Compra</h3>
-                <button class="modal-close" onclick="closeModal('modal-compra')">&times;</button>
+                <button type="button" class="modal-close" onclick="closeModal('modal-compra')">&times;</button>
             </div>
-            <form id="form-compra" onsubmit="guardarCompra(event)">
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>Proveedor:</label>
-                        <select id="compra-proveedor-id" class="form-control" onchange="verificarProveedorSeleccionado(this.value)">
-                            <!-- Carga dinámica -->
-                        </select>
-                        <div id="compra-proveedor-aviso" style="display: none; align-items: center; gap: 6px; margin-top: 6px; padding: 6px 10px; background: rgba(220, 38, 38, 0.08); border-left: 3px solid #dc2626; border-radius: 4px; font-size: 0.8rem; color: #b91c1c;">
-                            <i class="ph-bold ph-sparkle"></i> <span>Formato de factura <strong>VINI OEM Parts (Motores León)</strong> asignado automáticamente.</span>
+            <form id="form-compra" onsubmit="guardarCompra(event)" style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; height: 100%;">
+                <div class="modal-body" style="flex: 1 1 auto; overflow-y: auto; padding: 1.25rem; min-height: 0;">
+                    
+                    <!-- Contenedor Responsive 2 Columnas -->
+                    <div class="modal-compra-grid" style="display: grid; grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.4fr); gap: 1.25rem; align-items: stretch;">
+                        
+                        <!-- COLUMNA IZQUIERDA: Proveedor, Factura y Selector de Repuesto -->
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <!-- Datos del Proveedor y Factura -->
+                            <div style="background: var(--bg-hover, rgba(0,0,0,0.02)); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+                                <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-main); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+                                    <i class="ph-bold ph-buildings" style="color: var(--primary);"></i> Datos de la Compra
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0.75rem;">
+                                    <label style="font-size: 0.82rem; margin-bottom: 3px;"><strong>Proveedor:</strong></label>
+                                    <select id="compra-proveedor-id" class="form-control" onchange="verificarProveedorSeleccionado(this.value)">
+                                        <!-- Carga dinámica -->
+                                    </select>
+                                    <div id="compra-proveedor-aviso" style="display: none; align-items: center; gap: 6px; margin-top: 6px; padding: 6px 10px; background: rgba(220, 38, 38, 0.08); border-left: 3px solid #dc2626; border-radius: 4px; font-size: 0.78rem; color: #b91c1c;">
+                                        <i class="ph-bold ph-sparkle"></i> <span>Factura <strong>VINI OEM Parts</strong> asignada.</span>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.82rem; margin-bottom: 3px;"><strong>No. Factura de Proveedor (Opcional):</strong></label>
+                                    <input type="text" id="compra-numero-factura" class="form-control" placeholder="Ej: A-00045946">
+                                </div>
+                            </div>
+
+                            <!-- Selector de Repuesto a Añadir -->
+                            <div style="background: rgba(241, 245, 249, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-main); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+                                        <i class="ph-bold ph-plus-circle" style="color: var(--primary);"></i> Añadir Repuesto a la Lista
+                                    </div>
+
+                                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                                        <label style="font-size: 0.82rem; margin-bottom: 3px;">Repuesto a Aumentar Stock:</label>
+                                        <select id="compra-producto-id" class="form-control" onchange="onCompraProductoSeleccionado(this.value)">
+                                            <!-- Carga dinámica -->
+                                        </select>
+                                    </div>
+
+                                    <div class="grid-2col" style="gap: 0.75rem; margin-bottom: 0.75rem;">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 0.82rem; margin-bottom: 3px;">Cantidad:</label>
+                                            <input type="number" id="compra-cantidad" class="form-control" min="1" value="10" placeholder="10">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label style="font-size: 0.82rem; margin-bottom: 3px;">Costo Unitario ($):</label>
+                                            <input type="number" step="0.01" min="0" id="compra-costo-unitario" class="form-control" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn btn-primary" onclick="agregarItemACompra()" style="width: 100%; height: 42px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; margin-top: 0.75rem;">
+                                    <i class="ph-bold ph-plus"></i> + Añadir a la Lista de Compra
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>No. Factura de Proveedor (Opcional):</label>
-                        <input type="text" id="compra-numero-factura" class="form-control" placeholder="Ej: A-00045946">
-                    </div>
-                    <div class="form-group">
-                        <label>Repuesto Aumentar Stock:</label>
-                        <select id="compra-producto-id" class="form-control">
-                            <!-- Carga dinámica -->
-                        </select>
-                    </div>
-                    <div class="grid-2col">
-                        <div class="form-group">
-                            <label>Cantidad Recibida:</label>
-                            <input type="number" id="compra-cantidad" class="form-control" min="1" value="10" required>
+
+                        <!-- COLUMNA DERECHA: Tabla en Vivo de Repuestos Seleccionados -->
+                        <div style="border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; background: var(--bg-card); overflow: hidden; min-height: 380px;">
+                            <div style="background: var(--bg-hover, rgba(0,0,0,0.03)); padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                                <span style="font-weight: 600; font-size: 0.88rem; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                                    <i class="ph-bold ph-receipt"></i> Repuestos en esta Compra:
+                                </span>
+                                <span id="compra-articulos-conteo" class="badge" style="background: var(--primary); color: white; font-weight: 600; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px;">0 ítems</span>
+                            </div>
+
+                            <div style="flex: 1 1 auto; overflow-y: auto; max-height: 380px; min-height: 200px;">
+                                <table class="data-table" style="margin-bottom: 0; font-size: 0.85rem; width: 100%;">
+                                    <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                        <tr>
+                                            <th>Repuesto / SKU</th>
+                                            <th style="text-align: center; width: 85px;">Cant.</th>
+                                            <th style="text-align: right; width: 95px;">Costo U.</th>
+                                            <th style="text-align: right; width: 105px;">Subtotal</th>
+                                            <th style="text-align: center; width: 50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-compra-items">
+                                        <!-- Render dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style="padding: 0.75rem 1rem; background: var(--bg-hover, rgba(0,0,0,0.03)); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Total de la Factura:</span>
+                                <strong id="compra-total-calculado" style="font-size: 1.3rem; color: var(--primary);">$0.00</strong>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Costo Unitario ($):</label>
-                            <input type="number" step="0.01" id="compra-costo-unitario" class="form-control" placeholder="Dejar 0 para costo actual">
-                        </div>
+
                     </div>
                 </div>
-                <div class="modal-footer">
+
+                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modal-compra')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Registrar Compra y Aumentar Stock</button>
+                    <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.6rem 1.4rem; font-weight: 600;">
+                        <i class="ph-bold ph-check"></i> Registrar Compra y Aumentar Stock
+                    </button>
                 </div>
             </form>
         </div>

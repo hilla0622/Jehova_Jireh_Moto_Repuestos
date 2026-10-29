@@ -1091,7 +1091,7 @@ async function cargarHistorialDeclaraciones() {
                 <td>${fechaStr}</td>
                 <td><span class="badge ${d.estado === 'Aprobada' || d.estado === 'Presentada' ? 'badge-success' : 'badge-secondary'}">${d.estado}</span></td>
                 <td style="text-align: right; font-family: monospace;">C$ ${fmt(d.ir_determinado)}</td>
-                <td style="text-align: right; font-family: monospace; color: #16a34a;">- C$ ${fmt(d.total_acreditamientos)}</td>
+                <td style="text-align: right; font-family: monospace; color: #16a34a;">- C$ ${fmt(d.acreditamientos !== undefined ? d.acreditamientos : (d.total_acreditamientos || 0))}</td>
                 <td style="text-align: right; font-weight: bold; font-family: monospace; color: ${d.saldo_a_pagar > 0 ? '#dc2626' : '#16a34a'};">
                     C$ ${fmt(d.saldo_a_pagar > 0 ? d.saldo_a_pagar : d.saldo_a_favor)}
                 </td>

@@ -23,6 +23,26 @@ def fiscal_role_required(f):
 
 def register_fiscal_routes(app):
 
+    @app.route('/api/fiscal/analisis/<int:anio>', methods=['POST'])
+    @fiscal_role_required
+    def api_fiscal_analisis(anio):
+        from app import get_db_connection
+        from fiscal_analisis import obtener_analisis, interpretar_con_ia
+        conn = None
+        try:
+            conn = get_db_connection()
+            informe = obtener_analisis(conn.cursor(), anio)
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
+        except Exception:
+            app.logger.exception('Error al preparar el análisis fiscal')
+            return jsonify({'error': 'No se pudo consultar la información contable del ejercicio.'}), 500
+        finally:
+            if conn is not None:
+                conn.close()
+        # Liberar SQL Server antes de esperar al proveedor de IA.
+        return jsonify(interpretar_con_ia(informe))
+
     @app.route('/api/fiscal/respaldo-demo/<int:anio>', methods=['GET'])
     @fiscal_role_required
     def api_fiscal_respaldo_demo(anio):

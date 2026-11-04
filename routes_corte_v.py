@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, date
+from decimal import Decimal
 from flask import request, jsonify, render_template, session
 from functools import wraps
 from rrhh_service import ROLES_RRHH, normalizar_parametro, parametros_calculo, validar_parametro
@@ -603,6 +604,10 @@ def register_corte_v_routes(app):
                 "id": next_id
             }), 201
 
+    def dias_pendientes_liquidacion(liquidacion):
+        valor_dia = round(float(liquidacion['salario_base']) / 30, 2)
+        return round(float(liquidacion.get('monto_dias_pendientes') or 0) / valor_dia) if valor_dia else 0
+
     @app.route('/api/rrhh/liquidaciones/<int:id>', methods=['GET', 'PUT', 'DELETE'])
     @login_required
     def api_liquidacion_detalle(id):
@@ -623,152 +628,183 @@ def register_corte_v_routes(app):
                     r[campo] = float(r[campo])
             r['fecha_ingreso'] = str(r['fecha_ingreso'])[:10] if r.get('fecha_ingreso') else ''
             r['fecha_salida'] = str(r['fecha_salida'])[:10] if r.get('fecha_salida') else ''
+            r['dias_pendientes_pago'] = dias_pendientes_liquidacion(r)
+            r['fecha_pago'] = str(r['fecha_pago'])[:10] if r.get('fecha_pago') else ''
             return jsonify(r)
 
         if session['user']['rol'] not in ROLES_RRHH:
             return jsonify({"error": "No tienes permisos."}), 403
 
-        if request.method == 'DELETE':
-            row = execute_query("SELECT id, codigo, asiento_id FROM liquidaciones_laborales WHERE id = ?", (id,), fetchone=True)
-            if not row:
-                return jsonify({"error": "Liquidación no encontrada."}), 404
-            asiento_id = row.get('asiento_id')
-            if asiento_id:
-                execute_query("DELETE FROM movimientos_contables WHERE asiento_id = ?", (asiento_id,), commit=True)
-                execute_query("DELETE FROM asientos_contables WHERE id = ?", (asiento_id,), commit=True)
-            execute_query("DELETE FROM liquidaciones_laborales WHERE id = ?", (id,), commit=True)
-            return jsonify({"success": True, "mensaje": f"Liquidación {row['codigo']} eliminada correctamente."})
+        from app import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-        if request.method == 'PUT':
-            row = execute_query("SELECT * FROM liquidaciones_laborales WHERE id = ?", (id,), fetchone=True)
-            if not row:
-                return jsonify({"error": "Liquidación no encontrada."}), 404
+        def consulta(sql, params=(), *, fetchone=False, fetchall=False):
+            cursor.execute(sql, params)
+            if fetchone or fetchall:
+                columnas = [c[0] for c in cursor.description]
+                if fetchall:
+                    return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+                fila = cursor.fetchone()
+                return dict(zip(columnas, fila)) if fila else None
 
-            data = request.json or {}
-            emp_id = int(data.get('empleado_id') or row['empleado_id'])
-            f_salida = data.get('fecha_salida') or str(row['fecha_salida'])[:10]
-            motivo = data.get('motivo_salida') or row['motivo_salida']
-            dias_pendientes = int(data.get('dias_pendientes_pago') if data.get('dias_pendientes_pago') is not None else (row.get('dias_pendientes_pago') or 0))
-            deducciones = float(data.get('deducciones_totales') if data.get('deducciones_totales') is not None else (row.get('deducciones_totales') or 0.0))
-            estado = data.get('estado') or row.get('estado') or 'Borrador'
+        def retirar_asientos(asiento_pago):
+            devengos = consulta(
+                "SELECT id FROM asientos_contables WHERE modulo_origen='RRHH_LIQ_DEVENGO' AND referencia_id=?",
+                (id,), fetchall=True)
+            for aid in ([asiento_pago] if asiento_pago else []) + [a['id'] for a in devengos]:
+                consulta('DELETE FROM movimientos_contables WHERE asiento_id=?', (aid,))
+                consulta('DELETE FROM asientos_contables WHERE id=?', (aid,))
 
-            emp = execute_query("SELECT * FROM empleados WHERE id = ?", (emp_id,), fetchone=True)
-            if not emp:
-                return jsonify({"error": "Empleado no encontrado."}), 404
+        def registrar_asiento(fecha, concepto, origen, lineas):
+            consulta("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+                VALUES (?, ?, ?, ?, ?)""", (fecha, concepto, origen, id, session['user']['id']))
+            aid = consulta("SELECT @@IDENTITY AS id", fetchone=True)['id']
+            for codigo, debe, haber in lineas:
+                if not debe and not haber:
+                    continue
+                cuenta = consulta('SELECT id FROM cuentas_contables WHERE codigo=?', (codigo,), fetchone=True)
+                if not cuenta:
+                    raise ValueError(f'Falta la cuenta contable {codigo}.')
+                consulta('INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, ?)',
+                         (aid, cuenta['id'], str(debe), str(haber)))
+            return aid
 
-            f_ingreso = emp['fecha_ingreso']
-            salario = float(emp['salario_base'])
-            valor_dia = round(salario / 30.0, 2)
+        try:
+            if request.method == 'DELETE':
+                row = consulta("SELECT id, codigo, asiento_id FROM liquidaciones_laborales WITH (UPDLOCK, HOLDLOCK) WHERE id = ?", (id,), fetchone=True)
+                if not row:
+                    return jsonify({"error": "Liquidación no encontrada."}), 404
+                retirar_asientos(row.get('asiento_id'))
+                consulta("DELETE FROM liquidaciones_laborales WITH (UPDLOCK, HOLDLOCK) WHERE id = ?", (id,))
+                conn.commit()
+                return jsonify({"success": True, "mensaje": f"Liquidación {row['codigo']} eliminada correctamente."})
 
-            d_ing = datetime.strptime(str(f_ingreso)[:10], '%Y-%m-%d').date() if f_ingreso else date(2022, 1, 1)
-            d_egr = datetime.strptime(str(f_salida)[:10], '%Y-%m-%d').date()
+            if request.method == 'PUT':
+                row = consulta("SELECT * FROM liquidaciones_laborales WHERE id = ?", (id,), fetchone=True)
+                if not row:
+                    return jsonify({"error": "Liquidación no encontrada."}), 404
 
-            diff_dias = max(1, (d_egr - d_ing).days)
-            anios = diff_dias // 365
-            meses = (diff_dias % 365) // 30
-            dias = (diff_dias % 365) % 30
+                data = request.json or {}
+                emp_id = int(data.get('empleado_id') or row['empleado_id'])
+                f_salida = data.get('fecha_salida') or str(row['fecha_salida'])[:10]
+                motivo = data.get('motivo_salida') or row['motivo_salida']
+                dias_pendientes = int(data.get('dias_pendientes_pago') if data.get('dias_pendientes_pago') is not None else dias_pendientes_liquidacion(row))
+                deducciones = float(data.get('deducciones_totales') if data.get('deducciones_totales') is not None else (row.get('deducciones_totales') or 0.0))
+                estado = data.get('estado') or row.get('estado') or 'Borrador'
 
-            monto_pend = round(dias_pendientes * valor_dia, 2)
-            saldo_vac = float(emp.get('dias_vacaciones_disponibles') or 0.0)
-            monto_vac = round(saldo_vac * valor_dia, 2)
+                emp = consulta("SELECT * FROM empleados WHERE id = ?", (emp_id,), fetchone=True)
+                if not emp:
+                    return jsonify({"error": "Empleado no encontrado."}), 404
 
-            anio_egr = d_egr.year
-            d_inicio_agui = date(anio_egr - 1, 12, 1)
-            base_agui = max(d_inicio_agui, d_ing)
-            dias_agui = max(0, (d_egr - base_agui).days + 1)
-            meses_agui = dias_agui / 30.0
-            monto_agui = round((salario / 12.0) * (meses_agui if meses_agui <= 12.0 else 12.0), 2)
+                f_ingreso = emp['fecha_ingreso']
+                salario = float(emp['salario_base'])
+                valor_dia = round(salario / 30.0, 2)
 
-            monto_indem = 0.0
-            if 'Despido Injustificado' in motivo or 'Art. 45' in motivo:
-                anios_completos = anios
-                meses_fraccion = meses + (dias / 30.0)
-                if anios_completos <= 3:
-                    meses_indem = anios_completos + (meses_fraccion / 12.0)
+                d_ing = datetime.strptime(str(f_ingreso)[:10], '%Y-%m-%d').date() if f_ingreso else date(2022, 1, 1)
+                d_egr = datetime.strptime(str(f_salida)[:10], '%Y-%m-%d').date()
+
+                diff_dias = max(1, (d_egr - d_ing).days)
+                anios = diff_dias // 365
+                meses = (diff_dias % 365) // 30
+                dias = (diff_dias % 365) % 30
+
+                monto_pend = round(dias_pendientes * valor_dia, 2)
+                saldo_vac = float(emp.get('dias_vacaciones_disponibles') or 0.0)
+                monto_vac = round(saldo_vac * valor_dia, 2)
+
+                anio_egr = d_egr.year
+                d_inicio_agui = date(anio_egr - 1, 12, 1)
+                base_agui = max(d_inicio_agui, d_ing)
+                dias_agui = max(0, (d_egr - base_agui).days + 1)
+                meses_agui = dias_agui / 30.0
+                monto_agui = round((salario / 12.0) * (meses_agui if meses_agui <= 12.0 else 12.0), 2)
+
+                monto_indem = 0.0
+                if 'Despido Injustificado' in motivo or 'Art. 45' in motivo:
+                    anios_completos = anios
+                    meses_fraccion = meses + (dias / 30.0)
+                    if anios_completos <= 3:
+                        meses_indem = anios_completos + (meses_fraccion / 12.0)
+                    else:
+                        meses_indem = 3.0 + ((anios_completos - 3) * (20.0 / 30.0)) + (meses_fraccion * (20.0 / 360.0))
+                    meses_indem = min(5.0, meses_indem)
+                    monto_indem = round(meses_indem * salario, 2)
+
+                total_percepciones = round(monto_pend + monto_vac + monto_agui + monto_indem, 2)
+                neto_pagar = max(0.0, round(total_percepciones - deducciones, 2))
+
+                metodo_pago = data.get('metodo_pago') or row.get('metodo_pago') or 'Transferencia Bancaria'
+                numero_ref = data.get('numero_referencia') or row.get('numero_referencia')
+                cuenta_id = None
+                asiento_id = row.get('asiento_id')
+                fecha_pago = data.get('fecha_pago') or (row.get('fecha_pago') or date.today().isoformat() if estado == 'Pagado' else None)
+
+                if estado not in ('Borrador', 'Aprobado', 'Pagado'):
+                    return jsonify(error='Estado de liquidación inválido.'), 400
+                if estado == 'Pagado':
+                    if metodo_pago not in ('Efectivo', 'Transferencia Bancaria', 'Cheque'):
+                        return jsonify(error='Método de pago inválido.'), 400
+                    fecha_pago = date.fromisoformat(str(fecha_pago)[:10])
+                    if fecha_pago < d_egr:
+                        return jsonify(error='La fecha de pago no puede ser anterior a la salida.'), 400
                 else:
-                    meses_indem = 3.0 + ((anios_completos - 3) * (20.0 / 30.0)) + (meses_fraccion * (20.0 / 360.0))
-                meses_indem = min(5.0, meses_indem)
-                monto_indem = round(meses_indem * salario, 2)
+                    fecha_pago = None
 
-            total_percepciones = round(monto_pend + monto_vac + monto_agui + monto_indem, 2)
-            neto_pagar = max(0.0, round(total_percepciones - deducciones, 2))
+                retirar_asientos(asiento_id)
+                asiento_id = None
+                if estado == 'Pagado' and neto_pagar > 0:
+                    codigo_efectivo = '1.1.01' if metodo_pago == 'Efectivo' else '1.1.02'
+                    efectivo = consulta("SELECT id FROM cuentas_contables WHERE codigo=?", (codigo_efectivo,), fetchone=True)
+                    if not efectivo:
+                        raise ValueError('Falta configurar la cuenta de Caja o Bancos.')
+                    cuenta_id = efectivo['id']
+                    neto = Decimal(str(neto_pagar))
+                    salario_pendiente = min(neto, Decimal(str(monto_pend)))
+                    disponible = neto - salario_pendiente
+                    prov = consulta("""
+                        SELECT COALESCE(SUM(d.provision_aguinaldo),0) AS total
+                        FROM detalle_nomina d JOIN nomina n ON n.id=d.nomina_id
+                        WHERE d.empleado_id=? AND n.periodo_anio*100+n.periodo_mes>=?
+                            AND n.periodo_anio*100+n.periodo_mes<=?
+                    """, (emp_id, (d_egr.year - 1)*100+12, d_egr.year*100+d_egr.month), fetchone=True)
+                    provision = min(disponible, Decimal(str(monto_agui)), Decimal(str(prov['total'])))
+                    registrar_asiento(d_egr, f"Reconocimiento liquidación {row['codigo']}", 'RRHH_LIQ_DEVENGO', [
+                        ('6.1.01', salario_pendiente, 0), ('2.1.08', provision, 0),
+                        ('6.1.12', disponible - provision, 0), ('2.1.04', 0, neto)])
+                    asiento_id = registrar_asiento(fecha_pago, f"Pago liquidación {row['codigo']}", 'RRHH_LIQUIDACION', [
+                        ('2.1.04', neto, 0), (codigo_efectivo, 0, neto)])
 
-            metodo_pago = data.get('metodo_pago') or row.get('metodo_pago') or 'Transferencia Bancaria'
-            numero_ref = data.get('numero_referencia') or row.get('numero_referencia')
-            cuenta_id = data.get('cuenta_id') or row.get('cuenta_id')
-            asiento_id = row.get('asiento_id')
-            fecha_pago = data.get('fecha_pago') or (d_egr.isoformat() if estado == 'Pagado' else row.get('fecha_pago'))
+                consulta("""
+                    UPDATE liquidaciones_laborales
+                    SET empleado_id = ?, fecha_salida = ?, motivo_salida = ?, salario_base = ?,
+                        antiguedad_anios = ?, antiguedad_meses = ?, antiguedad_dias = ?,
+                        monto_dias_pendientes = ?, dias_vacaciones_pendientes = ?, monto_vacaciones = ?,
+                        monto_aguinaldo_proporcional = ?, monto_indemnizacion_antiguedad = ?,
+                        total_percepciones = ?, deducciones_totales = ?, neto_a_pagar = ?, estado = ?,
+                        metodo_pago = ?, numero_referencia = ?, cuenta_id = ?, asiento_id = ?, fecha_pago = ?
+                    WHERE id = ?
+                """, (emp_id, d_egr, motivo, salario, anios, meses, dias,
+                      monto_pend, saldo_vac, monto_vac, monto_agui, monto_indem,
+                      total_percepciones, deducciones, neto_pagar, estado,
+                      metodo_pago, numero_ref, cuenta_id, asiento_id, fecha_pago, id))
 
-            # Sincronización contable (Caja y Bancos)
-            if estado in ('Borrador', 'Aprobado'):
-                if asiento_id:
-                    execute_query("DELETE FROM movimientos_contables WHERE asiento_id = ?", (asiento_id,), commit=True)
-                    execute_query("DELETE FROM asientos_contables WHERE id = ?", (asiento_id,), commit=True)
-                    asiento_id = None
-            elif estado == 'Pagado':
-                # Resolver cuenta de salida (Caja General 1.1.01 o Banco General 1.1.02)
-                cta_row = None
-                if cuenta_id:
-                    try:
-                        cta_row = execute_query("SELECT id FROM cuentas_contables WHERE id = ?", (int(cuenta_id),), fetchone=True)
-                    except Exception:
-                        cta_row = None
-                if not cta_row:
-                    cod = '1.1.01' if metodo_pago == 'Efectivo' else '1.1.02'
-                    cta_row = execute_query("SELECT id FROM cuentas_contables WHERE codigo = ?", (cod,), fetchone=True)
-                    if not cta_row:
-                        nom_cta = 'Caja' if cod == '1.1.01' else 'Bancos'
-                        execute_query("""INSERT INTO cuentas_contables (codigo, nombre, clasificacion, naturaleza, descripcion, activo)
-                            VALUES (?, ?, 'Activo corriente', 'Deudora', ?, 1)""", (cod, nom_cta, nom_cta), commit=True)
-                        cta_row = execute_query("SELECT id FROM cuentas_contables WHERE codigo = ?", (cod,), fetchone=True)
-                cuenta_id = cta_row['id'] if cta_row else 1
+                conn.commit()
+                return jsonify({
+                    "success": True,
+                    "mensaje": f"Liquidación {row['codigo']} actualizada correctamente (Neto a pagar: C$ {neto_pagar:,.2f}).",
+                    "id": id
+                })
 
-                # Resolver cuenta de contrapartida pasivo/laboral (2.1.04 Sueldos y salarios por pagar)
-                cta_contra = execute_query("SELECT id FROM cuentas_contables WHERE codigo = '2.1.04'", fetchone=True)
-                if not cta_contra:
-                    execute_query("""INSERT INTO cuentas_contables (codigo, nombre, clasificacion, naturaleza, descripcion, activo)
-                        VALUES ('2.1.04', 'Sueldos y salarios por pagar', 'Pasivo corriente', 'Acreedora', 'Sueldos por pagar', 1)""", commit=True)
-                    cta_contra = execute_query("SELECT id FROM cuentas_contables WHERE codigo = '2.1.04'", fetchone=True)
-                cta_contra_id = cta_contra['id'] if cta_contra else 12
-
-                concepto_asiento = f"Pago liquidación {row['codigo']} - {emp['nombre_completo']} ({metodo_pago} Ref: {numero_ref or 'S/R'})"
-                uid = session.get('user', {}).get('id', 1)
-
-                if not asiento_id:
-                    execute_query("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
-                        VALUES (GETDATE(), ?, 'RRHH_LIQUIDACION', ?, ?)""", (concepto_asiento, id, uid), commit=True)
-                    last_asiento = execute_query("SELECT MAX(id) AS id FROM asientos_contables WHERE modulo_origen = 'RRHH_LIQUIDACION' AND referencia_id = ?", (id,), fetchone=True)
-                    asiento_id = int(last_asiento['id']) if last_asiento else None
-
-                if asiento_id:
-                    execute_query("DELETE FROM movimientos_contables WHERE asiento_id = ?", (asiento_id,), commit=True)
-                    if neto_pagar > 0:
-                        # DEBE: Cancela la obligación laboral (2.1.04)
-                        execute_query("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)",
-                            (asiento_id, cta_contra_id, neto_pagar), commit=True)
-                        # HABER: Caja o Bancos (Disminuye el activo real de forma que impacta Libro Mayor y Estados Financieros)
-                        execute_query("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)",
-                            (asiento_id, cuenta_id, neto_pagar), commit=True)
-
-            execute_query("""
-                UPDATE liquidaciones_laborales
-                SET empleado_id = ?, fecha_salida = ?, motivo_salida = ?, salario_base = ?,
-                    antiguedad_anios = ?, antiguedad_meses = ?, antiguedad_dias = ?,
-                    monto_dias_pendientes = ?, dias_vacaciones_pendientes = ?, monto_vacaciones = ?,
-                    monto_aguinaldo_proporcional = ?, monto_indemnizacion_antiguedad = ?,
-                    total_percepciones = ?, deducciones_totales = ?, neto_a_pagar = ?, estado = ?,
-                    metodo_pago = ?, numero_referencia = ?, cuenta_id = ?, asiento_id = ?, fecha_pago = ?
-                WHERE id = ?
-            """, (emp_id, d_egr, motivo, salario, anios, meses, dias,
-                  monto_pend, saldo_vac, monto_vac, monto_agui, monto_indem,
-                  total_percepciones, deducciones, neto_pagar, estado,
-                  metodo_pago, numero_ref, cuenta_id, asiento_id, fecha_pago, id), commit=True)
-
-            return jsonify({
-                "success": True,
-                "mensaje": f"Liquidación {row['codigo']} actualizada correctamente (Neto a pagar: C$ {neto_pagar:,.2f}).",
-                "id": id
-            })
+        except (ValueError, TypeError) as exc:
+            conn.rollback()
+            return jsonify(error=str(exc)), 400
+        except Exception:
+            conn.rollback()
+            app.logger.exception('Error al actualizar liquidación')
+            return jsonify(error='No se pudo actualizar la liquidación.'), 500
+        finally:
+            conn.close()
 
     @app.route('/rrhh/liquidacion/<int:id>/imprimir')
     @login_required

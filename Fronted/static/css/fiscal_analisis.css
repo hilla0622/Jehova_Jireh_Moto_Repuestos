@@ -1,0 +1,54 @@
+.ir-insight {
+    --ir-red: #800e19;
+    background: #fff;
+    color: #302a2a;
+    border: 1px solid #e7d8da;
+    border-left: 5px solid var(--ir-red);
+    border-right: 5px solid var(--ir-red);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px #63081206;
+    padding: 32px 38px 20px;
+    margin: 32px 0 26px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+}
+.ir-insight *, .ir-insight *::before, .ir-insight *::after { box-sizing: border-box; }
+.ir-insight [hidden] { display: none !important; }
+.ir-insight-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.ir-insight-eyebrow { color: var(--ir-red); font-size: 10px; font-weight: 700; letter-spacing: 1.8px; }
+.ir-insight h2 { font-family: "Times New Roman", Times, serif; font-size: clamp(25px, 2.4vw, 34px); font-weight: 400; color: #670b14; margin: 7px 0 9px; line-height: 1.15; }
+.ir-insight-heading p { margin: 0; color: #6c6060; max-width: 650px; }
+.ir-insight-button { display: inline-flex; justify-content: center; align-items: center; gap: 9px; background: var(--ir-red); color: #fff; border: 1px solid var(--ir-red); border-radius: 6px; padding: 12px 18px; font: 600 13px Arial, sans-serif; cursor: pointer; flex-shrink: 0; }
+.ir-insight-button:hover { background: #600a12; }
+.ir-insight-button:disabled { opacity: .65; cursor: wait; }
+.ir-insight button:focus-visible, .ir-insight summary:focus-visible { outline: 3px solid #be7077; outline-offset: 4px; }
+.ir-insight-context { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: #756565; border-bottom: 1px solid #eadcde; margin-top: 24px; padding-bottom: 12px; font-size: 12px; }
+.ir-insight-context > :first-child { color: var(--ir-red); font-weight: 700; }
+.ir-insight-status { padding: 24px 0 8px; color: #746464; }
+.ir-insight-status.is-error { color: var(--ir-red); }
+.ir-insight-report { display: block; width: 100%; padding-top: 26px; }
+.ir-insight-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--ir-red); margin-bottom: 20px; }
+.ir-insight .ir-insight-narrative { font-family: "Times New Roman", Times, serif; font-size: 18px; font-weight: 400; line-height: 1.85; color: #352e2e; margin: 0 0 20px; white-space: pre-line; overflow-wrap: anywhere; }
+.ir-insight-provider { color: #7c6868; font-size: 12px; margin: 16px 0; }
+.ir-insight-source { border-bottom: 1px solid #eadcde; padding: 14px 0; }
+.ir-insight-source p { margin: 0 0 7px; font-size: 13px; }
+.ir-insight-source strong { color: #670b14; }
+.ir-insight-source small { display: block; color: #7b6969; font-size: 11px; overflow-wrap: anywhere; }
+.ir-insight-link { background: transparent; color: var(--ir-red); border: 0; text-decoration: underline; text-underline-offset: 3px; padding: 7px 0 0; font: 600 12px Arial, sans-serif; cursor: pointer; }
+.ir-insight-notice { border-left: 2px solid var(--ir-red); padding: 7px 12px; margin: 20px 0 0; color: #725858; font-size: 12px; }
+.ir-insight details { margin: 0; padding: 15px 0; border-top: 1px solid #eadcde; }
+.ir-insight summary { cursor: pointer; color: var(--ir-red); font-size: 12px; font-weight: 600; }
+.ir-insight-table-wrap { overflow-x: auto; }
+.ir-insight table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+.ir-insight th, .ir-insight td { padding: 10px 8px; text-align: right; border-bottom: 1px solid #eadcde; white-space: nowrap; }
+.ir-insight th:first-child, .ir-insight td:first-child { text-align: left; }
+.ir-insight th { background: #fff; color: #6c4145; }
+.ir-insight-footnote { border-top: 1px solid #eadcde; padding-top: 13px; margin: 18px 0 0; font-size: 11px; color: #7b6969; }
+@media(max-width: 600px) {
+    .ir-insight { padding: 22px 18px 16px; }
+    .ir-insight-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
+    .ir-insight-button { width: 100%; }
+    .ir-insight .ir-insight-narrative { font-size: 17px; line-height: 1.75; }
+}
+@media print { .ir-insight { display: none; } }

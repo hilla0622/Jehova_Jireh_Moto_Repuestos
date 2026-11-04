@@ -1,3 +1,4 @@
+import math
 import os
 import pyodbc
 from datetime import datetime, timezone, timedelta
@@ -788,6 +789,25 @@ def api_caja_sesion(id):
     return jsonify(sesion)
 
 # --- VENTAS (POS) ---
+def cantidades_venta(items):
+    cantidades = {}
+    if not isinstance(items, list) or not items:
+        raise ValueError('El carrito está vacío.')
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError('Producto inválido.')
+        valores = [str(item.get('producto_id', '')), str(item.get('cantidad', 1))]
+        if any(not valor.isascii() or not valor.isdecimal() or len(valor) > 10 for valor in valores):
+            raise ValueError('El producto y la cantidad deben ser enteros positivos.')
+        producto, cantidad = map(int, valores)
+        if producto <= 0 or cantidad <= 0 or producto > 2147483647:
+            raise ValueError('El producto y la cantidad deben ser enteros positivos.')
+        cantidades[producto] = cantidades.get(producto, 0) + cantidad
+        if cantidades[producto] > 2147483647:
+            raise ValueError('La cantidad solicitada es demasiado grande.')
+    return sorted(cantidades.items())
+
+
 @app.route('/api/ventas', methods=['GET', 'POST'])
 @login_required
 def api_ventas():
@@ -803,21 +823,23 @@ def api_ventas():
             ORDER BY v.id DESC
         """
         ventas = execute_query(query_v, fetchall=True)
+        detalles_por_venta = {}
+        if ventas:
+            for detalle in execute_query("""
+                SELECT d.venta_id, p.id AS producto_id, p.nombre AS producto_nombre,
+                       d.cantidad, d.precio_unitario, d.subtotal
+                FROM detalle_ventas d INNER JOIN productos p ON d.producto_id=p.id ORDER BY d.id
+            """, fetchall=True):
+                venta_id = detalle.pop('venta_id')
+                detalle['precio_unitario'] = float(detalle['precio_unitario'])
+                detalle['subtotal'] = float(detalle['subtotal'])
+                detalles_por_venta.setdefault(venta_id, []).append(detalle)
         for v in ventas:
             if hasattr(v['fecha'], 'strftime'):
                 v['fecha'] = v['fecha'].strftime('%Y-%m-%d')
             v['total'] = float(v['total'])
             
-            detalles = execute_query("""
-                SELECT p.id AS producto_id, p.nombre AS producto_nombre, d.cantidad, d.precio_unitario, d.subtotal 
-                FROM detalle_ventas d
-                INNER JOIN productos p ON d.producto_id = p.id
-                WHERE d.venta_id = ?
-            """, (v['id'],), fetchall=True)
-            for d in detalles:
-                d['precio_unitario'] = float(d['precio_unitario'])
-                d['subtotal'] = float(d['subtotal'])
-            v['detalles'] = detalles
+            v['detalles'] = detalles_por_venta.get(v['id'], [])
             
         return jsonify(ventas)
 
@@ -827,7 +849,12 @@ def api_ventas():
         
         data = request.json or {}
         cliente_nombre = data.get('cliente', 'Cliente General').strip()
-        forma_pago = data.get('forma_pago', 'Efectivo').strip()
+        forma_pago = data.get('forma_pago', 'Efectivo')
+        if forma_pago in ('Transferencia / Móvil', 'Transferencia Bancaria'):
+            forma_pago = 'Transferencia'
+        cuentas_cobro = {'Efectivo':'1.1.01','Transferencia':'1.1.02','Tarjeta':'1.1.02','Crédito':'1.1.03'}
+        if not isinstance(forma_pago, str) or forma_pago not in cuentas_cobro:
+            return jsonify(error='Forma de pago inválida.'), 400
         items = data.get('items', []) 
 
         if not items:
@@ -844,11 +871,8 @@ def api_ventas():
             total_venta = 0.0
             detalles_a_insertar = []
 
-            for item in items:
-                p_id = int(item.get('producto_id'))
-                cant = int(item.get('cantidad', 1))
-                
-                cursor.execute("SELECT id, nombre, stock_actual, precio_venta, costo FROM productos WHERE id = ?", (p_id,))
+            for p_id, cant in cantidades_venta(items):
+                cursor.execute("SELECT id, nombre, stock_actual, precio_venta, costo FROM productos WITH (UPDLOCK, ROWLOCK) WHERE id = ?", (p_id,))
                 prod = cursor.fetchone()
                 
                 if not prod:
@@ -895,23 +919,21 @@ def api_ventas():
                     VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
                 """, (p_id, cant, stock_ant, stock_post, f"Venta {codigo_v}", 'Venta desde caja', session['user']['id']))
 
-            # --- FASE 2: REGISTRO DE PAGO Y COMPROBANTE EN POS ---
-            try:
+            # Una venta a crédito registra una cuenta por cobrar.
+            if forma_pago != 'Crédito':
                 cursor.execute("""
                     INSERT INTO pagos (venta_id, pedido_web_id, origen, metodo, monto, referencia, fecha)
                     VALUES (?, NULL, 'VENTA_POS', ?, ?, ?, GETDATE())
                 """, (venta_id, forma_pago, total_venta, f"Cobro en caja {codigo_v}"))
 
-                numero_comp = f"TICK-{codigo_v}"
-                cursor.execute("""
-                    INSERT INTO comprobantes (venta_id, pedido_web_id, origen, numero, fechaEmision, total)
-                    VALUES (?, NULL, 'VENTA_POS', ?, GETDATE(), ?)
-                """, (venta_id, numero_comp, total_venta))
-            except Exception as e_pago:
-                print(f"[Fase 2] Nota al registrar pago/comprobante POS: {e_pago}")
+            numero_comp = f"TICK-{codigo_v}"
+            cursor.execute("""
+                INSERT INTO comprobantes (venta_id, pedido_web_id, origen, numero, fechaEmision, total)
+                VALUES (?, NULL, 'VENTA_POS', ?, GETDATE(), ?)
+            """, (venta_id, numero_comp, total_venta))
 
             # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA ---
-            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
+            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = ?", (cuentas_cobro[forma_pago],))
             cta_caja = cursor.fetchone()[0]
             cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'") # Ventas
             cta_ventas = cursor.fetchone()[0]
@@ -976,10 +998,17 @@ def api_ventas():
             conn.commit()
             return jsonify({"success": True, "mensaje": f"Venta {codigo_v} procesada.", "venta": venta_obj}), 201
 
+        except ValueError as e:
+            if 'conn' in locals():
+                conn.rollback()
+            return jsonify(error=str(e)), 400
         except Exception as e:
             if 'conn' in locals():
                 conn.rollback()
             return jsonify({"error": str(e)}), 500
+        finally:
+            if 'conn' in locals():
+                conn.close()
 
 
 @app.route('/api/ventas_web', methods=['POST'])
@@ -1008,10 +1037,7 @@ def api_ventas_web():
         total_venta = 0.0
         detalles_a_insertar = []
 
-        for item in items:
-            p_id = int(item.get('producto_id'))
-            cant = int(item.get('cantidad', 1))
-            
+        for p_id, cant in cantidades_venta(items):
             cursor.execute("SELECT id, nombre, stock_actual, precio_venta, costo FROM productos WHERE id = ?", (p_id,))
             prod = cursor.fetchone()
             
@@ -1030,36 +1056,33 @@ def api_ventas_web():
                 p_id, cant, float(prod.precio_venta), float(prod.costo), subtotal, prod.stock_actual
             ))
 
-        # Buscar un admin genérico para los movimientos que exigen usuario_id NO NULL
-        cursor.execute("SELECT TOP 1 u.id FROM usuarios u INNER JOIN roles r ON u.rol_id = r.id WHERE r.nombre = 'Administrador'")
-        admin_row = cursor.fetchone()
-        admin_id = admin_row[0] if admin_row else 1
-
         # Extraer datos de contacto y entrega enviados desde la tienda web
-        forma_entrega = data.get('forma_entrega', 'Envío a Domicilio').strip()
-        metodo_pago = data.get('metodo', 'Efectivo').strip()
+        forma_entrega = 'Retiro en Tienda'
+        metodo_pago = data.get('metodo', 'Efectivo')
+        if metodo_pago not in ('Efectivo', 'Transferencia', 'Transferencia Bancaria', 'Tarjeta'):
+            raise ValueError('Método de pago inválido.')
         telefono = data.get('telefono', '').strip()
-        direccion = data.get('direccion', '').strip() or data.get('address', '').strip()
+        direccion = 'Retiro en Tienda (Sucursal Masatepe)'
 
-        # --- FASE 2: FLUJO EXCLUSIVO DEL PORTAL WEB (UML) ---
-        # 1. Registrar Carrito formal y su detalle
-        cursor.execute("""
-            INSERT INTO carritos (cliente_id, subtotal, estado)
-            VALUES (?, ?, 'Completado')
-        """, (cliente_id, total_venta))
-        cursor.execute("SELECT @@IDENTITY AS id")
-        carrito_id = cursor.fetchone()[0]
-
-        for (p_id, cant, precio, costo, subtotal, stock_ant) in detalles_a_insertar:
+        # El carrito persistente requiere una cuenta de cliente. El pedido admite invitados.
+        if cliente_id is not None:
             cursor.execute("""
-                INSERT INTO detalle_carritos (carrito_id, producto_id, cantidad, precioUnitario, subtotal)
-                VALUES (?, ?, ?, ?, ?)
-            """, (carrito_id, p_id, cant, precio, subtotal))
+                INSERT INTO carritos (cliente_id, subtotal, estado)
+                VALUES (?, ?, 'Completado')
+            """, (cliente_id, total_venta))
+            cursor.execute("SELECT @@IDENTITY AS id")
+            carrito_id = cursor.fetchone()[0]
+
+            for (p_id, cant, precio, costo, subtotal, stock_ant) in detalles_a_insertar:
+                cursor.execute("""
+                    INSERT INTO detalle_carritos (carrito_id, producto_id, cantidad, precioUnitario, subtotal)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (carrito_id, p_id, cant, precio, subtotal))
 
         # 2. Registrar Pedido Web formal y su detalle (sin tocar la tabla ventas)
         cursor.execute("""
             INSERT INTO pedidos_web (codigo, cliente_id, fecha, subtotal, total, formaEntrega, metodo, estado, nombre_cliente, telefono, email, direccion_entrega)
-            VALUES (?, ?, GETDATE(), ?, ?, ?, ?, 'Completado', ?, ?, ?, ?)
+            VALUES (?, ?, GETDATE(), ?, ?, ?, ?, 'Pendiente', ?, ?, ?, ?)
         """, (codigo_v, cliente_id, total_venta, total_venta, forma_entrega, metodo_pago, nombre_cliente, telefono, email, direccion))
         cursor.execute("SELECT @@IDENTITY AS id")
         pedido_id = cursor.fetchone()[0]
@@ -1070,13 +1093,59 @@ def api_ventas_web():
                 VALUES (?, ?, ?, ?, ?)
             """, (pedido_id, p_id, cant, precio, subtotal))
             
+        conn.commit()
+        return jsonify(success=True, codigo=codigo_v, estado='Pendiente',
+                       mensaje='Pedido recibido. El pago se confirma en tienda.'), 201
+    except ValueError as e:
+        conn.rollback()
+        return jsonify(error=str(e)), 400
+    except Exception:
+        if 'conn' in locals():
+            conn.rollback()
+        app.logger.exception('Error al recibir el pedido web')
+        return jsonify(error='No se pudo registrar el pedido.'), 500
+    finally:
+        if 'conn' in locals() and conn is not None:
+            conn.close()
+
+
+@app.route('/api/pedidos_web/<int:pedido_id>/confirmar', methods=['POST'])
+@role_required('Administrador', 'Vendedor', 'Gerente de Operaciones')
+def confirmar_pedido_web(pedido_id):
+    usuario_id = session['user']['id']
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT codigo,estado,total,metodo FROM pedidos_web WITH (UPDLOCK,HOLDLOCK) WHERE id=?", pedido_id)
+        pedido = cursor.fetchone()
+        if not pedido:
+            return jsonify(error='Pedido no encontrado.'), 404
+        if pedido.estado != 'Pendiente':
+            return jsonify(error='Solo se puede confirmar un pedido pendiente.'), 409
+        codigo_v, _, total_venta, metodo_pago = pedido
+        metodo_pago = (request.get_json(silent=True) or {}).get('metodo', metodo_pago)
+        if metodo_pago not in ('Efectivo', 'Transferencia', 'Transferencia Bancaria', 'Tarjeta'):
+            return jsonify(error='Método de pago inválido.'), 400
+        cursor.execute("""SELECT producto_id, SUM(cantidad) FROM detalle_pedidos_web
+            WHERE pedido_id=? GROUP BY producto_id ORDER BY producto_id""", pedido_id)
+        cantidades = cursor.fetchall()
+        if not cantidades or any(cantidad <= 0 for _, cantidad in cantidades):
+            return jsonify(error='El pedido no tiene cantidades válidas.'), 400
+        detalles_a_insertar = []
+        for p_id, cant in cantidades:
+            cursor.execute("SELECT stock_actual,costo FROM productos WITH (UPDLOCK, ROWLOCK) WHERE id=?", p_id)
+            prod = cursor.fetchone()
+            if not prod or prod.stock_actual < cant:
+                return jsonify(error='Existencias insuficientes para confirmar el pedido.'), 409
+            detalles_a_insertar.append((p_id, cant, None, prod.costo, None, prod.stock_actual))
+        for p_id, cant, _, _, _, stock_ant in detalles_a_insertar:
             # Descontar stock y registrar movimiento en Kardex
             stock_post = stock_ant - cant
             cursor.execute("UPDATE productos SET stock_actual = ? WHERE id = ?", (stock_post, p_id))
             cursor.execute("""
                 INSERT INTO movimientos_inventario (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_posterior, referencia_origen, motivo, usuario_id)
                 VALUES (?, 'SALIDA_VENTA', ?, ?, ?, ?, ?, ?)
-            """, (p_id, cant, stock_ant, stock_post, f"Pedido Web {codigo_v}", 'Venta desde la tienda online', admin_id))
+            """, (p_id, cant, stock_ant, stock_post, f"Pedido Web {codigo_v}", 'Venta desde la tienda online', usuario_id))
 
         # 3. Registrar Pago formal con discriminador 'PEDIDO_WEB'
         cursor.execute("""
@@ -1092,7 +1161,7 @@ def api_ventas_web():
         """, (pedido_id, numero_comp_web, total_venta))
 
         # --- ASIENTO CONTABLE AUTOMÁTICO DE VENTA WEB ---
-        cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'") # Caja
+        cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = ?", ('1.1.01' if metodo_pago == 'Efectivo' else '1.1.02',))
         cta_caja = cursor.fetchone()[0]
         cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'") # Ventas
         cta_ventas = cursor.fetchone()[0]
@@ -1106,7 +1175,7 @@ def api_ventas_web():
         cursor.execute("""
             INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
             VALUES (GETDATE(), ?, 'PEDIDOS_WEB', ?, ?)
-        """, (f"Pedido Web {codigo_v}", pedido_id, admin_id))
+        """, (f"Pedido Web {codigo_v}", pedido_id, usuario_id))
         
         cursor.execute("SELECT @@IDENTITY AS id")
         asiento_v_id = cursor.fetchone()[0]
@@ -1118,18 +1187,15 @@ def api_ventas_web():
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_v_id, cta_costo, total_costo_venta))
             cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_v_id, cta_inv, total_costo_venta))
 
+        cursor.execute("UPDATE pedidos_web SET estado='Completado', metodo=? WHERE id=?", metodo_pago, pedido_id)
         conn.commit()
-        return jsonify({
-            "success": True, 
-            "mensaje": f"Venta {codigo_v} procesada con éxito.",
-            "codigo": codigo_v,
-            "comprobante": f"COMP-{codigo_v}"
-        }), 201
+        return jsonify(success=True, codigo=codigo_v, comprobante=numero_comp_web)
+    except Exception:
+        app.logger.exception('Error al confirmar el pedido web')
+        return jsonify(error='No se pudo confirmar el pago.'), 500
+    finally:
+        conn.close()
 
-    except Exception as e:
-        if 'conn' in locals():
-            conn.rollback()
-        return jsonify({"error": str(e)}), 500
 
 # --- CONSULTAS FASE 2: PEDIDOS WEB, PAGOS Y COMPROBANTES ---
 @app.route('/api/pedidos_web', methods=['GET'])
@@ -1146,25 +1212,25 @@ def api_pedidos_web():
         ORDER BY p.id DESC
     """
     pedidos = execute_query(query, fetchall=True)
+    detalles_por_pedido = {}
+    if pedidos:
+        for detalle in execute_query("""
+            SELECT dp.pedido_id, dp.id, dp.producto_id, prod.nombre AS producto_nombre, prod.codigo_sku,
+                   dp.cantidad, dp.precioUnitario, dp.subtotal
+            FROM detalle_pedidos_web dp INNER JOIN productos prod ON dp.producto_id=prod.id ORDER BY dp.id
+        """, fetchall=True):
+            pedido_id = detalle.pop('pedido_id')
+            detalle['precioUnitario'] = float(detalle['precioUnitario'])
+            detalle['precio_unitario'] = detalle['precioUnitario']
+            detalle['subtotal'] = float(detalle['subtotal'])
+            detalles_por_pedido.setdefault(pedido_id, []).append(detalle)
     for ped in pedidos:
         if hasattr(ped['fecha'], 'strftime'):
             ped['fecha'] = ped['fecha'].strftime('%Y-%m-%d %H:%M:%S')
         ped['total'] = float(ped['total'])
         ped['subtotal'] = float(ped['subtotal'])
         
-        # Obtener detalle de productos del pedido web
-        detalles = execute_query("""
-            SELECT dp.id, dp.producto_id, prod.nombre AS producto_nombre, prod.codigo_sku,
-                   dp.cantidad, dp.precioUnitario, dp.subtotal
-            FROM detalle_pedidos_web dp
-            INNER JOIN productos prod ON dp.producto_id = prod.id
-            WHERE dp.pedido_id = ?
-        """, (ped['id'],), fetchall=True)
-        for d in detalles:
-            d['precioUnitario'] = float(d['precioUnitario'])
-            d['precio_unitario'] = float(d['precioUnitario'])
-            d['subtotal'] = float(d['subtotal'])
-        ped['detalles'] = detalles
+        ped['detalles'] = detalles_por_pedido.get(ped['id'], [])
         ped['codigo_venta'] = ped['codigo']
         ped['forma_pago'] = ped['metodo']
         ped['vendedor'] = 'Tienda Online'
@@ -1181,7 +1247,7 @@ def api_pedido_web_anular(p_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT estado, codigo FROM pedidos_web WHERE id = ?", (p_id,))
+        cursor.execute("SELECT estado, codigo FROM pedidos_web WITH (UPDLOCK,HOLDLOCK) WHERE id = ?", (p_id,))
         pedido = cursor.fetchone()
         if not pedido:
             return jsonify({"error": "Pedido web no encontrado."}), 404
@@ -1189,6 +1255,10 @@ def api_pedido_web_anular(p_id):
             return jsonify({"error": "Este pedido ya se encuentra anulado."}), 400
 
         cursor.execute("UPDATE pedidos_web SET estado = 'Anulado' WHERE id = ?", (p_id,))
+
+        if pedido.estado == 'Pendiente':
+            conn.commit()
+            return jsonify(success=True, mensaje='Pedido pendiente anulado.')
 
         cursor.execute("SELECT producto_id, cantidad FROM detalle_pedidos_web WHERE pedido_id = ?", (p_id,))
         detalles = cursor.fetchall()
@@ -1289,20 +1359,23 @@ def api_venta_anular(v_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT estado, codigo_venta FROM ventas WHERE id = ?", (v_id,))
+        cursor.execute("SELECT estado, codigo_venta FROM ventas WITH (UPDLOCK,HOLDLOCK) WHERE id = ?", (v_id,))
         venta = cursor.fetchone()
         if not venta:
             return jsonify({"error": "Venta no encontrada."}), 404
         if venta.estado == 'Anulada':
             return jsonify({"error": "Esta venta ya se encuentra anulada."}), 400
 
+        cursor.execute("SELECT 1 FROM devoluciones WHERE venta_id=?", v_id)
+        if cursor.fetchone():
+            return jsonify(error='La venta tiene devoluciones. No se puede revertir completa.'), 409
         cursor.execute("UPDATE ventas SET estado = 'Anulada' WHERE id = ?", (v_id,))
         
         cursor.execute("SELECT producto_id, cantidad FROM detalle_ventas WHERE venta_id = ?", (v_id,))
         detalles = cursor.fetchall()
         
         for det in detalles:
-            cursor.execute("SELECT stock_actual AS stock FROM productos WHERE id = ?", (det.producto_id,))
+            cursor.execute("SELECT stock_actual AS stock FROM productos WITH (UPDLOCK,ROWLOCK) WHERE id = ?", (det.producto_id,))
             prod = cursor.fetchone()
             if prod:
                 stock_anterior = prod.stock
@@ -1361,7 +1434,7 @@ def api_venta_devolucion(v_id):
             return jsonify({"error": "Debes seleccionar al menos un producto a devolver."}), 400
 
         # Validate venta exists and is not anulada
-        cursor.execute("SELECT id, estado, codigo_venta FROM ventas WHERE id = ?", (v_id,))
+        cursor.execute("SELECT id, estado, codigo_venta, forma_pago FROM ventas WITH (UPDLOCK,HOLDLOCK) WHERE id = ?", (v_id,))
         venta = cursor.fetchone()
         if not venta:
             return jsonify({"error": "Venta no encontrada."}), 404
@@ -1370,7 +1443,7 @@ def api_venta_devolucion(v_id):
 
         # Get original sale details
         cursor.execute("""
-            SELECT d.producto_id, d.cantidad, d.precio_unitario, p.costo
+            SELECT d.producto_id, d.cantidad, d.precio_unitario, COALESCE(NULLIF(d.costo_historico,0),p.costo) AS costo
             FROM detalle_ventas d
             INNER JOIN productos p ON d.producto_id = p.id
             WHERE d.venta_id = ?
@@ -1392,13 +1465,7 @@ def api_venta_devolucion(v_id):
         # Validate each item
         total_devuelto = 0.0
         detalles_a_devolver = []
-        for item in items:
-            p_id = int(item.get('producto_id'))
-            cant = int(item.get('cantidad', 0))
-
-            if cant <= 0:
-                continue
-
+        for p_id, cant in cantidades_venta(items):
             if p_id not in detalles_originales:
                 return jsonify({"error": f"El producto ID {p_id} no pertenece a esta venta."}), 400
 
@@ -1437,7 +1504,7 @@ def api_venta_devolucion(v_id):
             """, (dev_id, p_id, cant, precio, subtotal))
 
             # Return stock
-            cursor.execute("SELECT stock_actual FROM productos WHERE id = ?", (p_id,))
+            cursor.execute("SELECT stock_actual FROM productos WITH (UPDLOCK,ROWLOCK) WHERE id = ?", (p_id,))
             prod = cursor.fetchone()
             stock_anterior = prod.stock_actual
             
@@ -1453,40 +1520,35 @@ def api_venta_devolucion(v_id):
                 VALUES (?, 'DEVOLUCION_CLIENTE', ?, ?, ?, ?, ?)
             """, (p_id, cant, stock_anterior, stock_posterior, f"Devolucion {codigo_dev} de venta {venta.codigo_venta}: {motivo}", session['user']['id']))
 
-            total_costo_devuelto += costo * cant
+            if actualiza_stock:
+                total_costo_devuelto += costo * cant
 
-        # --- ASIENTO CONTABLE DE REVERSION PARCIAL ---
-        try:
-            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.01'")
-            cta_caja = cursor.fetchone()
-            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '4.1.01'")
-            cta_ventas = cursor.fetchone()
-            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '5.1.01'")
-            cta_costo = cursor.fetchone()
-            cursor.execute("SELECT id FROM cuentas_contables WHERE codigo = '1.1.04'")
-            cta_inv = cursor.fetchone()
-
-            if cta_caja and cta_ventas:
-                cursor.execute("""
-                    INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
-                    VALUES (GETDATE(), ?, 'DEVOLUCION', ?, ?)
-                """, (f"Devolucion {codigo_dev} de Venta {venta.codigo_venta}", v_id, session['user']['id']))
-                cursor.execute("SELECT @@IDENTITY AS id")
-                asiento_id = cursor.fetchone().id
-
-                # Reverse the sale amount: Debit Ventas, Credit Caja
-                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_ventas.id, total_devuelto))
-                cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_caja.id, total_devuelto))
-
-                # Reverse the cost: Debit Inventario, Credit Costo de Ventas
-                if total_costo_devuelto > 0 and cta_costo and cta_inv:
-                    cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, 0)", (asiento_id, cta_inv.id, total_costo_devuelto))
-                    cursor.execute("INSERT INTO movimientos_contables (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, 0, ?)", (asiento_id, cta_costo.id, total_costo_devuelto))
-        except Exception:
-            pass  # Don't fail the entire devolucion if accounting entries fail
+        # Recuperar la contrapartida registrada en la venta original, incluso en ventas antiguas.
+        cursor.execute("""SELECT TOP 1 m.cuenta_id FROM asientos_contables a
+            JOIN movimientos_contables m ON m.asiento_id=a.id
+            JOIN cuentas_contables c ON c.id=m.cuenta_id
+            WHERE a.modulo_origen='VENTAS' AND a.referencia_id=? AND m.debe>0
+            AND c.codigo IN ('1.1.01','1.1.02','1.1.03') ORDER BY a.id,m.id""", v_id)
+        contrapartida = cursor.fetchone()
+        cursor.execute("SELECT codigo,id FROM cuentas_contables WHERE codigo IN ('4.1.01','5.1.01','1.1.04')")
+        cuentas = dict(cursor.fetchall())
+        if not contrapartida or not all(codigo in cuentas for codigo in ('4.1.01','5.1.01','1.1.04')):
+            raise ValueError('No se encontraron las cuentas de la venta original para revertirla.')
+        cursor.execute("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
+            OUTPUT INSERTED.id VALUES (GETDATE(), ?, 'DEVOLUCION', ?, ?)""",
+            (f"Devolucion {codigo_dev} de Venta {venta.codigo_venta}", v_id, session['user']['id']))
+        asiento_id = cursor.fetchone()[0]
+        movimientos = [(cuentas['4.1.01'],total_devuelto,0),(contrapartida[0],0,total_devuelto)]
+        if total_costo_devuelto > 0:
+            movimientos.extend([(cuentas['1.1.04'],total_costo_devuelto,0),(cuentas['5.1.01'],0,total_costo_devuelto)])
+        cursor.executemany("INSERT INTO movimientos_contables (asiento_id,cuenta_id,debe,haber) VALUES (?,?,?,?)",
+            [(asiento_id,cuenta,debe,haber) for cuenta,debe,haber in movimientos])
 
         conn.commit()
         return jsonify({"success": True, "mensaje": f"Devolución {codigo_dev} procesada correctamente. {len(detalles_a_devolver)} producto(s) devuelto(s). Total: ${total_devuelto:.2f}", "codigo": codigo_dev})
+    except ValueError as e:
+        conn.rollback()
+        return jsonify(error=str(e)), 400
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
@@ -1615,6 +1677,18 @@ def api_compras():
             ORDER BY c.id DESC
         """
         compras = execute_query(query_c, fetchall=True)
+        detalles_por_compra = {}
+        if compras:
+            for detalle in execute_query("""
+                SELECT d.compra_id, p.id AS producto_id, p.codigo_sku AS producto_codigo,
+                       p.nombre AS producto_nombre, p.descripcion AS producto_descripcion,
+                       d.cantidad, d.costo_unitario, d.subtotal
+                FROM detalle_compras d INNER JOIN productos p ON d.producto_id=p.id ORDER BY d.id
+            """, fetchall=True):
+                compra_id = detalle.pop('compra_id')
+                detalle['costo_unitario'] = float(detalle['costo_unitario'])
+                detalle['subtotal'] = float(detalle['subtotal'])
+                detalles_por_compra.setdefault(compra_id, []).append(detalle)
         for c in compras:
             fecha_raw = c.get('fecha')
             if hasattr(fecha_raw, 'strftime'):
@@ -1631,18 +1705,7 @@ def api_compras():
 
             c['total'] = float(c['total'])
             
-            detalles = execute_query("""
-                SELECT p.id AS producto_id, p.codigo_sku AS producto_codigo, 
-                       p.nombre AS producto_nombre, p.descripcion AS producto_descripcion,
-                       d.cantidad, d.costo_unitario, d.subtotal
-                FROM detalle_compras d
-                INNER JOIN productos p ON d.producto_id = p.id
-                WHERE d.compra_id = ?
-            """, (c['id'],), fetchall=True)
-            for d in detalles:
-                d['costo_unitario'] = float(d['costo_unitario'])
-                d['subtotal'] = float(d['subtotal'])
-            c['detalles'] = detalles
+            c['detalles'] = detalles_por_compra.get(c['id'], [])
             
         return jsonify(compras)
 
@@ -1675,14 +1738,17 @@ def api_compras():
             cursor.execute("SELECT @@IDENTITY AS id")
             compra_id = cursor.fetchone()[0]
 
-            for item in items:
+            cantidades_venta(items)
+            for item in sorted(items, key=lambda item: int(item['producto_id'])):
                 p_id = int(item.get('producto_id'))
                 cant = int(item.get('cantidad', 1))
                 costo_u = float(item.get('costo_unitario', 0.0))
 
-                cursor.execute("SELECT stock_actual, costo FROM productos WHERE id = ?", (p_id,))
+                if not math.isfinite(costo_u) or costo_u < 0:
+                    raise ValueError('El costo unitario debe ser un importe válido.')
+                cursor.execute("SELECT stock_actual, costo FROM productos WITH (UPDLOCK, ROWLOCK) WHERE id = ?", (p_id,))
                 prod = cursor.fetchone()
-                if not prod: continue
+                if not prod: raise ValueError(f"Producto {p_id} no encontrado.")
                 
                 real_costo = costo_u if costo_u > 0 else float(prod.costo)
                 subt = real_costo * cant
@@ -1722,10 +1788,17 @@ def api_compras():
             conn.commit()
             return jsonify({"success": True, "mensaje": "Compra registrada."}), 201
 
+        except (ValueError, TypeError) as e:
+            if 'conn' in locals():
+                conn.rollback()
+            return jsonify(error=str(e)), 400
         except Exception as e:
             if 'conn' in locals():
                 conn.rollback()
             return jsonify({"error": str(e)}), 500
+        finally:
+            if 'conn' in locals():
+                conn.close()
 
 @app.route('/api/compras/<int:compra_id>', methods=['GET'])
 @login_required
@@ -1963,22 +2036,26 @@ def api_asientos_contables():
                 
             query_a = f"SELECT id, fecha, concepto, modulo_origen, usuario_id, created_at FROM asientos_contables {where_clause} ORDER BY fecha DESC, id DESC"
             asientos = execute_query(query_a, params=tuple(params), fetchall=True)
+            movimientos_por_asiento = {}
+            if asientos:
+                for mov in execute_query(f"""
+                    SELECT m.asiento_id, m.id, c.codigo, c.nombre AS cuenta, m.debe, m.haber
+                    FROM movimientos_contables m
+                    INNER JOIN cuentas_contables c ON m.cuenta_id=c.id
+                    INNER JOIN asientos_contables a ON a.id=m.asiento_id
+                    {where_clause.replace('fecha', 'a.fecha')} ORDER BY m.id
+                """, params=tuple(params), fetchall=True):
+                    asiento_id = mov.pop('asiento_id')
+                    mov['debe'] = float(mov['debe'])
+                    mov['haber'] = float(mov['haber'])
+                    movimientos_por_asiento.setdefault(asiento_id, []).append(mov)
             for a in asientos:
                 if hasattr(a['fecha'], 'strftime'):
                     a['fecha'] = a['fecha'].strftime('%Y-%m-%d')
                 if hasattr(a['created_at'], 'strftime'):
                     a['created_at'] = a['created_at'].strftime('%Y-%m-%d %H:%M:%S')
                 
-                movs = execute_query("""
-                    SELECT m.id, c.codigo, c.nombre AS cuenta, m.debe, m.haber 
-                    FROM movimientos_contables m
-                    INNER JOIN cuentas_contables c ON m.cuenta_id = c.id
-                    WHERE m.asiento_id = ?
-                """, (a['id'],), fetchall=True)
-                for m in movs:
-                    m['debe'] = float(m['debe'])
-                    m['haber'] = float(m['haber'])
-                a['movimientos'] = movs
+                a['movimientos'] = movimientos_por_asiento.get(a['id'], [])
             return jsonify(asientos)
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -3032,8 +3109,8 @@ def api_nomina_generar():
             concepto_asiento = f"Registro de nómina mes {mes:02d}/{anio} (Complemento)"
         cursor.execute("""
             INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
-            VALUES (GETDATE(), ?, 'RRHH', ?, ?)
-        """, (concepto_asiento, nomina_id, session['user']['id']))
+            VALUES (?, ?, 'RRHH', ?, ?)
+        """, (fin_periodo, concepto_asiento, nomina_id, session['user']['id']))
         cursor.execute("SELECT @@IDENTITY AS id")
         asiento_id = cursor.fetchone()[0]
         
@@ -3205,8 +3282,8 @@ def api_nomina_incluir_horas_extras(nomina_id):
         if round(sum(value for _, value in debits) - sum(value for _, value in credits), 2) != 0:
             raise ValueError('El asiento del ajuste no cuadra. No se modificó la nómina.')
         cursor.execute("""INSERT INTO asientos_contables (fecha,concepto,modulo_origen,referencia_id,usuario_id)
-            VALUES (GETDATE(),?,'RRHH_AJUSTE_HORAS_EXTRAS',?,?)""",
-            (f'Ajuste de horas extras nómina {mes:02d}/{anio}', nomina_id, session['user']['id']))
+            VALUES (?,?,'RRHH_AJUSTE_HORAS_EXTRAS',?,?)""",
+            (fin_periodo, f'Ajuste de horas extras nómina {mes:02d}/{anio}', nomina_id, session['user']['id']))
         cursor.execute('SELECT @@IDENTITY')
         journal_id = cursor.fetchone()[0]
         for code, amount in debits:

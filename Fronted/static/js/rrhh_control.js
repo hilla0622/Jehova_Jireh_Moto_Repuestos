@@ -233,7 +233,7 @@ async function abrirPagoControl() {
     openModal('modal-pago-control');
     try {
         const rows = await rrhhApi('/api/nomina/historial');
-        form.elements.nomina_id.innerHTML = '<option value="">Seleccione una nómina</option>' + rows.map(r => `<option value="${r.id}">#${r.id} · ${r.mes}/${r.anio}</option>`).join('');
+        form.elements.nomina_id.innerHTML = '<option value="">Seleccione una nómina</option>' + rows.map(r => `<option value="${r.id}">Nómina ${r.anio}-${String(r.mes).padStart(2, '0')}</option>`).join('');
     } catch (error) { form.querySelector('.rrhh-error').textContent = error.message; }
 }
 function actualizarCuentaSugeridaPago() {
@@ -267,7 +267,7 @@ function actualizarEstadoPagoUI() {
         if (!esConfirmado) {
             refEl.placeholder = `(No aplica en estado ${estado})`;
         } else {
-            refEl.placeholder = 'Ej: BAC-TRF-001 o LAFISE-002';
+            refEl.placeholder = 'Ej: TRF-BAC-2026-0001 (referencia bancaria)';
         }
     }
 
@@ -340,7 +340,7 @@ async function editarPagoNomina(id) {
 
     try {
         const rows = await rrhhApi('/api/nomina/historial');
-        form.elements.nomina_id.innerHTML = rows.map(r => `<option value="${r.id}" ${r.id === p.nomina_id ? 'selected' : ''}>#${r.id} · ${r.mes}/${r.anio}</option>`).join('');
+        form.elements.nomina_id.innerHTML = rows.map(r => `<option value="${r.id}" ${r.id === p.nomina_id ? 'selected' : ''}>Nómina ${r.anio}-${String(r.mes).padStart(2, '0')}</option>`).join('');
     } catch (e) { }
 
     form.elements.nomina_id.value = p.nomina_id;

@@ -164,7 +164,7 @@ def obtener_reglas_fiscales(cursor):
         }
     return reglas
 
-def obtener_saldos_contables_ejercicio(cursor, anio):
+def obtener_saldos_contables_ejercicio(cursor, anio, fecha_corte=None):
     """
     Obtiene los saldos contables agrupados por cuenta para un año fiscal específico
     (desde el 1 de enero hasta el 31 de diciembre o la fecha actual si es el año en curso).
@@ -174,6 +174,11 @@ def obtener_saldos_contables_ejercicio(cursor, anio):
     if not 2000 <= int(anio) <= int(hoy[:4]):
         raise ValueError('Ejercicio fiscal inválido o futuro.')
     fecha_fin = f"{anio}-12-31" if str(anio) < hoy[:4] else min(hoy, f"{anio}-12-31")
+    if fecha_corte is not None:
+        corte = datetime.strptime(fecha_corte, '%Y-%m-%d').date().isoformat()
+        if not fecha_inicio <= corte <= fecha_fin:
+            raise ValueError('Fecha de corte fuera del ejercicio disponible.')
+        fecha_fin = corte
 
     # 1. Movimientos acumulados para cuentas de Balance (hasta fecha_fin)
     cursor.execute("""
@@ -301,7 +306,7 @@ def mapear_formulario_106(datos_contables, ajustes_fiscales=None, acreditamiento
     r18_casa_matriz_sucursales = 0.00
     # Otros agentes no financieros (IVA por pagar 2.1.03, sueldos 2.1.04, serv 2.1.05, retenciones 2.1.06 y 2.1.07, provisiones 2.1.08)
     r19_otros_agentes_no_fin = round(
-        sal("2.1.03") + sal("2.1.04") + sal("2.1.05") + sal("2.1.06") + sal("2.1.07") + sal("2.1.08") + sal("2.1.10"), 2
+        sal("2.1.03") + sal("2.1.04") + sal("2.1.05") + sal("2.1.06") + sal("2.1.07") + sal("2.1.08") + sal("2.1.09") + sal("2.1.10"), 2
     )
     # Renglón 20: Pasivo Fijo Nacional (15 + 16 + 17 + 18 + 19)
     r20_pasivo_fijo_nacional = round(r15_dividendos_por_pagar_res + r16_inst_financieras_desarrollo + r17_resto_inst_financieras + r18_casa_matriz_sucursales + r19_otros_agentes_no_fin, 2)
@@ -709,7 +714,7 @@ def guardar_declaracion_completa(cursor, simulacion, usuario_id, es_aprobada=Fal
         liq["total_acreditamientos"], liq["saldo_a_pagar"], liq["saldo_a_favor"],
         int(bool(errores)),
         ('[DEMO-FISCAL] Datos de demostración, sin validez oficial. ' if simulacion.get('datos_demostracion') else '') +
-        f"Simulación generada automáticamente desde contabilidad. Método: {calc['metodo_aplicado']}",
+        f"Declaración preparada desde contabilidad. Método: {calc['metodo_aplicado']}",
         usuario_id, (usuario_id if es_aprobada else None),
         (datetime.now() if es_aprobada else None),
         json.dumps(simulacion.get('negocio', {}), ensure_ascii=False)

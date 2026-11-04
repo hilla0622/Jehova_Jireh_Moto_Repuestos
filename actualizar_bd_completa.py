@@ -791,26 +791,49 @@ def run_migration():
     """)
 
     ejecutar("Tabla: liquidaciones_laborales", """
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'liquidaciones_laborales')
-    CREATE TABLE liquidaciones_laborales (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        empleado_id INT NOT NULL REFERENCES empleados(id),
-        fecha_liquidacion DATE NOT NULL,
-        motivo VARCHAR(100) NOT NULL,
-        salario_base DECIMAL(12,2) DEFAULT 0,
-        dias_trabajados_mes INT DEFAULT 0,
-        salario_proporcional DECIMAL(12,2) DEFAULT 0,
-        vacaciones_pendientes DECIMAL(12,2) DEFAULT 0,
-        aguinaldo_proporcional DECIMAL(12,2) DEFAULT 0,
-        indemnizacion DECIMAL(12,2) DEFAULT 0,
-        antiguedad_anios DECIMAL(5,2) DEFAULT 0,
-        otros_beneficios DECIMAL(12,2) DEFAULT 0,
-        deducciones DECIMAL(12,2) DEFAULT 0,
-        total_liquidacion DECIMAL(14,2) DEFAULT 0,
-        estado VARCHAR(30) DEFAULT 'Calculada',
-        observaciones VARCHAR(500) NULL,
-        created_at DATETIME DEFAULT GETDATE()
-    )
+    IF OBJECT_ID('liquidaciones_laborales', 'U') IS NULL
+    BEGIN
+        CREATE TABLE [liquidaciones_laborales] (
+            [id] int IDENTITY(1,1) NOT NULL,
+            [codigo] varchar(50) NOT NULL,
+            [empleado_id] int NOT NULL,
+            [fecha_ingreso] date NOT NULL,
+            [fecha_salida] date NOT NULL,
+            [motivo_salida] varchar(100) NOT NULL,
+            [salario_base] decimal(12,2) NOT NULL,
+            [antiguedad_anios] int DEFAULT ((0)) NULL,
+            [antiguedad_meses] int DEFAULT ((0)) NULL,
+            [antiguedad_dias] int DEFAULT ((0)) NULL,
+            [monto_dias_pendientes] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [dias_vacaciones_pendientes] decimal(6,2) DEFAULT ((0.00)) NULL,
+            [monto_vacaciones] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [monto_aguinaldo_proporcional] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [monto_indemnizacion_antiguedad] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [total_percepciones] decimal(12,2) NOT NULL,
+            [deducciones_totales] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [neto_a_pagar] decimal(12,2) NOT NULL,
+            [estado] varchar(30) DEFAULT ('Borrador') NULL,
+            [metodo_pago] varchar(50) NULL,
+            [numero_referencia] varchar(100) NULL,
+            [cuenta_id] int NULL,
+            [asiento_id] int NULL,
+            [fecha_pago] date NULL,
+            [elaborado_por] varchar(100) NULL,
+            [fecha_elaboracion] datetime DEFAULT (getdate()) NULL,
+            CONSTRAINT [pk_liquidaciones_laborales] PRIMARY KEY ([id]),
+            CONSTRAINT [fk_liquidaciones_emp] FOREIGN KEY ([empleado_id]) REFERENCES [empleados]([id])
+        );
+    END;
+    IF COL_LENGTH('liquidaciones_laborales','metodo_pago') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD metodo_pago varchar(50) NULL;
+    IF COL_LENGTH('liquidaciones_laborales','numero_referencia') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD numero_referencia varchar(100) NULL;
+    IF COL_LENGTH('liquidaciones_laborales','cuenta_id') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD cuenta_id int NULL;
+    IF COL_LENGTH('liquidaciones_laborales','asiento_id') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD asiento_id int NULL;
+    IF COL_LENGTH('liquidaciones_laborales','fecha_pago') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD fecha_pago date NULL;
     """)
 
     # =========================================================================
@@ -1021,18 +1044,18 @@ def run_migration():
     ejecutar("Vista: vista_kardex_completo", """
     CREATE OR ALTER VIEW vista_kardex_completo AS
     SELECT 
-        mi.id, mi.producto_id, p.codigo, p.nombre AS producto_nombre,
-        mi.tipo, mi.cantidad, mi.stock_anterior, mi.stock_nuevo,
-        mi.referencia, mi.observacion, mi.created_at
+        mi.id, mi.producto_id, p.codigo_sku AS codigo, p.nombre AS producto_nombre,
+        mi.tipo_movimiento AS tipo, mi.cantidad, mi.stock_anterior, mi.stock_posterior AS stock_nuevo,
+        mi.referencia_origen AS referencia, mi.motivo AS observacion, mi.created_at
     FROM movimientos_inventario mi
     INNER JOIN productos p ON mi.producto_id = p.id;
     """)
 
     ejecutar("Vista: vista_stock_bajo", """
     CREATE OR ALTER VIEW vista_stock_bajo AS
-    SELECT id, codigo, nombre, stock, stock_minimo, categoria_id, precio_venta
+    SELECT id, codigo_sku AS codigo, nombre, stock_actual AS stock, stock_minimo, categoria_id, precio_venta
     FROM productos
-    WHERE stock <= stock_minimo AND activo = 1;
+    WHERE stock_actual <= stock_minimo AND activo = 1;
     """)
 
     ejecutar("Vista: vista_balance_inventario", """
@@ -1040,9 +1063,9 @@ def run_migration():
     SELECT 
         c.nombre AS categoria,
         COUNT(p.id) AS total_productos,
-        SUM(p.stock) AS total_stock,
-        SUM(p.stock * p.precio_compra) AS valor_costo,
-        SUM(p.stock * p.precio_venta) AS valor_venta
+        SUM(p.stock_actual) AS total_stock,
+        SUM(p.stock_actual * p.costo) AS valor_costo,
+        SUM(p.stock_actual * p.precio_venta) AS valor_venta
     FROM productos p
     LEFT JOIN categorias c ON p.categoria_id = c.id
     WHERE p.activo = 1
@@ -1052,14 +1075,14 @@ def run_migration():
     ejecutar("Vista: vista_top_productos_vendidos", """
     CREATE OR ALTER VIEW vista_top_productos_vendidos AS
     SELECT TOP 20
-        p.id, p.codigo, p.nombre, 
+        p.id, p.codigo_sku AS codigo, p.nombre,
         SUM(dv.cantidad) AS total_vendido,
         SUM(dv.subtotal) AS total_ingreso
     FROM detalle_ventas dv
     INNER JOIN productos p ON dv.producto_id = p.id
     INNER JOIN ventas v ON dv.venta_id = v.id
     WHERE v.estado = 'Completada'
-    GROUP BY p.id, p.codigo, p.nombre
+    GROUP BY p.id, p.codigo_sku, p.nombre
     ORDER BY total_vendido DESC;
     """)
 
@@ -1081,21 +1104,21 @@ def run_migration():
     ]
     for clave, valor, desc in parametros:
         ejecutar(f"Parametro: {clave}", f"""
-        IF NOT EXISTS (SELECT 1 FROM parametros_laborales WHERE clave = '{clave}')
-            INSERT INTO parametros_laborales (clave, valor, descripcion) VALUES ('{clave}', '{valor}', '{desc}');
+        IF NOT EXISTS (SELECT 1 FROM parametros_laborales WHERE codigo = '{clave}')
+            INSERT INTO parametros_laborales (codigo, nombre, valor, descripcion) VALUES ('{clave}', '{clave}', '{valor}', '{desc}');
         """)
 
     obligaciones = [
-        ('Pago INSS', 'Pago mensual de cuotas INSS laboral y patronal', '2026-11-17', 'Pendiente'),
-        ('Pago INATEC', 'Pago mensual de aporte INATEC 2%', '2026-11-17', 'Pendiente'),
-        ('Declaracion IR', 'Retencion mensual de IR sobre salarios', '2026-11-05', 'Pendiente'),
-        ('Aguinaldo', 'Pago de decimo tercer mes (antes del 10 de diciembre)', '2026-12-10', 'Pendiente'),
+        ('Pago INSS', 'INSS', 'Mensual', 'Pago mensual de cuotas INSS laboral y patronal', '2026-11-17', 'Pendiente'),
+        ('Pago INATEC', 'INATEC', 'Mensual', 'Pago mensual de aporte INATEC 2%', '2026-11-17', 'Pendiente'),
+        ('Declaracion IR', 'DGI', 'Mensual', 'Retencion mensual de IR sobre salarios', '2026-11-05', 'Pendiente'),
+        ('Aguinaldo', 'Interno', 'Anual', 'Pago de decimo tercer mes (antes del 10 de diciembre)', '2026-12-10', 'Pendiente'),
     ]
-    for obl, desc, fv, est in obligaciones:
+    for obl, inst, periodo, desc, fv, est in obligaciones:
         ejecutar(f"Obligacion: {obl}", f"""
-        IF NOT EXISTS (SELECT 1 FROM calendario_obligaciones WHERE obligacion = '{obl}')
-            INSERT INTO calendario_obligaciones (obligacion, descripcion, fecha_vencimiento, estado) 
-            VALUES ('{obl}', '{desc}', '{fv}', '{est}');
+        IF NOT EXISTS (SELECT 1 FROM calendario_obligaciones WHERE nombre_obligacion = '{obl}')
+            INSERT INTO calendario_obligaciones (nombre_obligacion, institucion, periodo, observaciones, fecha_vencimiento, estado)
+            VALUES ('{obl}', '{inst}', '{periodo}', '{desc}', '{fv}', '{est}');
         """)
 
     roles = [
@@ -1167,8 +1190,8 @@ def run_migration():
     ]
     for nombre, desc, salario, depto in cargos_iniciales:
         ejecutar(f"Cargo: {nombre}", f"""
-        IF NOT EXISTS (SELECT 1 FROM cargos WHERE nombre = '{nombre}')
-            INSERT INTO cargos (nombre, descripcion, salario_base, departamento) 
+        IF NOT EXISTS (SELECT 1 FROM cargos WHERE nombre_cargo = '{nombre}')
+            INSERT INTO cargos (nombre_cargo, descripcion, salario_base_sugerido, area)
             VALUES ('{nombre}', '{desc}', {salario}, '{depto}');
         """)
 

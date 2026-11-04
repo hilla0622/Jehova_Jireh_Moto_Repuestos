@@ -69,7 +69,7 @@ class RRHHTest(unittest.TestCase):
         self.db.execute("""INSERT INTO empleados
             (nombre_completo, identificacion, cargo, salario_base, fecha_ingreso, activo, dias_vacaciones_disponibles)
             VALUES ('Empleado prueba','TEST-1','Mecánico',10000,'2025-01-01',1,10)""")
-        for code in ('6.1.01','6.1.11','6.1.12','2.1.04','2.1.06','2.1.07','2.1.08'):
+        for code in ('6.1.01','6.1.11','6.1.12','2.1.04','2.1.06','2.1.07','2.1.08','1.1.01','1.1.02'):
             self.db.execute("INSERT INTO cuentas_contables (codigo,nombre,clasificacion,naturaleza) VALUES (?,?,'Pasivo corriente','Acreedora')", (code, code))
         for code, value in [('INSS_LABORAL',7),('INSS_PATRONAL',21.5),('INATEC_PATRONAL',2),('VACACIONES_MES',2.5),('HORAS_EXTRAS_RECARGO',100)]:
             self.db.execute("INSERT INTO parametros_laborales (codigo,nombre,valor,unidad) VALUES (?,?,?,'%')", (code,code,value))

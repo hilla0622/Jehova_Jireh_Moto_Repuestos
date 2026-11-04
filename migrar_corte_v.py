@@ -261,35 +261,49 @@ def run_migration():
 
     # 11. LIQUIDACIONES LABORALES (RF108)
     exec_sql("""
-    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='liquidaciones_laborales')
+    IF OBJECT_ID('liquidaciones_laborales', 'U') IS NULL
     BEGIN
-        CREATE TABLE liquidaciones_laborales (
-            id INT IDENTITY(1,1) PRIMARY KEY,
-            codigo VARCHAR(50) NOT NULL UNIQUE,
-            empleado_id INT NOT NULL,
-            fecha_ingreso DATE NOT NULL,
-            fecha_egreso DATE NOT NULL,
-            motivo_salida VARCHAR(100) NOT NULL,
-            salario_base DECIMAL(12,2) NOT NULL,
-            salario_promedio_6m DECIMAL(12,2) NOT NULL,
-            anios_servicio DECIMAL(5,2) NOT NULL,
-            dias_pendientes_pago INT DEFAULT 0,
-            monto_dias_pendientes DECIMAL(12,2) DEFAULT 0.00,
-            dias_vacaciones_pendientes DECIMAL(5,2) DEFAULT 0.00,
-            monto_vacaciones DECIMAL(12,2) DEFAULT 0.00,
-            monto_aguinaldo_proporcional DECIMAL(12,2) DEFAULT 0.00,
-            monto_indemnizacion_antiguedad DECIMAL(12,2) DEFAULT 0.00,
-            total_percepciones DECIMAL(12,2) NOT NULL,
-            deduccion_inss_salario DECIMAL(12,2) DEFAULT 0.00,
-            deduccion_ir DECIMAL(12,2) DEFAULT 0.00,
-            otras_deducciones DECIMAL(12,2) DEFAULT 0.00,
-            neto_a_pagar DECIMAL(12,2) NOT NULL,
-            estado VARCHAR(30) DEFAULT 'Borrador',
-            observaciones VARCHAR(MAX) NULL,
-            created_at DATETIME DEFAULT GETDATE(),
-            CONSTRAINT fk_liquidaciones_emp FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+        CREATE TABLE [liquidaciones_laborales] (
+            [id] int IDENTITY(1,1) NOT NULL,
+            [codigo] varchar(50) NOT NULL,
+            [empleado_id] int NOT NULL,
+            [fecha_ingreso] date NOT NULL,
+            [fecha_salida] date NOT NULL,
+            [motivo_salida] varchar(100) NOT NULL,
+            [salario_base] decimal(12,2) NOT NULL,
+            [antiguedad_anios] int DEFAULT ((0)) NULL,
+            [antiguedad_meses] int DEFAULT ((0)) NULL,
+            [antiguedad_dias] int DEFAULT ((0)) NULL,
+            [monto_dias_pendientes] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [dias_vacaciones_pendientes] decimal(6,2) DEFAULT ((0.00)) NULL,
+            [monto_vacaciones] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [monto_aguinaldo_proporcional] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [monto_indemnizacion_antiguedad] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [total_percepciones] decimal(12,2) NOT NULL,
+            [deducciones_totales] decimal(12,2) DEFAULT ((0.00)) NULL,
+            [neto_a_pagar] decimal(12,2) NOT NULL,
+            [estado] varchar(30) DEFAULT ('Borrador') NULL,
+            [metodo_pago] varchar(50) NULL,
+            [numero_referencia] varchar(100) NULL,
+            [cuenta_id] int NULL,
+            [asiento_id] int NULL,
+            [fecha_pago] date NULL,
+            [elaborado_por] varchar(100) NULL,
+            [fecha_elaboracion] datetime DEFAULT (getdate()) NULL,
+            CONSTRAINT [pk_liquidaciones_laborales] PRIMARY KEY ([id]),
+            CONSTRAINT [fk_liquidaciones_emp] FOREIGN KEY ([empleado_id]) REFERENCES [empleados]([id])
         );
-    END
+    END;
+    IF COL_LENGTH('liquidaciones_laborales','metodo_pago') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD metodo_pago varchar(50) NULL;
+    IF COL_LENGTH('liquidaciones_laborales','numero_referencia') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD numero_referencia varchar(100) NULL;
+    IF COL_LENGTH('liquidaciones_laborales','cuenta_id') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD cuenta_id int NULL;
+    IF COL_LENGTH('liquidaciones_laborales','asiento_id') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD asiento_id int NULL;
+    IF COL_LENGTH('liquidaciones_laborales','fecha_pago') IS NULL
+        ALTER TABLE liquidaciones_laborales ADD fecha_pago date NULL;
     """)
     print("11. liquidaciones_laborales OK")
 

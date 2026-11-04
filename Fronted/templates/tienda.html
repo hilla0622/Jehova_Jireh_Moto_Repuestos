@@ -180,7 +180,7 @@
 
             <!-- Vista 1: Formulario de Invitado -->
             <div id="checkout-form-view">
-                <h2 class="modal-title">Detalles de Envío</h2>
+                <h2 class="modal-title">Datos para retirar en tienda</h2>
                 <form id="form-checkout">
                     <div class="form-group">
                         <label>Nombre Completo (Obligatorio)</label>
@@ -195,38 +195,31 @@
                         <input type="tel" id="checkout-phone" class="form-control" placeholder="+505 8888-8888">
                     </div>
                     <div class="form-group">
-                        <label>Forma de Entrega</label>
-                        <select id="checkout-delivery" class="form-control">
-                            <option value="Envío a Domicilio">Envío a Domicilio</option>
-                            <option value="Retiro en Tienda">Retiro en Tienda</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="group-checkout-address">
-                        <label>Dirección de Entrega</label>
-                        <input type="text" id="checkout-address" class="form-control" required placeholder="Calle, Barrio o Punto de Referencia" value="{{ session.user.get('direccion', '') if session.user else '' }}">
+                        <p><i class="ph-bold ph-storefront"></i> Retiro en tienda · Sucursal Masatepe</p>
+                        <p style="color:var(--text-muted); font-size:0.9rem;">Recogé tu pedido en nuestra tienda.</p>
                     </div>
                     <div class="form-group">
                         <label>Método de Pago</label>
                         <select id="checkout-method" class="form-control">
-                            <option value="Efectivo">Efectivo contra entrega</option>
+                            <option value="Efectivo">Efectivo al retirar en tienda</option>
                             <option value="Transferencia">Transferencia Bancaria</option>
                             <option value="Tarjeta">Tarjeta de Crédito / Débito</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn-block">Pagar Ahora</button>
+                    <button type="submit" class="btn-block">Enviar pedido</button>
                 </form>
             </div>
 
             <!-- Vista 2: Éxito + Opción Híbrida de Registro -->
             <div id="checkout-success-view" class="success-view">
                 <i>✓</i>
-                <h2 class="modal-title">¡Compra Exitosa!</h2>
-                <p style="color:var(--text-muted)">Tu pedido ha sido procesado. Te enviaremos el recibo a tu correo.</p>
+                <h2 class="modal-title">¡Pedido recibido!</h2>
+                <p style="color:var(--text-muted)">Tu pedido queda pendiente de pago para retiro en la tienda de Masatepe.</p>
 
                 {% if not session.user %}
                 <div class="hybrid-offer">
                     <h3 style="margin-bottom: 1rem; font-size: 1.2rem;">¿Quieres rastrear tus pedidos?</h3>
-                    <p style="color:var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Tus datos de envío ya
+                    <p style="color:var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Tus datos de contacto ya
                         están guardados. Solo crea una contraseña para tener una cuenta permanente.</p>
                     <form id="form-hybrid-register">
                         <div class="form-group">
@@ -239,7 +232,7 @@
                 </div>
                 {% else %}
                 <div class="hybrid-offer" style="border:none; margin-top:1rem; padding-top:0;">
-                    <button type="button" class="btn-block" onclick="imprimirFactura()" style="background:var(--accent-color); color:white; margin-top:1rem; font-size:1.1rem;">🖨️ Imprimir Factura</button>
+                    <button type="button" class="btn-block" onclick="imprimirFactura()" style="background:var(--accent-color); color:white; margin-top:1rem; font-size:1.1rem;">🖨️ Imprimir resumen del pedido</button>
                 </div>
                 {% endif %}
             </div>
@@ -248,7 +241,7 @@
 
 
 
-    <script src="{{ url_for('static', filename='js/tienda.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/tienda.js') }}?v=2.3"></script>
 </body>
 
 </html>

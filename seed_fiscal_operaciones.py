@@ -32,7 +32,9 @@ def cargar(conn):
         )""")
     cur.execute('SELECT clave FROM demo_fiscal_origenes WITH (UPDLOCK,HOLDLOCK) WHERE clave=?',(VERSION,))
     if cur.fetchone():
-        return verificar(conn, {})
+        from mejorar_datos_historicos import corregir
+        cambios = corregir(conn)
+        return verificar(conn, cambios)
     # Crear el escenario inicial si aún no existe. Después se transforma en esta transacción.
     from seed_fiscal_demo import cargar as cargar_base
     cargar_base(conn)
@@ -201,6 +203,8 @@ def cargar(conn):
         did=fiscal.guardar_declaracion_completa(cur,sim,uid)
         origen('DECLARACION-'+str(anio),'declaraciones_ir',did,f'{anio}-12-31',sim['liquidacion']['saldo_a_pagar'])
     origen(VERSION,'carga_demostracion',None,'2025-12-31',parametros=PARAMETROS)
+    from mejorar_datos_historicos import corregir
+    corregir(conn)
     return verificar(conn,dict(counts))
 
 
@@ -213,14 +217,19 @@ def verificar(conn, insertados):
             raise ValueError(f'Balance {anio} descuadrado; se cancela la carga.')
         cur.execute("""SELECT SUM(d.subtotal),SUM(d.cantidad*d.costo_historico)
             FROM ventas v JOIN detalle_ventas d ON d.venta_id=v.id
-            WHERE v.codigo_venta LIKE 'DEMO-V-%' AND YEAR(v.fecha_venta)=?""",(anio,))
+            WHERE EXISTS (SELECT 1 FROM demo_fiscal_origenes o WHERE o.tabla_origen='ventas'
+                AND o.documento_id=v.id AND o.clave LIKE 'VENTA-%') AND YEAR(v.fecha_venta)=?""",(anio,))
         ingresos,costos=map(float,cur.fetchone())
         if ingresos!=sim['resultados']['total_ingresos_brutos'] or costos!=sim['resultados']['total_costos']:
             raise ValueError(f'Ventas y costos no coinciden con el IR {anio}.')
-        cur.execute("""SELECT SUM(c.total) FROM compras c WHERE c.codigo_compra LIKE 'DEMO-C-%'
+        cur.execute("""SELECT SUM(c.total) FROM compras c WHERE EXISTS
+            (SELECT 1 FROM demo_fiscal_origenes o WHERE o.tabla_origen='compras'
+                AND o.documento_id=c.id AND o.clave LIKE 'COMPRA-%')
             AND YEAR(c.fecha_compra)=?""",(anio,))
         if float(cur.fetchone()[0])!=costos: raise ValueError(f'Compras no coinciden con costo vendido {anio}.')
-        cur.execute("""SELECT SUM(c.total) FROM compras c WHERE c.codigo_compra LIKE 'DEMO-G-%'
+        cur.execute("""SELECT SUM(c.total) FROM compras c WHERE EXISTS
+            (SELECT 1 FROM demo_fiscal_origenes o WHERE o.tabla_origen='compras'
+                AND o.documento_id=c.id AND o.clave LIKE 'GASTOS-%')
             AND YEAR(c.fecha_compra)=?""",(anio,))
         gastos_compras=float(cur.fetchone()[0])
         cur.execute("""SELECT SUM(d.salario_base),SUM(d.inss_patronal+d.inatec_patronal),
@@ -238,9 +247,10 @@ def verificar(conn, insertados):
             **sim['liquidacion']}
     # Cobro neto + retención respaldan el total de cada venta.
     cur.execute("""SELECT v.id FROM ventas v
+        JOIN demo_fiscal_origenes o ON o.tabla_origen='ventas' AND o.documento_id=v.id AND o.clave LIKE 'VENTA-%'
         LEFT JOIN (SELECT venta_id,SUM(monto) monto FROM pagos GROUP BY venta_id) p ON p.venta_id=v.id
-        LEFT JOIN acreditamientos_tributarios ac ON ac.numero_referencia=REPLACE(v.codigo_venta,'DEMO-V-','DEMO-IR-')+'-RET'
-        WHERE v.codigo_venta LIKE 'DEMO-V-%' AND ABS(v.total-ISNULL(p.monto,0)-ISNULL(ac.importe_total,0))>.001""")
+        LEFT JOIN acreditamientos_tributarios ac ON ac.numero_referencia='DEMO-IR-'+SUBSTRING(o.clave,7,7)+'-RET'
+        WHERE ABS(v.total-ISNULL(p.monto,0)-ISNULL(ac.importe_total,0))>.001""")
     if cur.fetchone(): raise ValueError('Venta DEMO sin respaldo completo de cobro y retención.')
     cur.execute("""SELECT d.id FROM detalle_nomina d JOIN empleados e ON e.id=d.empleado_id
         LEFT JOIN (SELECT nomina_id,empleado_id,SUM(monto_pagado) monto FROM pagos_nomina
@@ -259,7 +269,8 @@ def verificar(conn, insertados):
     if cur.fetchone(): raise ValueError('Las fechas de los documentos y sus asientos no coinciden.')
     cur.execute('SELECT clave,tabla_origen,documento_id,asiento_id,fecha,importe,detalle FROM demo_fiscal_origenes ORDER BY fecha,clave')
     fuentes=[dict(zip([c[0] for c in cur.description],r)) for r in cur.fetchall()]
-    return {'marca':MARK,'version':VERSION,'insertados':insertados,'ejercicios':resultados,'fuentes':fuentes}
+    version = 'OPERACIONES-V2' if any(f['clave']=='OPERACIONES-V2' for f in fuentes) else VERSION
+    return {'marca':MARK,'version':version,'insertados':insertados,'ejercicios':resultados,'fuentes':fuentes}
 
 
 def main():

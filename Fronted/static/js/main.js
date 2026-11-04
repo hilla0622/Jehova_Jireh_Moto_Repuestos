@@ -199,6 +199,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filterVentas) {
         filterVentas.addEventListener('input', (e) => filterHistorialVentasTable(e.target.value));
     }
+    const ordenVentas = document.getElementById('orden-historial-ventas');
+    if (ordenVentas) {
+        ordenVentas.addEventListener('change', () => filterHistorialVentasTable(filterVentas?.value || ''));
+    }
 
     const filterPedidosWeb = document.getElementById('filter-pedidos-web');
     if (filterPedidosWeb) {
@@ -1231,8 +1235,7 @@ async function loadHistorialVentas() {
         const ventas = await res.json();
         ventasCache = ventas;
         
-        const ventasFisicas = ventas.filter(v => !v.codigo_venta || !v.codigo_venta.startsWith('WEB-'));
-        renderHistorialVentasTable(ventasFisicas);
+        filterHistorialVentasTable(document.getElementById('filter-historial-ventas')?.value || '');
     } catch (err) {
         console.error('Error al cargar ventas:', err);
     }
@@ -1247,8 +1250,11 @@ function renderHistorialVentasTable(ventas) {
         return;
     }
 
-    const reversed = [...ventas].reverse();
-    tbody.innerHTML = reversed.map(v => `
+    const direccion = document.getElementById('orden-historial-ventas')?.value === 'asc' ? 1 : -1;
+    const ordenadas = [...ventas].sort((a, b) => direccion * (
+        String(a.fecha || '').localeCompare(String(b.fecha || '')) || Number(a.id) - Number(b.id)
+    ));
+    tbody.innerHTML = ordenadas.map(v => `
         <tr>
             <td><strong>${v.codigo_venta}</strong></td>
             <td>${v.fecha}</td>
@@ -1300,35 +1306,43 @@ function renderPedidosWebTable(pedidos) {
         return;
     }
 
+    const escapar = valor => String(valor ?? '').replace(/[&<>"']/g, c =>
+        ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
     tbody.innerHTML = pedidos.map(p => {
-        const estadoBadge = p.estado === 'Anulado' 
+        const pendiente = p.estado === 'Pendiente';
+        const estadoBadge = pendiente
+            ? '<span class="badge" style="background:#fef3c7;color:#92400e;">Pendiente de cobro</span>'
+            : p.estado === 'Anulado'
             ? '<span class="text-accent-red font-bold" style="font-size:0.8rem;"><i class="ph-bold ph-x-circle"></i> Anulado</span>'
-            : '<span style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">' + (p.estado || 'Completado') + '</span>';
+            : '<span style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">' + escapar(p.estado || 'Completado') + '</span>';
         
-        const formaEntregaBadge = p.formaEntrega === 'Retiro en Tienda'
-            ? `<span style="font-size: 0.78rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 0.2rem 0.45rem; border-radius: 4px;"><i class="ph-bold ph-storefront"></i> ${p.formaEntrega}</span>`
-            : `<span style="font-size: 0.78rem; background: rgba(245, 158, 11, 0.15); color: #fbbf24; padding: 0.2rem 0.45rem; border-radius: 4px;"><i class="ph-bold ph-truck"></i> ${p.formaEntrega || 'Envío a Domicilio'}</span>`;
+        const formaEntregaBadge = `<span style="font-size: 0.78rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 0.2rem 0.45rem; border-radius: 4px;"><i class="ph-bold ph-storefront"></i> ${escapar(p.formaEntrega || 'Retiro en Tienda')}</span>`;
 
-        const direccionTexto = p.direccion_entrega ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-top: 3px;" title="${p.direccion_entrega}"><i class="ph-bold ph-map-pin"></i> ${p.direccion_entrega}</div>` : '';
-        const contactoTexto = (p.telefono ? `<div><i class="ph-bold ph-phone"></i> ${p.telefono}</div>` : '') + (p.email ? `<div style="font-size: 0.75rem; color: #94a3b8;"><i class="ph-bold ph-envelope"></i> ${p.email}</div>` : '');
+        const direccionTexto = p.direccion_entrega ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-top: 3px;" title="${escapar(p.direccion_entrega)}"><i class="ph-bold ph-map-pin"></i> ${escapar(p.direccion_entrega)}</div>` : '';
+        const contactoTexto = (p.telefono ? `<div><i class="ph-bold ph-phone"></i> ${escapar(p.telefono)}</div>` : '') + (p.email ? `<div style="font-size: 0.75rem; color: #94a3b8;"><i class="ph-bold ph-envelope"></i> ${escapar(p.email)}</div>` : '');
 
         return `
             <tr>
-                <td><strong style="color: #f97316;">${p.codigo}</strong></td>
-                <td style="font-size: 0.82rem;">${p.fecha}</td>
-                <td><strong>${p.cliente || 'Invitado'}</strong></td>
+                <td><strong style="color: #f97316;">${escapar(p.codigo)}</strong></td>
+                <td style="font-size: 0.82rem;">${escapar(p.fecha)}</td>
+                <td><strong>${escapar(p.cliente || 'Invitado')}</strong></td>
                 <td style="font-size: 0.82rem;">${contactoTexto || '<span class="text-muted">N/D</span>'}</td>
                 <td>
                     ${formaEntregaBadge}
                     ${direccionTexto}
                 </td>
-                <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${p.metodo || 'Efectivo'}</span></td>
+                <td><span style="font-size: 0.8rem; background: var(--bg-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">${escapar(p.metodo || 'Efectivo')}</span></td>
                 <td style="font-weight: 700; color: var(--accent-green); font-size: 0.95rem;">$${formatMoneda(p.total, '')}</td>
-                <td>${estadoBadge}</td>
+                <td>
+                    ${estadoBadge}
+                    ${pendiente ? `<button type="button" class="btn btn-primary icon-btn-text" style="margin-top:0.4rem; white-space:nowrap;" onclick="confirmarPagoPedidoWeb(${p.id})"><i class="ph-bold ph-cash-register"></i> Confirmar cobro</button>` : ''}
+                </td>
                 <td style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                    ${pendiente ? '' : `
                     <button class="btn btn-secondary icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="verComprobantePedidoWeb(${p.id})">
                         <i class="ph-bold ph-receipt"></i> Ver Factura
                     </button>
+                    `}
                     ${p.estado === 'Anulado' ? '' : `
                     <button class="btn btn-danger icon-btn-text" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;" onclick="anularPedidoWeb(${p.id})">
                         <i class="ph-bold ph-trash"></i> Anular
@@ -1366,7 +1380,7 @@ function verComprobantePedidoWeb(pedidoId) {
         fecha: pedido.fecha,
         cliente: `${pedido.cliente || 'Invitado'}${pedido.telefono ? ' (Tel: ' + pedido.telefono + ')' : ''}`,
         vendedor: 'Tienda Online (Portal Web)',
-        forma_pago: `${pedido.metodo || 'Efectivo'} | ${pedido.formaEntrega || 'Envío'}`,
+        forma_pago: `${pedido.metodo || 'Efectivo'} | ${pedido.formaEntrega || 'Retiro en Tienda'}`,
         total: pedido.total,
         detalles: (pedido.detalles || []).map(d => ({
             producto_nombre: d.producto_nombre,
@@ -1378,6 +1392,36 @@ function verComprobantePedidoWeb(pedidoId) {
 
     renderTicketComprobante(adaptada, false);
     openModal('modal-comprobante');
+}
+
+async function confirmarPagoPedidoWeb(pedidoId) {
+    const pedido = pedidosWebCache.find(p => p.id === pedidoId);
+    if (!pedido) return;
+    const metodoInicial = pedido.metodo === 'Transferencia Bancaria' ? 'Transferencia' : pedido.metodo;
+    const confirmacion = await Swal.fire({
+        title: 'Confirmar cobro en tienda',
+        text: 'Confirmá solo después de recibir el pago. Se registrará la venta y se descontará el inventario.',
+        input: 'select',
+        inputOptions: {Efectivo: 'Efectivo', Transferencia: 'Transferencia bancaria', Tarjeta: 'Tarjeta'},
+        inputValue: metodoInicial || 'Efectivo',
+        showCancelButton: true,
+        confirmButtonText: 'Registrar cobro'
+    });
+    if (!confirmacion.isConfirmed) return;
+    try {
+        const res = await fetch(`/api/pedidos_web/${pedidoId}/confirmar`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({metodo: confirmacion.value})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo confirmar el cobro.');
+        await loadPedidosWeb();
+        loadDashboardStats();
+        Swal.fire('Cobro registrado', data.comprobante, 'success');
+    } catch (error) {
+        Swal.fire('Error', error.message, 'error');
+    }
 }
 
 async function anularPedidoWeb(pedidoId) {

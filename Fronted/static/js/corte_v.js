@@ -1820,6 +1820,7 @@ async function guardarHorasExtras(e) {
 async function cargarLiquidacionesLaborales() {
     try {
         const res = await fetch('/api/rrhh/liquidaciones');
+        if (!res.ok) throw new Error('No se pudieron cargar las liquidaciones. Revisá la conexión y la actualización de la base de datos.');
         const data = await res.json();
         _liquidacionesCache = data;
 
@@ -1858,6 +1859,8 @@ async function cargarLiquidacionesLaborales() {
         `).join('');
     } catch (e) {
         console.error('Error cargando liquidaciones:', e);
+        const tbody = document.getElementById('tbody-liquidaciones-laborales');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No se pudieron cargar las liquidaciones. Volvé a intentarlo.</td></tr>';
     }
 }
 
@@ -1868,15 +1871,7 @@ function toggleCamposPagoLiquidacion() {
     b.style.display = (est === 'Pagado') ? 'block' : 'none';
 }
 
-function actualizarCuentaLiquidacion() {
-    const metodo = document.getElementById('liq-metodo-pago')?.value;
-    const cta = document.getElementById('liq-cuenta-id');
-    if (!cta) return;
-    cta.value = (metodo === 'Efectivo') ? '1' : '2';
-}
-
 window.toggleCamposPagoLiquidacion = toggleCamposPagoLiquidacion;
-window.actualizarCuentaLiquidacion = actualizarCuentaLiquidacion;
 
 async function abrirModalNuevaLiquidacion() {
     await asegurarEmpleadosCache();
@@ -1899,8 +1894,7 @@ async function abrirModalNuevaLiquidacion() {
     if (b) b.style.display = 'none';
     const m = document.getElementById('liq-metodo-pago');
     if (m) m.value = 'Transferencia Bancaria';
-    const c = document.getElementById('liq-cuenta-id');
-    if (c) c.value = '2';
+    document.getElementById('liq-fecha-pago').value = '';
     const r = document.getElementById('liq-numero-referencia');
     if (r) r.value = '';
 
@@ -1914,14 +1908,12 @@ async function abrirModalNuevaLiquidacion() {
 
 async function editarLiquidacion(id) {
     await asegurarEmpleadosCache();
-    let l = _liquidacionesCache.find(x => x.id === id);
-    if (!l) {
-        try {
-            const res = await fetch(`/api/rrhh/liquidaciones/${id}`);
-            if (res.ok) l = await res.json();
-        } catch (e) {
-            console.error('Error buscando liquidación:', e);
-        }
+    let l;
+    try {
+        const res = await fetch(`/api/rrhh/liquidaciones/${id}`);
+        if (res.ok) l = await res.json();
+    } catch (e) {
+        console.error('Error buscando liquidación:', e);
     }
     if (!l) {
         Swal.fire('Error', 'Liquidación no encontrada.', 'error');
@@ -1946,8 +1938,7 @@ async function editarLiquidacion(id) {
 
     const m = document.getElementById('liq-metodo-pago');
     if (m) m.value = l.metodo_pago || 'Transferencia Bancaria';
-    const c = document.getElementById('liq-cuenta-id');
-    if (c) c.value = l.cuenta_id ? String(l.cuenta_id) : (l.metodo_pago === 'Efectivo' ? '1' : '2');
+    document.getElementById('liq-fecha-pago').value = l.fecha_pago || '';
     const r = document.getElementById('liq-numero-referencia');
     if (r) r.value = l.numero_referencia || '';
     toggleCamposPagoLiquidacion();
@@ -1975,7 +1966,7 @@ async function guardarLiquidacion(e) {
         data.estado = estEl.value;
         if (estEl.value === 'Pagado') {
             data.metodo_pago = document.getElementById('liq-metodo-pago')?.value || 'Transferencia Bancaria';
-            data.cuenta_id = parseInt(document.getElementById('liq-cuenta-id')?.value || '2');
+            data.fecha_pago = document.getElementById('liq-fecha-pago')?.value || undefined;
             data.numero_referencia = document.getElementById('liq-numero-referencia')?.value || '';
         }
     }
@@ -2071,7 +2062,7 @@ async function cargarPagosNomina() {
         tbody.innerHTML = data.map(p => `
             <tr>
                 <td><strong>${p.empleado}</strong></td>
-                <td>Nómina #${p.nomina_id}</td>
+                <td style="white-space:nowrap;">${p.nomina_mes && p.nomina_anio ? `Nómina ${p.nomina_anio}-${String(p.nomina_mes).padStart(2, '0')}` : 'Período no disponible'}</td>
                 <td>${p.fecha_pago?.slice(0, 10) || '—'}</td>
                 <td><span class="badge" style="background: rgba(59,130,246,0.15); color: #3b82f6;">${p.metodo_pago}</span></td>
                 <td><code>${p.numero_referencia || '—'}</code></td>

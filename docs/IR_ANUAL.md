@@ -99,7 +99,40 @@ El formulario y sus impresiones indican demostración cuando existen estos
 asientos hasta la fecha de corte. Los borradores guardan esa marca y la identidad
 fiscal disponible como instantánea. No se genera un RUC ficticio si falta configurar.
 
-## Verificación
+## Asistente de revisión del ejercicio
+
+En Declaración anual IR, «Analizar ejercicio» consulta de nuevo Contabilidad y
+muestra al pie del formulario un informe en prosa, en una sola columna. Explica
+la composición de ingresos, costos y gastos, el cambio del margen frente al mismo
+corte del año anterior, la conciliación fiscal y el efecto de los acreditamientos
+en el saldo. Las cifras comparativas y las observaciones con enlaces al formulario
+o a los acreditamientos se consultan en desplegables al final. No guarda ni
+aprueba declaraciones. Los valores simulados manualmente no forman parte del
+informe. Si no hay movimientos anteriores, no se inventa una comparación.
+
+El análisis contable funciona sin servicios externos. Para activar la
+interpretación con IA, guarde `OPENAI_API_KEY` de forma segura en `.env.local`,
+en la raíz del proyecto, o configure la variable en el proceso que inicia Flask:
+
+```powershell
+$env:OPENAI_API_KEY = 'su-clave-de-api'
+$env:FISCAL_AI_MODEL = 'gpt-4o-mini' # Opcional; modelo predeterminado 'gpt-4o-mini'
+```
+
+Reinicie Flask después de cambiar variables del proceso. La clave solo se utiliza
+en el servidor; no debe ponerse en JavaScript ni guardarse en el repositorio.
+`.env.local` está excluido de Git y se lee al solicitar el análisis, sin ejecutar
+su contenido. La variable del proceso tiene prioridad, incluso si se define vacía.
+La conexión usa la [API Responses](https://developers.openai.com/api/docs/guides/migrate-to-responses)
+con `store: false`. Solo envía indicadores y observaciones, sin identidad fiscal
+ni archivos. Si la clave falta o el proveedor falla, la interfaz identifica el
+resultado como «Análisis contable», sin presentarlo como generado por IA.
+
+Las observaciones no certifican cumplimiento. La ausencia de archivo adjunto
+solo indica falta de adjunto en el sistema, no invalidez fiscal del documento.
+La interpretación generada requiere revisión del contador.
+
+## Pruebas
 
 ```powershell
 python -m unittest discover -s tests -p test_fiscal.py -v

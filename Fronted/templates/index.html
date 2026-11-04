@@ -26,6 +26,7 @@
         window.usuarioRol = '{{ usuario.rol }}';
     </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fiscal_106.css') }}?v=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fiscal_analisis.css') }}?v=2.0">
 </head>
 <body class="gestion-ui">
     <div class="app-layout">
@@ -316,7 +317,7 @@
                                         <label for="pos-forma-pago">Forma de Pago:</label>
                                         <select id="pos-forma-pago" class="form-control">
                                             <option value="Efectivo">Efectivo</option>
-                                            <option value="Transferencia / Móvil">Transferencia / Móvil</option>
+                                            <option value="Transferencia">Transferencia / Móvil</option>
                                             <option value="Tarjeta">Tarjeta</option>
                                         </select>
                                     </div>
@@ -356,8 +357,15 @@
                     <!-- VISTA 2: Historial de Ventas -->
                     <div id="subtab-historial-ventas" class="subtab-view {% if usuario.rol == 'Contador' %}active{% endif %}">
                         <div class="card">
-                            <div class="table-toolbar">
+                            <div class="table-toolbar" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
                                 <input type="text" id="filter-historial-ventas" class="form-control" placeholder="Buscar por código de venta (ej. VEN-0001), cliente o vendedor...">
+                                <label for="orden-historial-ventas" style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; margin: 0;">
+                                    Orden:
+                                    <select id="orden-historial-ventas" class="form-control" style="width: auto;">
+                                        <option value="desc">Descendente: más recientes primero</option>
+                                        <option value="asc">Ascendente: más antiguas primero</option>
+                                    </select>
+                                </label>
                             </div>
                             <div class="table-responsive">
                                 <table class="data-table">
@@ -384,7 +392,7 @@
                     <div id="subtab-pedidos-web" class="subtab-view">
                         <div class="card">
                             <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                                <input type="text" id="filter-pedidos-web" class="form-control" style="flex: 1; min-width: 280px;" placeholder="Buscar por código (WEB-...), cliente, teléfono o dirección...">
+                                <input type="text" id="filter-pedidos-web" class="form-control" style="flex: 1; min-width: 280px;" placeholder="Buscar por código (WEB-...), cliente o teléfono...">
                                 <button class="btn btn-secondary" onclick="loadPedidosWeb()" title="Recargar pedidos web">
                                     <i class="ph-bold ph-arrows-clockwise"></i> Actualizar
                                 </button>
@@ -397,7 +405,7 @@
                                             <th>Fecha</th>
                                             <th>Cliente</th>
                                             <th>Contacto</th>
-                                            <th>Entrega / Dirección</th>
+                                            <th>Retiro</th>
                                             <th>Forma Pago</th>
                                             <th>Total ($)</th>
                                             <th>Estado</th>
@@ -1673,7 +1681,7 @@
                                     <table class="data-table" id="tabla-empleados">
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
+                                                <th>N.º</th>
                                                 <th>Nombre Completo</th>
                                                 <th>Cédula</th>
                                                 <th>Nº INSS</th>
@@ -3297,6 +3305,7 @@
                     <i class="ph-bold ph-list-dashes"></i> Catálogo de Cargos Registrados
                 </div>
                 <div style="overflow-x:auto; max-height:180px; overflow-y:auto; border:1px solid var(--border-color); border-radius:6px;">
+                    <label style="display:block; margin-bottom:0.75rem;"><input type="checkbox" id="cargos-mostrar-inactivos" onchange="cargarCargosRRHH()"> Mostrar también cargos inactivos</label>
                     <table class="data-table" id="tabla-cargos" style="margin:0; font-size:0.82rem;">
                         <thead>
                             <tr>
@@ -3931,18 +3940,15 @@
                         <div class="grid-2col">
                             <div class="form-group">
                                 <label>Método de Pago: *</label>
-                                <select id="liq-metodo-pago" class="form-control" onchange="actualizarCuentaLiquidacion()">
+                                <select id="liq-metodo-pago" class="form-control">
                                     <option value="Transferencia Bancaria">Transferencia Bancaria</option>
                                     <option value="Efectivo">Efectivo</option>
                                     <option value="Cheque">Cheque</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Pagar desde (Cuenta): *</label>
-                                <select id="liq-cuenta-id" class="form-control">
-                                    <option value="2">Banco General (1.1.02)</option>
-                                    <option value="1">Caja General (1.1.01)</option>
-                                </select>
+                                <label for="liq-fecha-pago">Fecha de pago</label>
+                                <input type="date" id="liq-fecha-pago" class="form-control">
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
@@ -4212,11 +4218,12 @@
                 // Actualizar tabla en modal-cargos
                 const tbody = document.getElementById('tbody-cargos');
                 if (tbody) {
-                    if (cargos.length === 0) {
+                    const visibles = cargos.filter(c => c.activo || document.getElementById('cargos-mostrar-inactivos')?.checked);
+                    if (visibles.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:1rem;">No hay cargos registrados.</td></tr>';
                         return;
                     }
-                    tbody.innerHTML = cargos.map(c => `
+                    tbody.innerHTML = visibles.map(c => `
                         <tr style="opacity:${c.activo ? '1' : '0.55'}">
                             <td><strong>${c.nombre_cargo}</strong></td>
                             <td style="color:var(--text-muted); font-size:0.83rem;">${c.descripcion || '—'}</td>
@@ -4419,7 +4426,7 @@
                 const tbody = document.getElementById('tbody-empleados');
                 if (!tbody) return;
                 if (lista.length === 0) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">No hay empleados registrados.</td></tr>'; return; }
-                tbody.innerHTML = lista.map(e => {
+                tbody.innerHTML = lista.map((e, indice) => {
                     const saldoVac = parseFloat(e.dias_vacaciones_disponibles) || 0;
                     let saldoVacBadge = '';
                     if (saldoVac > 0) {
@@ -4431,7 +4438,7 @@
                     }
                     return `
                     <tr style="opacity:${e.activo ? '1' : '0.5'}">
-                        <td>#${String(e.id).padStart(3,'0')}</td>
+                        <td>#${String(indice + 1).padStart(3,'0')}</td>
                         <td><strong>${e.nombre_completo}</strong></td>
                         <td>${e.identificacion || '—'}</td>
                         <td>${e.num_inss || '—'}</td>
@@ -5423,16 +5430,17 @@
     {% include 'rrhh_control_modales.html' %}
 
     <!-- Script Principal SPA del Sistema -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=5.6"></script>
-    <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.1"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=6.1"></script>
+    <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.3"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
-    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=5.6"></script>
+    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=6.0"></script>
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
     <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=3.0"></script>
     <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>
     <script src="{{ url_for('static', filename='js/conciliacion.js') }}?v=3.0"></script>
     <!-- Script Módulo Tributario y Declaración DGI Formulario 106 (RF129 - RF139) -->
-    <script src="{{ url_for('static', filename='js/fiscal.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='js/fiscal.js') }}?v=2.3"></script>
+    <script src="{{ url_for('static', filename='js/fiscal_analisis.js') }}?v=2.0"></script>
     <script src="{{ url_for('static', filename='js/workspace.js') }}?v=1.1"></script>
 </body>
 </html>

@@ -133,8 +133,10 @@ def register_rrhh_control_routes(app):
     @login_required
     def pagos_controlados():
         if request.method == 'GET':
-            return jsonify(serializar(execute_query('''SELECT p.*, e.nombre_completo AS empleado
+            return jsonify(serializar(execute_query('''SELECT p.*, e.nombre_completo AS empleado,
+                n.periodo_mes AS nomina_mes, n.periodo_anio AS nomina_anio
                 FROM pagos_nomina p JOIN empleados e ON e.id=p.empleado_id
+                JOIN nomina n ON n.id=p.nomina_id
                 ORDER BY p.fecha_pago DESC, p.id DESC''', fetchall=True)))
         data = request.get_json(silent=True) or {}
         try:
@@ -189,7 +191,7 @@ def register_rrhh_control_routes(app):
                     concepto_asiento = f"Pago de nómina {mes_nom:02d}/{anio_nom} - {emp_nom} ({metodo} Ref: {ref})"
                     uid = session.get('user', {}).get('id', 1)
                     cur.execute("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
-                        VALUES (GETDATE(), ?, 'RRHH_PAGO', ?, ?)""", (concepto_asiento, nid, uid))
+                        VALUES (?, ?, 'RRHH_PAGO', ?, ?)""", (dia, concepto_asiento, nid, uid))
                     asiento_id = identidad(cur)
 
                     # DEBIT: 2.1.04 Sueldos y salarios por pagar (Disminuye pasivo)
@@ -301,9 +303,10 @@ def register_rrhh_control_routes(app):
                             concepto_asiento = f"Pago de nómina {mes_nom:02d}/{anio_nom} - {emp_nom} ({nuevo_metodo} Ref: {nuevo_ref})"
                             uid = session.get('user', {}).get('id', 1)
                             cur.execute("""INSERT INTO asientos_contables (fecha, concepto, modulo_origen, referencia_id, usuario_id)
-                                VALUES (GETDATE(), ?, 'RRHH_PAGO', ?, ?)""", (concepto_asiento, nid, uid))
+                                VALUES (?, ?, 'RRHH_PAGO', ?, ?)""", (nuevo_dia, concepto_asiento, nid, uid))
                             asiento_id = identidad(cur)
                         else:
+                            cur.execute('UPDATE asientos_contables SET fecha=? WHERE id=?', (nuevo_dia, asiento_id))
                             cur.execute('DELETE FROM movimientos_contables WHERE asiento_id=?', (asiento_id,))
 
                         # DEBITO: 2.1.04 Sueldos y salarios por pagar

@@ -341,6 +341,11 @@
                                 <td class="dgi-td-num">21</td>
                                 <td class="dgi-td-val"><input type="text" id="cta-2110" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="0.00"></td>
                             </tr>
+                            <tr>
+                                <td class="dgi-td-desc"><div>Deducciones de Nómina por Conciliar (2.1.09)</div><div class="dgi-cuenta-subdetalle">Importes pendientes de distribuir según los soportes de nómina</div></td>
+                                <td class="dgi-td-num">21.a</td>
+                                <td class="dgi-td-val"><input type="text" id="cta-2109" class="dgi-input-renglon" oninput="recalcularFormularioCuentas()" value="0.00"></td>
+                            </tr>
                             <!-- 22. TOTAL PASIVOS (BORDE NEGRO GRUESO OFICIAL - IMAGEN 2) -->
                             <tr class="row-total-destacado" style="background: rgba(0, 95, 168, 0.08);">
                                 <td class="dgi-td-desc">
@@ -929,6 +934,23 @@
 
         </div>
 
+    <!-- INFORME DE ANÁLISIS: AL PIE DEL FORMULARIO -->
+    <section class="ir-insight" aria-labelledby="ir-insight-title">
+        <div class="ir-insight-heading">
+            <div>
+                <span class="ir-insight-eyebrow">LECTURA E INTERPRETACIÓN DEL EJERCICIO</span>
+                <h2 id="ir-insight-title">Análisis de la declaración anual.</h2>
+                <p>Una lectura de tus resultados, sus variaciones y su efecto en la liquidación del impuesto.</p>
+            </div>
+            <button type="button" id="ir-insight-generate" class="ir-insight-button" onclick="generarAnalisisIR()">
+                <i class="ph-bold ph-sparkle" aria-hidden="true"></i> Analizar ejercicio
+            </button>
+        </div>
+        <div class="ir-insight-context"><span id="ir-insight-period">Ejercicio seleccionado</span><span>Informe de revisión · IR anual</span></div>
+        <div id="ir-insight-status" class="ir-insight-status" role="status" aria-live="polite">Genera el informe para interpretar la información del ejercicio seleccionado.</div>
+        <div id="ir-insight-content" hidden></div>
+        <p class="ir-insight-footnote">Basado en los registros guardados en Contabilidad. Los cambios de simulación del formulario no se incluyen. La revisión y aprobación corresponden al contador.</p>
+    </section>
     </div>
 
     <!-- PESTAÑA 2: ACREDITAMIENTOS Y RETENCIONES SUFRIDAS -->

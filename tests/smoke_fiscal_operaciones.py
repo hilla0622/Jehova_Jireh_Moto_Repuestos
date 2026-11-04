@@ -1,5 +1,6 @@
 """Verifica operaciones DEMO, trazabilidad y API dentro de una transacción revertida."""
 import json
+import re
 from unittest.mock import patch
 import app
 import fiscal_service as fiscal
@@ -18,22 +19,41 @@ def main():
     conn=app.get_db_connection(); conn.autocommit=False
     try:
         cur=conn.cursor()
-        cur.execute('SELECT * FROM productos ORDER BY id'); productos=[tuple(r) for r in cur.fetchall()]
-        cur.execute('SELECT * FROM empleados ORDER BY id'); empleados=[tuple(r) for r in cur.fetchall()]
+        cur.execute("SELECT * FROM productos WHERE descripcion IS NULL OR descripcion NOT LIKE '[[]DEMO-FISCAL]%' ORDER BY id"); productos=[tuple(r) for r in cur.fetchall()]
+        cur.execute("SELECT * FROM empleados WHERE identificacion NOT LIKE 'DEMO-EMP-%' ORDER BY id"); empleados=[tuple(r) for r in cur.fetchall()]
+        cur.execute("SELECT * FROM ventas WHERE notas IS NULL OR notas NOT LIKE '[[]DEMO-FISCAL]%' ORDER BY id"); ventas=[tuple(r) for r in cur.fetchall()]
         primero=cargar(conn)
         segundo=cargar(conn)
         assert segundo['insertados']=={}, segundo['insertados']
         for anio,pagar,favor in [(2024,10755,0),(2025,0,4800)]:
             d=primero['ejercicios'][anio]
             assert d['saldo_a_pagar']==pagar and d['saldo_a_favor']==favor,d
-        # Todas las filas existentes se conservan exactamente (incluidos empleados actuales).
-        for tabla,anteriores in [('productos',productos),('empleados',empleados)]:
+        # Las operaciones y los registros ajenos a esta carga se conservan exactamente.
+        for tabla,anteriores in [('productos',productos),('empleados',empleados),('ventas',ventas)]:
             if anteriores:
                 ids=[r[0] for r in anteriores]
                 cur.execute(f"SELECT * FROM {tabla} WHERE id IN ({','.join('?' for _ in ids)}) ORDER BY id",tuple(ids))
                 assert [tuple(r) for r in cur.fetchall()]==anteriores,tabla
-        cur.execute("SELECT stock_actual FROM productos WHERE codigo_sku IN ('DEMO-IR-REP-2024','DEMO-IR-REP-2025')")
+        cur.execute("SELECT stock_actual FROM productos WHERE codigo_sku IN ('KIT901','AMO901')")
         assert [r[0] for r in cur.fetchall()]==[0,0]
+        cur.execute("""SELECT v.id,v.codigo_venta,c.nombre_completo,v.total FROM ventas v
+            JOIN clientes c ON c.id=v.cliente_id JOIN demo_fiscal_origenes o ON o.documento_id=v.id
+            AND o.tabla_origen='ventas' AND o.clave LIKE 'VENTA-%'""")
+        historicas=cur.fetchall()
+        assert len(historicas)==24
+        assert all(re.fullmatch(r'VEN-\d{4}',r.codigo_venta) for r in historicas)
+        assert len({r.nombre_completo for r in historicas})==12
+        assert 'Marcos Gaitan' in {r.nombre_completo for r in historicas}
+        assert len({r.total for r in historicas})>=12
+        cur.execute("""SELECT v.id FROM ventas v JOIN demo_fiscal_origenes o ON o.documento_id=v.id
+            AND o.tabla_origen='ventas' AND o.clave LIKE 'VENTA-%'
+            WHERE v.total<>(SELECT SUM(subtotal) FROM detalle_ventas WHERE venta_id=v.id)
+            OR EXISTS (SELECT 1 FROM comprobantes c WHERE c.venta_id=v.id
+                AND (c.total<>v.total OR c.numero<>'TICK-'+v.codigo_venta))""")
+        assert not cur.fetchone(), 'Detalles o comprobantes inconsistentes'
+        cur.execute("""SELECT id FROM productos WHERE activo=1 AND descripcion LIKE '[[]DEMO-FISCAL]%'
+            AND (nombre LIKE '%DEMO%' OR codigo_sku LIKE 'DEMO%')""")
+        assert not cur.fetchone(), 'Productos sin nombres/códigos apropiados'
         # Verificar que las pantallas pueden consultar los registros sin confirmar la carga.
         with patch.object(app,'get_db_connection',return_value=LecturaTransaccion(conn)):
             with app.app.test_client() as client:

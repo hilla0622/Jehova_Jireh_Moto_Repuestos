@@ -81,6 +81,7 @@ async function cargarInfoTributaria() {
  * Carga y mapea los saldos contables reales en el Formulario 106
  */
 async function cargarSimulacionFiscal(mostrarNotif = false) {
+    if (typeof reiniciarAnalisisIR === 'function') reiniciarAnalisisIR();
     const anioSolicitado = anioFiscalSeleccionado;
     simulacionFiscalActual = null;
     declaracionGuardadaId = null;
@@ -135,6 +136,7 @@ async function cargarSimulacionFiscal(mostrarNotif = false) {
         setIn('cta-2106', cb['2.1.06'] ?? 0);
         setIn('cta-2107', cb['2.1.07'] ?? 0);
         setIn('cta-2108', cb['2.1.08'] ?? 0);
+        setIn('cta-2109', cb['2.1.09'] ?? 0);
         setIn('cta-2110', cb['2.1.10'] ?? 0);
 
         // 3. Patrimonio
@@ -242,10 +244,11 @@ function recalcularFormularioCuentas() {
     const c2106 = val('cta-2106'); // Ret. INSS
     const c2107 = val('cta-2107'); // Ret. IR
     const c2108 = val('cta-2108'); // Provisiones sociales
+    const c2109 = val('cta-2109'); // Deducciones pendientes de distribución
     const c2110 = val('cta-2110'); // INATEC
 
     // Renglón 22: Total Pasivos (suma renglones 13 al 21)
-    const totPasivos = round2(c2101 + c2102 + c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2110);
+    const totPasivos = round2(c2101 + c2102 + c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2109 + c2110);
     setR('tot-pasivos', totPasivos);
 
     // =========================================================================
@@ -525,6 +528,7 @@ function recopilarPayloadSimulacion() {
     const c2106 = val('cta-2106');
     const c2107 = val('cta-2107');
     const c2108 = val('cta-2108');
+    const c2109 = val('cta-2109');
     const c2110 = val('cta-2110');
     const totPasivos = val('tot-pasivos');
 
@@ -569,8 +573,8 @@ function recopilarPayloadSimulacion() {
         { renglon: 16, descripcion: "Instituciones Financieras de Desarrollo", importe: 0.0, tipo: "Manual" },
         { renglon: 17, descripcion: "Resto de Instituciones Financieras", importe: 0.0, tipo: "Manual" },
         { renglon: 18, descripcion: "Casa Matriz u Otras Sucursales", importe: 0.0, tipo: "Manual" },
-        { renglon: 19, descripcion: "Otros Agentes no Financieros", importe: round2(c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2110), tipo: "Contable" },
-        { renglon: 20, descripcion: "Pasivo Fijo Nacional (suma 15+16+17+18+19)", importe: round2(c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2110), tipo: "Calculado", destacado: true },
+        { renglon: 19, descripcion: "Otros Agentes no Financieros", importe: round2(c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2109 + c2110), tipo: "Contable" },
+        { renglon: 20, descripcion: "Pasivo Fijo Nacional (suma 15+16+17+18+19)", importe: round2(c2103 + c2104 + c2105 + c2106 + c2107 + c2108 + c2109 + c2110), tipo: "Calculado", destacado: true },
         { renglon: 21, descripcion: "Dividendos Pagados no Residentes", importe: 0.0, tipo: "Manual" },
         { renglon: 22, descripcion: "Dividendos por pagar no Residentes", importe: 0.0, tipo: "Manual" },
         { renglon: 23, descripcion: "Instituciones Financieras Ext", importe: 0.0, tipo: "Manual" }
@@ -1466,6 +1470,7 @@ function imprimirFormulario106() {
                     <tr><td class="text-center">19</td><td>2.1.07 Retenciones IR por Pagar</td><td class="text-right">${fmt(val('cta-2107'))}</td></tr>
                     <tr><td class="text-center">20</td><td>2.1.08 Provisiones Sociales por Pagar (Aguinaldo)</td><td class="text-right">${fmt(val('cta-2108'))}</td></tr>
                     <tr><td class="text-center">21</td><td>2.1.10 INATEC por Pagar</td><td class="text-right">${fmt(val('cta-2110'))}</td></tr>
+                    <tr><td class="text-center">21.a</td><td>2.1.09 Deducciones de Nómina por Conciliar</td><td class="text-right">${fmt(val('cta-2109'))}</td></tr>
                     <tr class="total-row" style="background: #e0f2fe;"><td class="text-center"><strong>22</strong></td><td><strong style="color: #005fa8;">TOTAL PASIVOS (13 al 21)</strong></td><td class="text-right"><strong style="color: #005fa8;">${fmt(val('tot-pasivos'))}</strong></td></tr>
                     <tr><td class="text-center">23</td><td>3.1.01 Capital del Propietario</td><td class="text-right">${fmt(val('cta-3101'))}</td></tr>
                     <tr><td class="text-center">24</td><td>3.1.02 Utilidades Acumuladas</td><td class="text-right">${fmt(val('cta-3102'))}</td></tr>

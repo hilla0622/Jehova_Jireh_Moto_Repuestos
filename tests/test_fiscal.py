@@ -8,6 +8,12 @@ import app as backend
 
 
 class FiscalTests(unittest.TestCase):
+    def test_deducciones_pendientes_forman_parte_del_pasivo(self):
+        sim=fiscal.mapear_formulario_106({'anio':2024,'fecha_fin':'2024-12-31',
+            'balance':{'1.1.02':{'saldo':100},'2.1.09':{'saldo':100}},'resultados':{}})
+        self.assertEqual(sim['balance']['total_pasivos'],100)
+        self.assertTrue(sim['balance']['balance_cuadrado'])
+
     def sim(self):
         return fiscal.mapear_formulario_106({
             'anio': 2024, 'fecha_fin': '2024-12-31', 'balance': {}, 'resultados': {}})

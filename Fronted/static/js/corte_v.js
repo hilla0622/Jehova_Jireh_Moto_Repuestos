@@ -860,7 +860,7 @@ function aplicarFiltroLocalTablaABC() {
                 <td>${badgeClase}</td>
                 <td><code style="font-size: 0.8rem;">${p.codigo || '—'}</code></td>
                 <td><strong>${p.nombre}</strong></td>
-                <td><span style="font-size: 0.82rem; color: var(--text-muted);">${p.categoria || '—'}</span></td>
+                <td><span class="badge-categoria" style="font-size: 0.70rem; font-weight: 500; line-height: 1.2; background: rgba(100, 116, 139, 0.1); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.25); padding: 2px 7px; border-radius: 4px; display: inline-block; white-space: nowrap;">${p.categoria || '—'}</span></td>
                 <td style="text-align: center; font-weight: 700; ${bajoStock ? 'color: var(--accent-red);' : ''}">${formatCantidad(p.stock)}${stockIcon}</td>
                 <td style="text-align: right;">${formatMoneda(p.costo)}</td>
                 <td style="text-align: right; font-weight: 700; color: var(--warning);">${formatMoneda(p.valor_inmovilizado)}</td>

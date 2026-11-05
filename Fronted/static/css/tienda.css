@@ -640,6 +640,9 @@ body {
 }
 
 .product-image {
+    position: relative;
+    display: grid;
+    place-items: center;
     height: 160px;
     margin: -1.5rem -1.5rem 1rem;
     overflow: hidden;
@@ -649,10 +652,17 @@ body {
 }
 
 .product-image img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
     transition: transform 220ms ease-out;
+}
+
+.product-image-placeholder {
+    color: #475569;
+    font-size: 0.85rem;
 }
 
 @media (hover: hover) {

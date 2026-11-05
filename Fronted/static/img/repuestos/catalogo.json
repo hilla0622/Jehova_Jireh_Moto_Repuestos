@@ -1,0 +1,1884 @@
+{
+  "ACE-CAS-20W50": {
+    "archivo": "ace-cas-20w50.webp",
+    "fuente": "https://shopee.co.id/Castrol-Activ-4T-SAE-20W-50-Oli-Pelumas-1-L--i.287137399.8019367261",
+    "referencia": "Castrol Activ 4T SAE 20W-50 1 L",
+    "referencial": false
+  },
+  "ACE-MOT-10W40": {
+    "archivo": "ace-mot-10w40.webp",
+    "fuente": "https://shopee.com.br/MOTUL-5100-10W40-4T-1L-i.1113251919.22292659642",
+    "referencia": "Motul 5100 4T 10W-40 1 L",
+    "referencial": false
+  },
+  "ACE-MOT-20W50": {
+    "archivo": "ace-mot-20w50.webp",
+    "fuente": "https://mistermoto.com.gt/product/motul-3000-20w50-4t-1-litro/",
+    "referencia": "Motul 3000 20W50 4T 1L | Aceite Mineral de Alto Kilometraje - Mister moto",
+    "referencial": false
+  },
+  "ACE-REP-20W50": {
+    "archivo": "ace-rep-20w50.webp",
+    "fuente": "https://www.kmmotos.com/products/aceite-repsol-20w50-mineral",
+    "referencia": "Aceite Repsol 20W50 Mineral",
+    "referencial": true
+  },
+  "AMO-CG150-PAR": {
+    "archivo": "amo-cg150-par.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "amortiguador-cg",
+    "referencial": true
+  },
+  "AMO026": {
+    "archivo": "amo026.webp",
+    "fuente": "https://www.kmmotos.com/products/amortiguadores-gn125-kms",
+    "referencia": "Amortiguadores GN125 KMS",
+    "referencial": true
+  },
+  "AMO033": {
+    "archivo": "amo033.webp",
+    "fuente": "https://http2.mlstatic.com/D_NQ_NP_636126-MCO105563192083_012026-O.webp",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI018": {
+    "archivo": "ani018.webp",
+    "fuente": "https://www.kmmotos.com/cdn/shop/files/KM-CA0022.png?v=1747533896",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI059": {
+    "archivo": "ani088.webp",
+    "fuente": "https://www.kmmotos.com/cdn/shop/files/KM-FA0009.png?v=1751085339",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI060": {
+    "archivo": "ani060.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPyGjY3DlvH542NxaGn40dkrTaPEVqOUjYV_AJcwBIzw&s",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI061": {
+    "archivo": "ani061.webp",
+    "fuente": "https://www.kmmotos.com/cdn/shop/files/KM-CA0023.png?v=1752372388",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI062": {
+    "archivo": "ani062.webp",
+    "fuente": "https://www.kmmotos.com/cdn/shop/files/9905602002159.png?v=1746790697&width=1920",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI066": {
+    "archivo": "ani066.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCZ4eMWxX-RwYcHONIl5xSAaWRH278uz5d2tysrrZnlA&s=10",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI086": {
+    "archivo": "ani088.webp",
+    "fuente": "https://www.kmmotos.com/cdn/shop/files/KM-FA0009.png?v=1751085339",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI088": {
+    "archivo": "ani088.webp",
+    "fuente": "https://www.kmmotos.com/cdn/shop/files/KM-FA0009.png?v=1751085339",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI089": {
+    "archivo": "ani088.webp",
+    "fuente": "https://www.kmmotos.com/cdn/shop/files/KM-FA0009.png?v=1751085339",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ANI098": {
+    "archivo": "ani098.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNmdKAc_9J6iDx_9LB-h16gGJyLIeK2uxC8Aj6gZAMJw&s=10",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ARA050": {
+    "archivo": "ara050.webp",
+    "fuente": "https://www.corporacionhongju.com/Articulo/Detalle?C_ART=929",
+    "referencia": "Canasta de clutch CG150 73T",
+    "referencial": true
+  },
+  "ARA051": {
+    "archivo": "ara050.webp",
+    "fuente": "https://www.corporacionhongju.com/Articulo/Detalle?C_ART=929",
+    "referencia": "Canasta de clutch CG150 73T",
+    "referencial": true
+  },
+  "ARB032": {
+    "archivo": "arb032.webp",
+    "fuente": "https://m.media-amazon.com/images/I/61yNk53rVYL._AC_UF894,1000_QL80_.jpg",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ARB042": {
+    "archivo": "arb042.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSkGwYBJ1OGYPMzebGpY6vLw5unHSwnFYz8oUSOcReq-A&s=10",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ARB050": {
+    "archivo": "arb050.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnBbcH3oTuNfwEqh49fgoMY712sdLHADbH9eWmGFecDQ&s=10",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ARB051": {
+    "archivo": "arb051.webp",
+    "fuente": "https://http2.mlstatic.com/D_NQ_NP_920320-CBT104073022219_012026-O.webp",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ARB058": {
+    "archivo": "arb058.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSMx0rx2hXfYrx0XEF8nx7ciNIbB-HIYNNeOxibhjHnOQ&s=10",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ASI015": {
+    "archivo": "asi015.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtYoAJSnCj59yDyyxI-DFrQn16pLktzXvU_90OZPvD6uINcnzzRJp21gvR&s=10",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "ASI021": {
+    "archivo": "asi021.webp",
+    "fuente": "https://www.kmmotos.com/products/asiento-racing-cg125-ft125-kb150-typan-varios-colores",
+    "referencia": "Asiento Racing CG125/FT125/KB150/TYPAN Varios Colores",
+    "referencial": true
+  },
+  "ASI023": {
+    "archivo": "asi023.webp",
+    "fuente": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSDJzjJb6ztsMeH6vZkbanEY_Xb-7tiCE1s-dx0RbtXZyJ2JGfCZ4Ju5jNg&s=10",
+    "referencia": "Foto previa del portal",
+    "referencial": true
+  },
+  "BAL020": {
+    "archivo": "bal020.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-rueda-6301-2rs-vini-cr/",
+    "referencia": "RULIMAN RUEDA 6301-2RS vini CR",
+    "referencial": false
+  },
+  "BAL079": {
+    "archivo": "bal149.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-de-motor-de-aguja-nk1512-cg200",
+    "referencia": "Balinera de Motor de Aguja NK1512 CG200",
+    "referencial": true
+  },
+  "BAL082": {
+    "archivo": "bal082.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-ciguenal-6205c3-vini/",
+    "referencia": "RULIMAN CIGUEÑAL 6205C3 vini",
+    "referencial": true
+  },
+  "BAL083": {
+    "archivo": "bal083.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-ciguenal-63-28-1b-p5cs18-vini/",
+    "referencia": "RULIMAN CIGUEÑAL 63/28/1B/P5CS18 vini",
+    "referencial": true
+  },
+  "BAL084": {
+    "archivo": "bal084.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-ciguenal-63-28rs-p5-vini/",
+    "referencia": "RULIMAN CIGUEÑAL 63/28RS P5 vini",
+    "referencial": true
+  },
+  "BAL100": {
+    "archivo": "bal100.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-rueda-6302-2rs-vini/",
+    "referencia": "RULIMAN RUEDA 6302-2RS vini",
+    "referencial": false
+  },
+  "BAL1013": {
+    "archivo": "bal1013.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-rueda-6204-2rsc3-eje-vini/",
+    "referencia": "RULIMAN RUEDA 6204 2RSC3 EJE vini",
+    "referencial": true
+  },
+  "BAL108": {
+    "archivo": "bal108.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-rueda-6202-2rs-vini/",
+    "referencia": "RULIMAN RUEDA 6202 2RS vini",
+    "referencial": false
+  },
+  "BAL125": {
+    "archivo": "bal125.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-de-ciguenal-6205-yamaha-ybr125-crux110-dt175-xtz125",
+    "referencia": "Balinera de Cigüeñal (6205) Yamaha YBR125/CRUX110/DT175/XTZ125",
+    "referencial": true
+  },
+  "BAL127": {
+    "archivo": "bal127.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-rueda-6004-2rs-vini/",
+    "referencia": "RULIMAN RUEDA 6004-2RS vini",
+    "referencial": false
+  },
+  "BAL147": {
+    "archivo": "bal147.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-6005-2rs-1",
+    "referencia": "Balinera 6005 2RS",
+    "referencial": true
+  },
+  "BAL148": {
+    "archivo": "bal148.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-6019",
+    "referencia": "Balinera 6006",
+    "referencial": true
+  },
+  "BAL149": {
+    "archivo": "bal149.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-de-motor-de-aguja-nk1512-cg200",
+    "referencia": "Balinera de Motor de Aguja NK1512 CG200",
+    "referencial": true
+  },
+  "BAN005": {
+    "archivo": "ban005.webp",
+    "fuente": "https://www.kmmotos.com/products/banda-de-traccion-874x22-italika-atv200-original-e13050068",
+    "referencia": "Banda de Traccion 874x22 Italika ATV200 (Original E13050068)",
+    "referencial": true
+  },
+  "BAT-12N7": {
+    "archivo": "bat-12n7.webp",
+    "fuente": "https://www.kmmotos.com/products/bateria-12n7-3b-acido-yuasa-haojue-150-rks150-rc150-ft150-ft150gt-atv150-atv200-atv180",
+    "referencia": "Batería 12N7-3B Acido Yuasa/haojue 150,RKS150,RC150,FT150,FT150GT,ATV150,ATV200,ATV180",
+    "referencial": true
+  },
+  "BAT-YTX7": {
+    "archivo": "bat-ytx7.webp",
+    "fuente": "https://mundimotos.com.mx/products/gytx7a-bs-1",
+    "referencia": "Batería Yuasa YTX7A-BS sellada",
+    "referencial": true
+  },
+  "BIE040": {
+    "archivo": "bie066.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-biela-nxr125-bross-cg125-13-36-81-28-vini/",
+    "referencia": "KIT BIELA NXR125 BROSS/CG125 (13-36-81-28) vini",
+    "referencial": true
+  },
+  "BIE043": {
+    "archivo": "bie043.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-biela-dr200-17-38-80-31-vini/",
+    "referencia": "KIT BIELA DR200 (17-38-80-31) vini",
+    "referencial": false
+  },
+  "BIE048": {
+    "archivo": "bie048.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-biela-xtz-ybr125-15-37-63-29-vini/",
+    "referencia": "KIT BIELA XTZ/YBR125 (15-37-63-29) vini",
+    "referencial": false
+  },
+  "BIE053": {
+    "archivo": "bie053.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-biela-pulsar135-14-32-72-25-vini/",
+    "referencia": "KIT BIELA PULSAR135 (14-32-72-25) vini",
+    "referencial": false
+  },
+  "BIE063": {
+    "archivo": "bie063.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-biela-discover125-st-14-36-72-28-vini/",
+    "referencia": "KIT BIELA DISCOVER125 ST (14-36-72-28) vini",
+    "referencial": false
+  },
+  "BIE066": {
+    "archivo": "bie066.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-biela-nxr125-bross-cg125-13-36-81-28-vini/",
+    "referencia": "KIT BIELA NXR125 BROSS/CG125 (13-36-81-28) vini",
+    "referencial": true
+  },
+  "BIE068": {
+    "archivo": "bie068.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-biela-pulsar180-17-38-77-30-vini/",
+    "referencia": "KIT BIELA PULSAR180 (17-38-77-30) vini",
+    "referencial": true
+  },
+  "BLN041": {
+    "archivo": "bln041.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-balancin-jgo-cg125-cg150-cg200-inferior-racing-vini/",
+    "referencia": "KIT BALANCIN JGO CG125/CG150/CG200 INFERIOR RACING vini",
+    "referencial": true
+  },
+  "BLN042": {
+    "archivo": "bln042.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "balancin-wy",
+    "referencial": true
+  },
+  "BLN060": {
+    "archivo": "bln060.webp",
+    "fuente": "https://www.kmmotos.com/products/balancines-tvs-apache-rtr-180-160-2v-wimma-kms",
+    "referencia": "BALANCINES TVS APACHE RTR 180-160 2V WIMMA KMS",
+    "referencial": true
+  },
+  "BLN061": {
+    "archivo": "bln060.webp",
+    "fuente": "https://www.kmmotos.com/products/balancines-tvs-apache-rtr-180-160-2v-wimma-kms",
+    "referencia": "BALANCINES TVS APACHE RTR 180-160 2V WIMMA KMS",
+    "referencial": true
+  },
+  "BOB-CG125": {
+    "archivo": "bob098.webp",
+    "fuente": "https://www.kmmotos.com/products/bobina-de-alta-xm200-hj-ft125-ft150-cg-std",
+    "referencia": "Bobina de Alta XM200//HJ/FT125/FT150/CG/STD",
+    "referencial": true
+  },
+  "BOB058": {
+    "archivo": "bob058.webp",
+    "fuente": "https://www.kmmotos.com/products/estator-8-bobinas-italika-ft150-hd-original-e05010069",
+    "referencia": "Estator 8 Bobinas Italika FT150 HD Original (E05010069)",
+    "referencial": true
+  },
+  "BOB059": {
+    "archivo": "bob059.webp",
+    "fuente": "https://www.kmmotos.com/products/estator-completo-12-pole-d102c-discover-125-st",
+    "referencia": "Estator Completo 12 Pole D102C Discover 125 ST",
+    "referencial": true
+  },
+  "BOB073": {
+    "archivo": "bob079.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "estator",
+    "referencial": true
+  },
+  "BOB079": {
+    "archivo": "bob079.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "estator",
+    "referencial": true
+  },
+  "BOB098": {
+    "archivo": "bob098.webp",
+    "fuente": "https://www.kmmotos.com/products/bobina-de-alta-xm200-hj-ft125-ft150-cg-std",
+    "referencia": "Bobina de Alta XM200//HJ/FT125/FT150/CG/STD",
+    "referencial": true
+  },
+  "BOM039": {
+    "archivo": "bom039.webp",
+    "fuente": "https://www.kmmotos.com/products/bomba-de-freno-delantera-fz16",
+    "referencia": "Bomba de Freno Delantera FZ16",
+    "referencial": true
+  },
+  "BOM044": {
+    "archivo": "bom044.webp",
+    "fuente": "https://www.kmmotos.com/products/bomba-de-aceite-cg150-yumbo-250-37t",
+    "referencia": "Bomba de Aceite CG150/YUMBO 250 37T",
+    "referencial": true
+  },
+  "BOM046": {
+    "archivo": "bom039.webp",
+    "fuente": "https://www.kmmotos.com/products/bomba-de-freno-delantera-fz16",
+    "referencia": "Bomba de Freno Delantera FZ16",
+    "referencial": true
+  },
+  "BOM066": {
+    "archivo": "bom039.webp",
+    "fuente": "https://www.kmmotos.com/products/bomba-de-freno-delantera-fz16",
+    "referencia": "Bomba de Freno Delantera FZ16",
+    "referencial": true
+  },
+  "BOM067": {
+    "archivo": "bom067.webp",
+    "fuente": "https://www.kmmotos.com/products/bomba-freno-auxiliar-as200-ns200-trasera-pulsar",
+    "referencia": "Bomba Freno Auxiliar AS200/NS200 Trasera Pulsar",
+    "referencial": true
+  },
+  "BOM073": {
+    "archivo": "bom044.webp",
+    "fuente": "https://www.kmmotos.com/products/bomba-de-aceite-cg150-yumbo-250-37t",
+    "referencia": "Bomba de Aceite CG150/YUMBO 250 37T",
+    "referencial": true
+  },
+  "BOM087": {
+    "archivo": "bom087.webp",
+    "fuente": "https://www.kmmotos.com/products/bomba-de-freno-auxiliar-trasera-ns200-kms",
+    "referencia": "BOMBA DE FRENO AUXILIAR TRASERA NS200 KMS",
+    "referencial": true
+  },
+  "BOM088": {
+    "archivo": "bom088.webp",
+    "fuente": "https://www.alibaba.com/showroom/oil-pump-ax100.html",
+    "referencia": "Bomba de lubricación AX100",
+    "referencial": true
+  },
+  "BUC036": {
+    "archivo": "buc036.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-bujes-de-tijera-genesis-xm200-zx150l-zx200l-par-1",
+    "referencia": "Kit de Bujes de Tijera Genesis XM200/ZX150L/ZX200L (PAR)",
+    "referencial": true
+  },
+  "BUC059": {
+    "archivo": "buc059.webp",
+    "fuente": "https://www.kmmotos.com/products/buje-de-tijera-xl125-xm200",
+    "referencia": "Buje de Tijera XL125/XM200",
+    "referencial": true
+  },
+  "BUC066": {
+    "archivo": "buc036.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-bujes-de-tijera-genesis-xm200-zx150l-zx200l-par-1",
+    "referencia": "Kit de Bujes de Tijera Genesis XM200/ZX150L/ZX200L (PAR)",
+    "referencial": true
+  },
+  "BUJ-DEN-U22": {
+    "archivo": "buj-den-u22.webp",
+    "fuente": "https://motorbisikletim.com/motosiklet-yedek-parca/buji/prd-denso-cup-scotter-buji-c7hsa-u22fs-u",
+    "referencia": "Denso U22FS-U",
+    "referencial": false
+  },
+  "BUJ-NGK-CR7": {
+    "archivo": "buj-ngk-cr7.webp",
+    "fuente": "https://www.factory-bike.es/bujias/17183-bujia-ngk-cr7hsa.html",
+    "referencia": "Bujía NGK CR7HSA - Factory Bike",
+    "referencial": false
+  },
+  "BUJ-NGK-D8EA": {
+    "archivo": "buj-ngk-d8ea.webp",
+    "fuente": "https://www.kmmotos.com/products/bujia-d8ea-ngk-candela-2",
+    "referencia": "Bujía D8EA Ngk (CANDELA)",
+    "referencial": false
+  },
+  "BUJ081": {
+    "archivo": "buj081.webp",
+    "fuente": "https://www.kmmotos.com/products/foco-stop-p21-5w-italika-city-125-ft150-dm200-original-f09040108",
+    "referencia": "Foco Stop P21/5W Italika City 125 FT150 DM200 (Original F09040108)",
+    "referencial": true
+  },
+  "BUJ122": {
+    "archivo": "buj122.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "bombillo-direccional",
+    "referencial": true
+  },
+  "BUJ257": {
+    "archivo": "buj257.webp",
+    "fuente": "https://importadoracolmotos.com/producto/stop-gn125h-vini/",
+    "referencia": "STOP GN125H vini",
+    "referencial": false
+  },
+  "CAB-ACE-CG150": {
+    "archivo": "cab-ace-cg150.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cable-aceleracion-xy-cg150-106-6cm-vini/",
+    "referencia": "CABLE ACELERACION XY/CG150 106.6cm vini",
+    "referencial": true
+  },
+  "CAB-EMB-CG125": {
+    "archivo": "cab212.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-clutch-duraforce-cg125-r150-ft125-c",
+    "referencia": "Cable Clutch Duraforce CG125/R150/FT125/C",
+    "referencial": true
+  },
+  "CAB-FRE-AX100": {
+    "archivo": "cab156.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cable-freno-ax100-vini/",
+    "referencia": "CABLE FRENO AX100 vini",
+    "referencial": true
+  },
+  "CAB-VEL-YBR": {
+    "archivo": "cab-vel-ybr.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-de-velocimetro-ybr125-dm150-1",
+    "referencia": "Cable de Velocimetro YBR125/DM150",
+    "referencial": true
+  },
+  "CAB090": {
+    "archivo": "cab090.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-de-bobina-de-alta",
+    "referencia": "Cable de Bobina de Alta",
+    "referencial": true
+  },
+  "CAB131": {
+    "archivo": "cab131.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-de-clutch-xtz125k",
+    "referencia": "Cable de Clutch XTZ125K",
+    "referencial": true
+  },
+  "CAB143": {
+    "archivo": "cab143.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cable-aceleracion-pulsar135-ls-vini/",
+    "referencia": "CABLE ACELERACION PULSAR135 LS vini",
+    "referencial": false
+  },
+  "CAB144": {
+    "archivo": "cab143.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cable-aceleracion-pulsar135-ls-vini/",
+    "referencia": "CABLE ACELERACION PULSAR135 LS vini",
+    "referencial": true
+  },
+  "CAB156": {
+    "archivo": "cab156.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cable-freno-ax100-vini/",
+    "referencia": "CABLE FRENO AX100 vini",
+    "referencial": true
+  },
+  "CAB187": {
+    "archivo": "cab187.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-de-acelerador-gxt200-xenkai",
+    "referencia": "CABLE DE ACELERADOR GXT200 XENKAI",
+    "referencial": true
+  },
+  "CAB190": {
+    "archivo": "cab190.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/cable-de-clutch-ybr125/",
+    "referencia": "CABLE DE CLUTCH YBR125",
+    "referencial": true
+  },
+  "CAB193": {
+    "archivo": "cab193.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-de-acelerador-cg125-xenkai",
+    "referencia": "CABLE DE ACELERADOR CG125 XENKAI",
+    "referencial": true
+  },
+  "CAB211": {
+    "archivo": "cab211.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cable-aceleracion-gixxer150-l6-vini/",
+    "referencia": "CABLE ACELERACION GIXXER150 L6 vini",
+    "referencial": false
+  },
+  "CAB212": {
+    "archivo": "cab212.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-clutch-duraforce-cg125-r150-ft125-c",
+    "referencia": "Cable Clutch Duraforce CG125/R150/FT125/C",
+    "referencial": true
+  },
+  "CAB213": {
+    "archivo": "cab213.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-de-clutch-hj125-7-durarforce",
+    "referencia": "Cable de Clutch HJ125-7 Durarforce",
+    "referencial": true
+  },
+  "CAB314": {
+    "archivo": "cab213.webp",
+    "fuente": "https://www.kmmotos.com/products/cable-de-clutch-hj125-7-durarforce",
+    "referencia": "Cable de Clutch HJ125-7 Durarforce",
+    "referencial": true
+  },
+  "CAD-428H-120": {
+    "archivo": "cad-428h-120.webp",
+    "fuente": "https://rutasetenta.com/products/heavy-duty-motorcycle-chain-t428h-120",
+    "referencia": "Cadena para motocicleta de servicio pesado - 428H - Cadena de transmis\n – Ruta 70",
+    "referencial": true
+  },
+  "CAD032": {
+    "archivo": "cad032.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-de-tiempo-ns200-kms",
+    "referencia": "CADENA DE TIEMPO NS200 KMS",
+    "referencial": true
+  },
+  "CAD061": {
+    "archivo": "cad061.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-choho-520h-120l-reforzada",
+    "referencia": "Cadena Choho 520H-120L Reforzada",
+    "referencial": true
+  },
+  "CAD062": {
+    "archivo": "cad032.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-de-tiempo-ns200-kms",
+    "referencia": "CADENA DE TIEMPO NS200 KMS",
+    "referencial": true
+  },
+  "CAD071": {
+    "archivo": "cad071.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-de-tiempo-ybr125-3",
+    "referencia": "Cadena de Tiempo YBR125",
+    "referencial": true
+  },
+  "CAD074": {
+    "archivo": "cad074.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-de-tiempo-yamaha-crux110-90l-hasta-2016",
+    "referencia": "Cadena de Tiempo Yamaha CRUX110 (90L) (HASTA 2016)",
+    "referencial": true
+  },
+  "CAD081": {
+    "archivo": "cad081.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-de-tiempo-3-4-100l-yumbo-avatar-cb200",
+    "referencia": "Cadena de Tiempo 3*4 100L YUMBO/AVATAR/CB200",
+    "referencial": true
+  },
+  "CAD094": {
+    "archivo": "cad032.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-de-tiempo-ns200-kms",
+    "referencia": "CADENA DE TIEMPO NS200 KMS",
+    "referencial": true
+  },
+  "CAD095": {
+    "archivo": "cad095.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-tiempo-104l-cbb250-xm250z-cr5-250z",
+    "referencia": "Cadena Tiempo 104L CBB250 XM250Z/CR5/250Z",
+    "referencial": true
+  },
+  "CAD096": {
+    "archivo": "cad081.webp",
+    "fuente": "https://www.kmmotos.com/products/cadena-de-tiempo-3-4-100l-yumbo-avatar-cb200",
+    "referencia": "Cadena de Tiempo 3*4 100L YUMBO/AVATAR/CB200",
+    "referencial": true
+  },
+  "CAJ001": {
+    "archivo": "caj001.webp",
+    "fuente": "https://www.kmmotos.com/products/caja-de-transmicion-cr5-gxt250",
+    "referencia": "Caja de Transmicion CR5/GXT250",
+    "referencial": true
+  },
+  "CAJ023": {
+    "archivo": "caj023.webp",
+    "fuente": "https://www.kmmotos.com/products/caja-de-transmision-cg125-hj125-ft150-dm150",
+    "referencia": "Caja de Transmision CG125/HJ125/FT150/DM150",
+    "referencial": true
+  },
+  "CAJ029": {
+    "archivo": "caj029.webp",
+    "fuente": "https://www.kmmotos.com/products/caja-de-cambios-200l",
+    "referencia": "Caja de Cambios 200L",
+    "referencial": true
+  },
+  "CAJ046": {
+    "archivo": "caj029.webp",
+    "fuente": "https://www.kmmotos.com/products/caja-de-cambios-200l",
+    "referencia": "Caja de Cambios 200L",
+    "referencial": true
+  },
+  "CAJ047": {
+    "archivo": "caj047.webp",
+    "fuente": "https://www.kmmotos.com/products/caja-de-cambios-ps135-pulsar",
+    "referencia": "Caja de Cambios PS135 Pulsar",
+    "referencial": true
+  },
+  "CAM-275-18": {
+    "archivo": "cam-275-18.webp",
+    "fuente": "https://www.kmmotos.com/products/neumaticos-2-75-18-3-00-18-axus-a-r",
+    "referencia": "Neumaticos 2.75-18/3.00-18 Axus A/r",
+    "referencial": true
+  },
+  "CAM-300-18": {
+    "archivo": "cam-300-18.webp",
+    "fuente": "https://www.kmmotos.com/products/neumaticos-3-00-18-axus",
+    "referencia": "Neumaticos 3.00-18 Axus",
+    "referencial": true
+  },
+  "CAR-CG125-26": {
+    "archivo": "car046.webp",
+    "fuente": "https://www.kmmotos.com/products/carburador-cg125-pz26-xenkai",
+    "referencia": "CARBURADOR CG125/PZ26 XENKAI",
+    "referencial": true
+  },
+  "CAR-CG150-27": {
+    "archivo": "car050.webp",
+    "fuente": "https://www.kmmotos.com/products/carburador-cg150-pz27-xenkai",
+    "referencia": "CARBURADOR CG150 PZ27 XENKAI",
+    "referencial": true
+  },
+  "CAR046": {
+    "archivo": "car046.webp",
+    "fuente": "https://www.kmmotos.com/products/carburador-cg125-pz26-xenkai",
+    "referencia": "CARBURADOR CG125/PZ26 XENKAI",
+    "referencial": true
+  },
+  "CAR047": {
+    "archivo": "car047.webp",
+    "fuente": "https://www.kmmotos.com/products/carburador-pz30-cg200-a-r-4",
+    "referencia": "Carburador PZ30/CG200 A/r",
+    "referencial": true
+  },
+  "CAR050": {
+    "archivo": "car050.webp",
+    "fuente": "https://www.kmmotos.com/products/carburador-cg150-pz27-xenkai",
+    "referencia": "CARBURADOR CG150 PZ27 XENKAI",
+    "referencial": true
+  },
+  "CAR069": {
+    "archivo": "car069.webp",
+    "fuente": "https://importadoracolmotos.com/producto/carburador-gixxer150-vini/",
+    "referencia": "CARBURADOR GIXXER150 vini",
+    "referencial": false
+  },
+  "CAR070": {
+    "archivo": "car070.webp",
+    "fuente": "https://www.kmmotos.com/products/carburador-ds150-gy6-150-automatica",
+    "referencia": "Carburador DS150/GY6-150 Automatica",
+    "referencial": true
+  },
+  "CCH009": {
+    "archivo": "cch009.webp",
+    "fuente": "https://importadoracolmotos.com/producto/relay-arranque-cg-univ-vini/",
+    "referencia": "RELAY ARRANQUE CG UNIV vini",
+    "referencial": false
+  },
+  "CCH017": {
+    "archivo": "cch017.webp",
+    "fuente": "https://importadoracolmotos.com/producto/relay-arranque-pulsar200ns-pulsar135-vini/",
+    "referencia": "RELAY ARRANQUE PULSAR200NS/PULSAR135 vini",
+    "referencial": false
+  },
+  "CDI-CG150": {
+    "archivo": "cdi-cg150.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cdi-cg150-200-cb125-gy6-redondo-ac-vini/",
+    "referencia": "CDI CG150/200/CB125/GY6 REDONDO (AC) vini",
+    "referencial": true
+  },
+  "CDI027": {
+    "archivo": "cdi027.webp",
+    "fuente": "https://www.kmmotos.com/products/conector-de-cdi-4-2-redondo",
+    "referencia": "Conector de CDI 4+2 Redondo",
+    "referencial": true
+  },
+  "CDI032": {
+    "archivo": "cdi032.webp",
+    "fuente": "https://www.kmmotos.com/products/cdi-cg200-redondo",
+    "referencia": "CDI CG200 Redondo",
+    "referencial": true
+  },
+  "CDI034": {
+    "archivo": "cdi034.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cdi-pulsar135-vini/",
+    "referencia": "CDI PULSAR135 vini",
+    "referencial": false
+  },
+  "CDI049": {
+    "archivo": "cdi049.webp",
+    "fuente": "https://www.kmmotos.com/products/cdi-rt180-ft180",
+    "referencia": "CDI RT180/FT180",
+    "referencial": true
+  },
+  "CDI051": {
+    "archivo": "cdi051.webp",
+    "fuente": "https://www.kmmotos.com/products/cdi-rt180-gy6-cuadrado-con-linea-9-mapas-racing",
+    "referencia": "CDI RT180 / GY6 Cuadrado con Linea 9 Mapas Racing",
+    "referencial": true
+  },
+  "CDI053": {
+    "archivo": "cdi053.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cdi-gn125h-dr200-vini/",
+    "referencia": "CDI GN125H/DR200 vini",
+    "referencial": false
+  },
+  "CDI055": {
+    "archivo": "cdi034.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cdi-pulsar135-vini/",
+    "referencia": "CDI PULSAR135 vini",
+    "referencial": true
+  },
+  "CDI059": {
+    "archivo": "cdi059.webp",
+    "fuente": "https://www.kmmotos.com/products/cdi-ybr125-1",
+    "referencia": "CDI YBR125",
+    "referencial": true
+  },
+  "CIL086": {
+    "archivo": "cil086.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-cilindro-cg150-ft150-dm150-std-piston-bajo-gris-xenkai",
+    "referencia": "KIT DE CILINDRO CG150/FT150/DM150/STD + PISTON BAJO GRIS XENKAI",
+    "referencial": true
+  },
+  "CIL087": {
+    "archivo": "cil086.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-cilindro-cg150-ft150-dm150-std-piston-bajo-gris-xenkai",
+    "referencia": "KIT DE CILINDRO CG150/FT150/DM150/STD + PISTON BAJO GRIS XENKAI",
+    "referencial": true
+  },
+  "CIL094": {
+    "archivo": "cil094.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-cilindro-completo-hj125-cg125",
+    "referencia": "Kit de Cilindro Completo HJ125/CG125",
+    "referencial": true
+  },
+  "CIL129": {
+    "archivo": "cil144.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-cg200-63-5mm-vini/",
+    "referencia": "CILINDRO CG200 63.5mm vini",
+    "referencial": true
+  },
+  "CIL138": {
+    "archivo": "cil138.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-cg230-negro-65-5mm-15p-250cc-vini/",
+    "referencia": "CILINDRO CG230 NEGRO 65.5mm-15P-250cc vini",
+    "referencial": true
+  },
+  "CIL143": {
+    "archivo": "cil143.webp",
+    "fuente": "https://www.kmmotos.com/products/cilindro-completo-platina-100-es-2016",
+    "referencia": "Cilindro Completo Platina 100 ES 2015",
+    "referencial": true
+  },
+  "CIL144": {
+    "archivo": "cil144.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-cg200-63-5mm-vini/",
+    "referencia": "CILINDRO CG200 63.5mm vini",
+    "referencial": false
+  },
+  "CIL146": {
+    "archivo": "cil146.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-pulsar135-4v-54-00mm-14p-vini/",
+    "referencia": "CILINDRO PULSAR135 4V 54.00mm-14P vini",
+    "referencial": false
+  },
+  "CIL160": {
+    "archivo": "cil160.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-apache160-4v-62-00mm-15p-vini/",
+    "referencia": "CILINDRO APACHE160 4V 62.00mm-15P vini",
+    "referencial": true
+  },
+  "CIL161": {
+    "archivo": "cil161.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-crf230-240-67-00mm-15p-233cc-racing-vini/",
+    "referencia": "CILINDRO CRF230/240 67.00mm-15P-233cc RACING vini",
+    "referencial": true
+  },
+  "CIL162": {
+    "archivo": "cil162.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-cilindro-motor-gy6-150cc-italika-ds150-gs150-xs150-original-e0304kc01",
+    "referencia": "Kit Cilindro Motor GY6 150cc Italika DS150 GS150 XS150 (Original E0304KC01)",
+    "referencial": true
+  },
+  "CIL163": {
+    "archivo": "cil163.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-mt110-withe-52-4mm-13p-108cc-vini/",
+    "referencia": "CILINDRO MT110 WITHE 52.4mm-13P-108cc vini",
+    "referencial": true
+  },
+  "CIL164": {
+    "archivo": "cil164.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-cilindro-gy6-125-ds125-automatica",
+    "referencia": "Kit de Cilindro GY6-125/DS125/AUTOMATICA",
+    "referencial": true
+  },
+  "CIL165": {
+    "archivo": "cil166.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-cilindro-cb150-wy150-cadena-1",
+    "referencia": "Kit de Cilindro CB150/WY150 Cadena",
+    "referencial": true
+  },
+  "CIL166": {
+    "archivo": "cil166.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-cilindro-cb150-wy150-cadena-1",
+    "referencia": "Kit de Cilindro CB150/WY150 Cadena",
+    "referencial": true
+  },
+  "CIL901": {
+    "archivo": "cil901.webp",
+    "fuente": "https://importadoracolmotos.com/producto/cilindro-cg150-62-00mm-15p-149cc-negro-vini/",
+    "referencia": "CILINDRO CG150 62.00mm-15P-149cc NEGRO vini",
+    "referencial": true
+  },
+  "COR-CG150-38": {
+    "archivo": "spr126.webp",
+    "fuente": "https://www.kmmotos.com/products/catarina-boxer-platina-ax100-ct100-38t-1",
+    "referencia": "Catarina BOXER/PLATINA/AX100/CT100 38T",
+    "referencial": true
+  },
+  "CPI019": {
+    "archivo": "cpi019.webp",
+    "fuente": "https://importadoracolmotos.com/producto/guia-cadenilla-pulsar135-vini/",
+    "referencia": "GUIA CADENILLA PULSAR135 vini",
+    "referencial": false
+  },
+  "CPI037": {
+    "archivo": "cpi037.webp",
+    "fuente": "https://www.kmmotos.com/products/guia-y-tensor-de-cadena-de-tiempo-pulsar-135",
+    "referencia": "Guia y Tensor de Cadena de Tiempo Pulsar 135",
+    "referencial": true
+  },
+  "CUN038": {
+    "archivo": "cun038.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "direccion-conica",
+    "referencial": true
+  },
+  "CUN039": {
+    "archivo": "cun039.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "direccion",
+    "referencial": true
+  },
+  "CUN042": {
+    "archivo": "cun039.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "direccion",
+    "referencial": true
+  },
+  "CUN054": {
+    "archivo": "cun039.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "direccion",
+    "referencial": true
+  },
+  "CUN056": {
+    "archivo": "cun038.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "direccion-conica",
+    "referencial": true
+  },
+  "DEL054": {
+    "archivo": "del054.webp",
+    "fuente": "https://www.kmmotos.com/products/discos-de-clutch-cg125-hj-ybr-std-a-r-3",
+    "referencia": "Discos de Clutch CG125/HJ/YBR/STD A/r",
+    "referencial": true
+  },
+  "DES029": {
+    "archivo": "des029.webp",
+    "fuente": "https://www.kmmotos.com/products/empaque-de-culata-cg125",
+    "referencia": "Empaque de Culata CG125",
+    "referencial": true
+  },
+  "DES045": {
+    "archivo": "des045.webp",
+    "fuente": "https://www.kmmotos.com/products/1-2-kit-de-empaques-pulsar-135-imbraq",
+    "referencia": "1/2 Kit de Empaques Pulsar 135 Imbraq",
+    "referencial": true
+  },
+  "DIR-CG125": {
+    "archivo": "cun039.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "direccion",
+    "referencial": true
+  },
+  "DIR-LED-PAR": {
+    "archivo": "dir-led-par.webp",
+    "fuente": "https://www.sombikers.com/0246192-intermitentes-universales-flecha-secuencial-led",
+    "referencia": "Intermitentes universales LED (par)",
+    "referencial": true
+  },
+  "DIR326": {
+    "archivo": "dir326.webp",
+    "fuente": "https://www.manomano.fr/bache-de-protection-888?model_id=2597467",
+    "referencia": "Cubierta universal impermeable para moto",
+    "referencial": true
+  },
+  "DIS-NS200": {
+    "archivo": "dis-ns200.webp",
+    "fuente": "https://supermoto.mx/disco-freno-delantero-bj-pulsar-ns-200-12-23/",
+    "referencia": "Disco de freno delantero Pulsar NS200",
+    "referencial": true
+  },
+  "EMB-CG150": {
+    "archivo": "del054.webp",
+    "fuente": "https://www.kmmotos.com/products/discos-de-clutch-cg125-hj-ybr-std-a-r-3",
+    "referencia": "Discos de Clutch CG125/HJ/YBR/STD A/r",
+    "referencial": true
+  },
+  "EMM062": {
+    "archivo": "emm062.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-empaque-completo-gn125-vini/",
+    "referencia": "KIT EMPAQUE COMPLETO GN125 vini",
+    "referencial": true
+  },
+  "EMM080": {
+    "archivo": "emm080.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-empaque-completo-cg150",
+    "referencia": "Kit Empaque Completo CG150",
+    "referencial": true
+  },
+  "EMM092": {
+    "archivo": "emm092.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-empaques-de-motor-ps135-pulsar",
+    "referencia": "Kit de Empaques de Motor PS135 Pulsar",
+    "referencial": true
+  },
+  "EMM102": {
+    "archivo": "emm102.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-empaque-completo-cg200-vini/",
+    "referencia": "KIT EMPAQUE COMPLETO CG200 vini",
+    "referencial": true
+  },
+  "EMP-CG150": {
+    "archivo": "emm080.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-empaque-completo-cg150",
+    "referencia": "Kit Empaque Completo CG150",
+    "referencial": true
+  },
+  "ENG013": {
+    "archivo": "eng013.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-de-bendix-gxt-kmf-gya-tx200-cg200-20-balines-a-r",
+    "referencia": "Balinera de Bendix GXT/KMF/GYA/TX200/CG200 (20 Balines) A/r",
+    "referencial": true
+  },
+  "ENG047": {
+    "archivo": "eng013.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-de-bendix-gxt-kmf-gya-tx200-cg200-20-balines-a-r",
+    "referencia": "Balinera de Bendix GXT/KMF/GYA/TX200/CG200 (20 Balines) A/r",
+    "referencial": true
+  },
+  "ESP-UNI-M10": {
+    "archivo": "esp-uni-m10.webp",
+    "fuente": "https://importadoracolmotos.com/producto/espejo-ovalado-univ-jgo-vini/",
+    "referencia": "ESPEJO OVALADO UNIV JGO vini",
+    "referencial": true
+  },
+  "FIL-AIR-CG150": {
+    "archivo": "fil-air-cg150.webp",
+    "fuente": "https://www.kmmotos.com/products/filtro-de-aire-ft150-1",
+    "referencia": "Filtro de Aire FT150",
+    "referencial": true
+  },
+  "FIL-AIR-YBR": {
+    "archivo": "fil-air-ybr.webp",
+    "fuente": "https://importadoracolmotos.com/producto/filtro-aire-ybr125-libero-vini/",
+    "referencia": "FILTRO AIRE YBR125/LIBERO vini",
+    "referencial": true
+  },
+  "FIL-GAS-UNI": {
+    "archivo": "fil-gas-uni.webp",
+    "fuente": "https://www.kmmotos.com/products/filtro-de-gasolina-std-4",
+    "referencia": "Filtro de Gasolina STD",
+    "referencial": true
+  },
+  "FOC-H4-35": {
+    "archivo": "foc-h4-35.webp",
+    "fuente": "https://importadoracolmotos.com/producto/bombillo-halogeno-faro-ad-h4-12v-35w-vini/",
+    "referencia": "BOMBILLO HALOGENO FARO AD-H4 12V-35W vini",
+    "referencial": true
+  },
+  "FOC-STOP-21": {
+    "archivo": "buj081.webp",
+    "fuente": "https://www.kmmotos.com/products/foco-stop-p21-5w-italika-city-125-ft150-dm200-original-f09040108",
+    "referencia": "Foco Stop P21/5W Italika City 125 FT150 DM200 (Original F09040108)",
+    "referencial": true
+  },
+  "FRI038": {
+    "archivo": "fri038.webp",
+    "fuente": "https://www.kmmotos.com/products/fricciones-de-freno-pulsar-discover-boxerbm-152",
+    "referencia": "Fricciones de Freno Pulsar/discover/boxerbm 150",
+    "referencial": true
+  },
+  "FRI045": {
+    "archivo": "fri045.webp",
+    "fuente": "https://www.kmmotos.com/products/fricciones-de-freno-gxt200-hj125-7-gn125",
+    "referencia": "Fricciones de Freno GXT200/HJ125-7/GN125",
+    "referencial": true
+  },
+  "FUS003": {
+    "archivo": "fus003.webp",
+    "fuente": "https://www.kmmotos.com/products/fusible-de-hachita-15amp-kms",
+    "referencia": "Fusible de Hachita 15AMP Kms",
+    "referencial": true
+  },
+  "FUS004": {
+    "archivo": "fus004.webp",
+    "fuente": "https://www.kmmotos.com/products/fusible-de-hachita-20amp-kms",
+    "referencia": "Fusible de Hachita 20AMP Kms",
+    "referencial": true
+  },
+  "FUS005": {
+    "archivo": "fus005.webp",
+    "fuente": "https://www.kmmotos.com/products/fusibles-de-hachita-25a",
+    "referencia": "Fusibles de Hachita 25A",
+    "referencial": true
+  },
+  "FUS006": {
+    "archivo": "fus006.webp",
+    "fuente": "https://www.stein-dinse.com/en/ducati-fuse-30a-400-1100-scrambler-696-1200-monster-spare-parts-for-moto-guzzi-ducati-aprilia/item-1-1128000.html",
+    "referencia": "Fusible de cuchilla 30 A",
+    "referencial": true
+  },
+  "GUA134": {
+    "archivo": "gua134.webp",
+    "fuente": "https://www.kmmotos.com/products/guardafango-yz250-450-universal-azul-delantero",
+    "referencia": "Guardafango YZ250/450 Universal Azul Delantero",
+    "referencial": true
+  },
+  "GUA135": {
+    "archivo": "gua135.webp",
+    "fuente": "https://www.kmmotos.com/products/guardafango-del-supermoto-blanco",
+    "referencia": "Guardafango del Supermoto Blanco",
+    "referencial": true
+  },
+  "GUA136": {
+    "archivo": "gua136.webp",
+    "fuente": "https://www.kmmotos.com/products/guardafango-yz250-450-del-negro",
+    "referencia": "Guardafango YZ250/450 del Negro",
+    "referencial": true
+  },
+  "INI055": {
+    "archivo": "ini055.webp",
+    "fuente": "https://www.kmmotos.com/products/switch-de-ignicion-llavin-cg125-ft125-bk150-std-solo-xenkai",
+    "referencia": "SWITCH DE IGNICION (LLAVIN) CG125/FT125/BK150 STD (SOLO) XENKAI",
+    "referencial": true
+  },
+  "JUB024": {
+    "archivo": "jub024.webp",
+    "fuente": "https://importadoracolmotos.com/producto/carbones-arranque-cb110-vini/",
+    "referencia": "CARBONES ARRANQUE CB110 vini",
+    "referencial": true
+  },
+  "JUB028": {
+    "archivo": "jub024.webp",
+    "fuente": "https://importadoracolmotos.com/producto/carbones-arranque-cb110-vini/",
+    "referencia": "CARBONES ARRANQUE CB110 vini",
+    "referencial": true
+  },
+  "JUB040": {
+    "archivo": "jub024.webp",
+    "fuente": "https://importadoracolmotos.com/producto/carbones-arranque-cb110-vini/",
+    "referencia": "CARBONES ARRANQUE CB110 vini",
+    "referencial": true
+  },
+  "JUB041": {
+    "archivo": "jub041.webp",
+    "fuente": "https://importadoracolmotos.com/producto/carbones-arranque-pulsar200ns-vini/",
+    "referencia": "CARBONES ARRANQUE PULSAR200NS vini",
+    "referencial": false
+  },
+  "KIT-CG125-428": {
+    "archivo": "spr209.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-cg125-428h-132l-42t-15t-vini/",
+    "referencia": "KIT ARRASTRE CG125 428H-132L/42T/15T vini",
+    "referencial": true
+  },
+  "KIT-CG150-428": {
+    "archivo": "spr175.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-traccion-arrastre-ft150-cg150-bujes-38t-15t-428h-124l-powerdrag",
+    "referencia": "Kit de Traccion(arrastre) FT150/CG150/BUJES 38T-15T/428H-124L Powerdrag",
+    "referencial": true
+  },
+  "KIT-PUL150": {
+    "archivo": "spr255.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-pulsar135-428h-130l-42t-15t-vini/",
+    "referencia": "KIT ARRASTRE PULSAR135 428H-130L/42T/15T vini",
+    "referencial": true
+  },
+  "KIT-YBR125": {
+    "archivo": "kit-ybr125.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-traccion-arrastre-45t-14t-428h-124l-ybr125-etwq125-roadster",
+    "referencia": "Kit de Traccion(arrastre) 45T/14T -428H/124L YBR125/ETWQ125/ROADSTER",
+    "referencial": true
+  },
+  "LAV044": {
+    "archivo": "lav044.webp",
+    "fuente": "https://www.kmmotos.com/products/llave-de-paso-de-combustible-italika-dm150-dm125-original-f17020031",
+    "referencia": "Llave de Paso de Combustible Italika DM150 DM125 (Original F17020031)",
+    "referencial": true
+  },
+  "LAV047": {
+    "archivo": "lav047.webp",
+    "fuente": "https://www.kmmotos.com/products/llavin-cerradura-de-asiento-italika-150z-170z-125z-original-f04020078",
+    "referencia": "Llavin Cerradura de Asiento Italika 150Z 170Z 125Z (Original F04020078)",
+    "referencial": true
+  },
+  "LIM-CAR-300": {
+    "archivo": "lim-car-300.webp",
+    "fuente": "https://www.capris.cr/es/loctite-1693653-sf-auto-100-limpiador-carburadores-y-descarbonizante-spray-incoloro-300ml-520981.html",
+    "referencia": "Loctite SF Auto 100 300 ml",
+    "referencial": true
+  },
+  "LIQ-DOT4": {
+    "archivo": "liq-dot4.webp",
+    "fuente": "https://www.kmmotos.com/products/liquido-de-freno-250ml-dot-4",
+    "referencia": "LIQUIDO DE FRENO-250ML DOT-4",
+    "referencial": true
+  },
+  "LLA-100-80-17": {
+    "archivo": "lla-100-80-17.webp",
+    "fuente": "https://www.kmmotos.com/products/llanta-trasera-100-80-17-lisa-6pr-pg97c-tl",
+    "referencia": "LLANTA TRASERA 100/80-17 LISA 6PR PG97C TL",
+    "referencial": true
+  },
+  "LLA-275-18": {
+    "archivo": "lla-275-18.webp",
+    "fuente": "https://www.kmmotos.com/products/llanta-delantera-2-75-18-doble-proposito-l8118",
+    "referencia": "LLANTA DELANTERA 2.75-18 DOBLE PROPOSITO L8118",
+    "referencial": true
+  },
+  "LLA-300-18": {
+    "archivo": "lla-300-18.webp",
+    "fuente": "https://www.kmmotos.com/products/llanta-delantera-3-00-18-doble-proposito-l652",
+    "referencia": "LLANTA DELANTERA 3.00-18 DOBLE PROPOSITO L652",
+    "referencial": true
+  },
+  "LLA-90-90-17": {
+    "archivo": "lla-90-90-17.webp",
+    "fuente": "https://www.kmmotos.com/products/llanta-delantera-90-90-17-lisa-6pr-pg77c-tl",
+    "referencia": "LLANTA DELANTERA 90/90-17 LISA 6PR PG77C TL",
+    "referencial": true
+  },
+  "LUB-CAD-400": {
+    "archivo": "lub-cad-400.webp",
+    "fuente": "https://www.kmmotos.com/products/lubricante-para-cadena-4",
+    "referencia": "Lubricante para Cadena",
+    "referencial": true
+  },
+  "MAN-EMB-CG": {
+    "archivo": "man-emb-cg.webp",
+    "fuente": "https://www.kmmotos.com/products/manecilla-izquierda-de-clutch-dm150-italika-original-f10030066",
+    "referencia": "Manecilla Izquierda De Clutch Dm150 Italika (Original F10030066)",
+    "referencial": true
+  },
+  "MAN-FRE-CG": {
+    "archivo": "man-fre-cg.webp",
+    "fuente": "https://www.kmmotos.com/products/manecilla-derecha-de-freno-italika-dm150-original-f10030174",
+    "referencia": "Manecilla Derecha de Freno Italika DM150 (Original F10030174)",
+    "referencial": true
+  },
+  "MAN037": {
+    "archivo": "man037.webp",
+    "referencial": true
+  },
+  "MCI074": {
+    "archivo": "mci074.webp",
+    "fuente": "https://www.kmmotos.com/products/manecilla-de-clutch-holder-hj125-7-xenkai",
+    "referencia": "MANECILLA DE CLUTCH + HOLDER HJ125-7 XENKAI",
+    "referencial": true
+  },
+  "MDC098": {
+    "archivo": "mdc098.webp",
+    "fuente": "https://www.kmmotos.com/products/switch-de-ignicion-llavin-gn125",
+    "referencia": "Switch de Ignicion (LLAVIN) GN125",
+    "referencial": true
+  },
+  "MDO036": {
+    "archivo": "mdo073.webp",
+    "fuente": "https://mundimotos.com/products/comando-derecho-pulsar200ns-bajaj-original",
+    "referencia": "Mando derecho de arranque Pulsar NS200",
+    "referencial": true
+  },
+  "MDO073": {
+    "archivo": "mdo073.webp",
+    "fuente": "https://mundimotos.com/products/comando-derecho-pulsar200ns-bajaj-original",
+    "referencia": "Mando derecho de arranque Pulsar NS200",
+    "referencial": true
+  },
+  "MDO074": {
+    "archivo": "mdo073.webp",
+    "fuente": "https://mundimotos.com/products/comando-derecho-pulsar200ns-bajaj-original",
+    "referencia": "Mando derecho de arranque Pulsar NS200",
+    "referencial": true
+  },
+  "MDO075": {
+    "archivo": "mdo075.webp",
+    "fuente": "https://www.kmmotos.com/products/mando-de-luces-izquierdo-ns200",
+    "referencia": "MANDO DE LUCES (IZQUIERDO) NS200",
+    "referencial": true
+  },
+  "MDO076": {
+    "archivo": "mdo076.webp",
+    "fuente": "https://www.moglix.com/uno-minda-lhs-handle-bar-switch-for-bajaj-pulsar-135-150-180-discover-125st-sw-0647c/mp/msn457mj0r0q9j",
+    "referencia": "Mando izquierdo Pulsar 135 Uno Minda",
+    "referencial": true
+  },
+  "MDO077": {
+    "archivo": "mdo075.webp",
+    "fuente": "https://www.kmmotos.com/products/mando-de-luces-izquierdo-ns200",
+    "referencia": "MANDO DE LUCES (IZQUIERDO) NS200",
+    "referencial": true
+  },
+  "MGA013": {
+    "archivo": "mga013.webp",
+    "fuente": "https://importadoracolmotos.com/producto/manguera-freno-trasera-gy200-vini/",
+    "referencia": "MANGUERA FRENO TRASERA GY200 vini",
+    "referencial": true
+  },
+  "MGA024": {
+    "archivo": "mga024.webp",
+    "fuente": "https://www.kmmotos.com/products/manguera-de-freno-delantera-gxt",
+    "referencia": "Manguera de Freno Delantera GXT",
+    "referencial": true
+  },
+  "MOT025": {
+    "archivo": "mot047.webp",
+    "fuente": "https://importadoracolmotos.com/producto/motor-arranque-gn-en125h-vini/",
+    "referencia": "MOTOR ARRANQUE GN/EN125H vini",
+    "referencial": true
+  },
+  "MOT047": {
+    "archivo": "mot047.webp",
+    "fuente": "https://importadoracolmotos.com/producto/motor-arranque-gn-en125h-vini/",
+    "referencia": "MOTOR ARRANQUE GN/EN125H vini",
+    "referencial": true
+  },
+  "MOT050": {
+    "archivo": "mot050.webp",
+    "fuente": "https://www.kmmotos.com/products/motor-de-arranque-cg125-ft125-hj125",
+    "referencia": "Motor de Arranque CG125/FT125/HJ125",
+    "referencial": true
+  },
+  "OD-NS200-CABLECL": {
+    "archivo": "od-ns200-cablecl.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/cable-de-clutch-ns200/",
+    "referencia": "CABLE DE CLUTCH NS200",
+    "referencial": false
+  },
+  "OD-NS200-FILTRO": {
+    "archivo": "od-ns200-filtro.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/filtro-de-aire-pulsar-ns200/",
+    "referencia": "FILTRO DE AIRE PULSAR NS200",
+    "referencial": false
+  },
+  "OD-XR150-CABLEVEL": {
+    "archivo": "od-xr150-cablevel.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/cable-de-velocimetro-xr150/",
+    "referencia": "CABLE DE VELOCIMETRO XR150",
+    "referencial": false
+  },
+  "OD-XR150-CDI": {
+    "archivo": "od-xr150-cdi.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/cdi-honda-xr150/",
+    "referencia": "CDI HONDA XR150",
+    "referencial": false
+  },
+  "OD-XR150-ESPEJO": {
+    "archivo": "od-xr150-espejo.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/espejo-xr150/",
+    "referencia": "ESPEJO XR150",
+    "referencial": false
+  },
+  "OD-XR150-FILTRO": {
+    "archivo": "od-xr150-filtro.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/filtro-de-aire-xr150/",
+    "referencia": "FILTRO DE AIRE XR150",
+    "referencial": false
+  },
+  "OD-XR150-MORDAZA": {
+    "archivo": "od-xr150-mordaza.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/mordaza-de-freno-delantero-honda-xr150/",
+    "referencia": "MORDAZA DE FRENO DELANTERO-HONDA XR150",
+    "referencial": false
+  },
+  "OD-XR150-RECT": {
+    "archivo": "od-xr150-rect.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/rectificador-de-corriente-xr150/",
+    "referencia": "RECTIFICADOR DE CORRIENTE XR150",
+    "referencial": false
+  },
+  "OD-XR150-TAPON": {
+    "archivo": "od-xr150-tapon.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/tapon-del-tanque-xr150/",
+    "referencia": "TAPÓN DEL TANQUE XR150",
+    "referencial": false
+  },
+  "OD-YBR125-MORDAZA": {
+    "archivo": "od-ybr125-mordaza.webp",
+    "fuente": "https://comercialortegadiaz.com/producto/mordaza-de-freno-delantero-ybr125/",
+    "referencia": "MORDAZA DE FRENO DELANTERO-YBR125",
+    "referencial": false
+  },
+  "OTR362": {
+    "archivo": "otr362.webp",
+    "fuente": "https://importadoracolmotos.com/producto/sellos-valvula-en125-gn125h-gs125-vini/",
+    "referencia": "SELLOS VALVULA EN125/GN125H/GS125 vini",
+    "referencial": false
+  },
+  "OTR363": {
+    "archivo": "otr363.webp",
+    "fuente": "https://www.kmmotos.com/products/sellos-de-valvulas-ps180-ug4-4s-pulsar-135-platina-125-discover-125-135-re205-ns200",
+    "referencia": "Sellos de Válvulas PS180 UG4/4S/PULSAR 135/PLATINA 125/DISCOVER 125/135/RE205/NS200",
+    "referencial": true
+  },
+  "PAL035": {
+    "archivo": "pal035.webp",
+    "fuente": "https://www.kmmotos.com/products/pedal-de-cambio-cg125-hj125-std-1",
+    "referencia": "Pedal de Cambio CG125/HJ125 STD",
+    "referencial": true
+  },
+  "PAS-CG150": {
+    "archivo": "pas-cg150.webp",
+    "fuente": "https://shopee.com.br/i.422156131.20278282117",
+    "referencia": "Pastillas delanteras Honda CG 150 Titan Mix ESD",
+    "referencial": true
+  },
+  "PAS-FZ150": {
+    "archivo": "pas-ns200.webp",
+    "fuente": "https://importadoracolmotos.com/producto/pastilla-freno-pulsar135-180-220-200ns-fz16-del-vini/",
+    "referencia": "PASTILLA FRENO PULSAR135/180/220/200NS/FZ16 DEL vini",
+    "referencial": true
+  },
+  "PAS-NS200": {
+    "archivo": "pas-ns200.webp",
+    "fuente": "https://importadoracolmotos.com/producto/pastilla-freno-pulsar135-180-220-200ns-fz16-del-vini/",
+    "referencia": "PASTILLA FRENO PULSAR135/180/220/200NS/FZ16 DEL vini",
+    "referencial": true
+  },
+  "PAT027": {
+    "archivo": "pat027.webp",
+    "fuente": "https://importadoracolmotos.com/producto/pedal-arranque-gxt200-vini/",
+    "referencia": "PEDAL ARRANQUE GXT200 vini",
+    "referencial": true
+  },
+  "PAT028": {
+    "archivo": "pat027.webp",
+    "fuente": "https://importadoracolmotos.com/producto/pedal-arranque-gxt200-vini/",
+    "referencia": "PEDAL ARRANQUE GXT200 vini",
+    "referencial": false
+  },
+  "PAT029": {
+    "archivo": "pat029.webp",
+    "fuente": "https://www.kmmotos.com/products/pedal-de-arranque-krant-hj125",
+    "referencia": "Pedal de Arranque/krant HJ125",
+    "referencial": true
+  },
+  "PED-CG125": {
+    "archivo": "ped-cg125.webp",
+    "fuente": "https://importadoracolmotos.com/producto/reposapie-delantero-gn125h-vini/",
+    "referencia": "REPOSAPIE DELANTERO GN125H vini",
+    "referencial": true
+  },
+  "PIN-CG125-15": {
+    "archivo": "pin-cg125-15.webp",
+    "fuente": "https://importadoracolmotos.com/producto/pinon-motriz-cg125-xl185-428-15t-vini/",
+    "referencia": "PIÑON MOTRIZ CG125/XL185 428-15T vini",
+    "referencial": true
+  },
+  "PIS-CG150-STD": {
+    "archivo": "pis199.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-piston-de-cg150-ft150-rt180",
+    "referencia": "Kit Pistón de CG150/FT150/RT180",
+    "referencial": true
+  },
+  "PIS145": {
+    "archivo": "pis145.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-cg125-std-56-00mm-15-vini/",
+    "referencia": "KIT PISTON CG125 STD (56.00mm-15) vini",
+    "referencial": true
+  },
+  "PIS146": {
+    "archivo": "pis199.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-piston-de-cg150-ft150-rt180",
+    "referencia": "Kit Pistón de CG150/FT150/RT180",
+    "referencial": true
+  },
+  "PIS147": {
+    "archivo": "pis166.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-cg200-std-63-5mm-15-racing-vini/",
+    "referencia": "KIT PISTON CG200 STD (63.5mm-15) RACING* vini",
+    "referencial": true
+  },
+  "PIS148": {
+    "archivo": "pis148.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-pulsar135-std-54-00mm-14-vini/",
+    "referencia": "KIT PISTON PULSAR135 STD (54.00mm-14) vini",
+    "referencial": false
+  },
+  "PIS149": {
+    "archivo": "pis149.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-re205-std-61-00mm-17-vini/",
+    "referencia": "KIT PISTON RE205 STD (61.00mm-17) vini",
+    "referencial": true
+  },
+  "PIS152": {
+    "archivo": "pis166.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-cg200-std-63-5mm-15-racing-vini/",
+    "referencia": "KIT PISTON CG200 STD (63.5mm-15) RACING* vini",
+    "referencial": false
+  },
+  "PIS153": {
+    "archivo": "pis193.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-piston-cbf150",
+    "referencia": "Kit de Pistón CBF150",
+    "referencial": true
+  },
+  "PIS162": {
+    "archivo": "pis162.webp",
+    "fuente": "https://www.motosyaccesorios.com.mx/tienda7/pistones-bielas-anillos/6640-piston-pulsar-180-6350-jpn.html",
+    "referencia": "Pistón completo Pulsar 180 63.50 mm",
+    "referencial": true
+  },
+  "PIS163": {
+    "archivo": "pis163.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-pulsar-200ns-std-72-00mm-17-vini/",
+    "referencia": "KIT PISTON PULSAR 200NS STD (72.00mm-17) vini",
+    "referencial": false
+  },
+  "PIS166": {
+    "archivo": "pis166.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-cg200-std-63-5mm-15-racing-vini/",
+    "referencia": "KIT PISTON CG200 STD (63.5mm-15) RACING* vini",
+    "referencial": true
+  },
+  "PIS193": {
+    "archivo": "pis193.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-piston-cbf150",
+    "referencia": "Kit de Pistón CBF150",
+    "referencial": true
+  },
+  "PIS197": {
+    "archivo": "pis197.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-ag200-cg250-std-oval-67-00mm-16-vini/",
+    "referencia": "KIT PISTON AG200/CG250 STD (OVAL 67.00mm-16) vini",
+    "referencial": true
+  },
+  "PIS198": {
+    "archivo": "pis198.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-piston-apache-rtr160-4v-std-62mm-15-vini/",
+    "referencia": "KIT PISTON APACHE RTR160 4V STD (62mm-15) vini",
+    "referencial": true
+  },
+  "PIS199": {
+    "archivo": "pis199.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-piston-de-cg150-ft150-rt180",
+    "referencia": "Kit Pistón de CG150/FT150/RT180",
+    "referencial": true
+  },
+  "PIT009": {
+    "archivo": "pit009.webp",
+    "fuente": "https://importadoracolmotos.com/producto/pito-universal-12v-grande-vini/",
+    "referencia": "PITO UNIVERSAL 12V GRANDE vini",
+    "referencial": true
+  },
+  "PUN-UNI": {
+    "archivo": "pun-uni.webp",
+    "fuente": "https://tecki.vn/p1.296320168.14357545833-boc-tay-lai-xe-may-bang-cao-su-22mm-chat-luong-cao",
+    "referencia": "Puños universales de goma de 22 mm",
+    "referencial": true
+  },
+  "REC053": {
+    "archivo": "rec053.webp",
+    "fuente": "https://www.kmmotos.com/products/regulador-de-voltaje-4l-rectificador-dm150-ft125-ft150-125z-2",
+    "referencia": "Regulador de Voltaje 4L (RECTIFICADOR) DM150/FT125/FT150/125Z",
+    "referencial": true
+  },
+  "REC055": {
+    "archivo": "rec055.webp",
+    "fuente": "https://www.mercadolibre.com.co/regulador-rectificador-pulsar-135--ns-125--xcd-125/up/MCOU3041743551",
+    "referencia": "Rectificador Pulsar 135",
+    "referencial": true
+  },
+  "REC056": {
+    "archivo": "rec056.webp",
+    "fuente": "https://www.kmmotos.com/products/regulador-de-voltage-bajaj-boxer-150",
+    "referencia": "Regulador de Voltage Bajaj Boxer 150",
+    "referencial": true
+  },
+  "REC057": {
+    "archivo": "rec055.webp",
+    "fuente": "https://www.mercadolibre.com.co/regulador-rectificador-pulsar-135--ns-125--xcd-125/up/MCOU3041743551",
+    "referencia": "Rectificador Pulsar 135",
+    "referencial": true
+  },
+  "REG-CG150": {
+    "archivo": "reg-cg150.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "regulador",
+    "referencial": true
+  },
+  "RET-CG150": {
+    "archivo": "ret122.webp",
+    "fuente": "https://www.kmmotos.com/products/retenedores-de-barra-27377-5-kb150-ft125-magnum-150-par",
+    "referencia": "Retenedores de Barra (27377.5) KB150/FT125/MAGNUM 150 (PAR)",
+    "referencial": true
+  },
+  "RET060": {
+    "archivo": "ret060.webp",
+    "fuente": "https://www.kmmotos.com/products/retenedores-de-barra-304210-5-bajaj-pulsar-ps135-platina-125-discover-100-ct100-boxer",
+    "referencia": "Retenedores de Barra (304210.5) Bajaj Pulsar PS135/PLATINA 125/DISCOVER 100/CT100/BOXER",
+    "referencial": true
+  },
+  "RET065": {
+    "archivo": "ret122.webp",
+    "fuente": "https://www.kmmotos.com/products/retenedores-de-barra-27377-5-kb150-ft125-magnum-150-par",
+    "referencia": "Retenedores de Barra (27377.5) KB150/FT125/MAGNUM 150 (PAR)",
+    "referencial": true
+  },
+  "RET090": {
+    "archivo": "ret122.webp",
+    "fuente": "https://www.kmmotos.com/products/retenedores-de-barra-27377-5-kb150-ft125-magnum-150-par",
+    "referencia": "Retenedores de Barra (27377.5) KB150/FT125/MAGNUM 150 (PAR)",
+    "referencial": true
+  },
+  "RET092": {
+    "archivo": "ret060.webp",
+    "fuente": "https://www.kmmotos.com/products/retenedores-de-barra-304210-5-bajaj-pulsar-ps135-platina-125-discover-100-ct100-boxer",
+    "referencia": "Retenedores de Barra (304210.5) Bajaj Pulsar PS135/PLATINA 125/DISCOVER 100/CT100/BOXER",
+    "referencial": true
+  },
+  "RET115": {
+    "archivo": "ret122.webp",
+    "fuente": "https://www.kmmotos.com/products/retenedores-de-barra-27377-5-kb150-ft125-magnum-150-par",
+    "referencia": "Retenedores de Barra (27377.5) KB150/FT125/MAGNUM 150 (PAR)",
+    "referencial": true
+  },
+  "RET122": {
+    "archivo": "ret122.webp",
+    "fuente": "https://www.kmmotos.com/products/retenedores-de-barra-27377-5-kb150-ft125-magnum-150-par",
+    "referencia": "Retenedores de Barra (27377.5) KB150/FT125/MAGNUM 150 (PAR)",
+    "referencial": true
+  },
+  "RGL004": {
+    "archivo": "rgl004.webp",
+    "fuente": "https://www.kmmotos.com/products/tensores-de-cadena-ft180-rt180",
+    "referencia": "Tensores de Cadena FT180/RT180",
+    "referencial": true
+  },
+  "RGL005": {
+    "archivo": "rgl004.webp",
+    "fuente": "https://www.kmmotos.com/products/tensores-de-cadena-ft180-rt180",
+    "referencia": "Tensores de Cadena FT180/RT180",
+    "referencial": true
+  },
+  "RGL006": {
+    "archivo": "rgl004.webp",
+    "fuente": "https://www.kmmotos.com/products/tensores-de-cadena-ft180-rt180",
+    "referencia": "Tensores de Cadena FT180/RT180",
+    "referencial": true
+  },
+  "ROD-6202": {
+    "archivo": "rod-6202.webp",
+    "fuente": "https://www.kmmotos.com/products/balinera-6202-2rs-xenkai",
+    "referencia": "BALINERA 6202 2RS XENKAI",
+    "referencial": true
+  },
+  "ROD-6301": {
+    "archivo": "bal020.webp",
+    "fuente": "https://importadoracolmotos.com/producto/ruliman-rueda-6301-2rs-vini-cr/",
+    "referencia": "RULIMAN RUEDA 6301-2RS vini CR",
+    "referencial": true
+  },
+  "SIN025": {
+    "archivo": "sin025.webp",
+    "fuente": "https://www.kmmotos.com/products/engranaje-de-velocimetro-zx150l-zx200l",
+    "referencia": "Engranaje de Velocimetro ZX150L/ZX200L",
+    "referencial": true
+  },
+  "SIS016": {
+    "archivo": "sis016.webp",
+    "fuente": "https://www.kmmotos.com/products/arnes-electrico-cg125-ft125-mg125-9",
+    "referencia": "Arnes Eléctrico CG125/FT125/MG125-7",
+    "referencial": true
+  },
+  "SIS023": {
+    "archivo": "sis023.webp",
+    "fuente": "https://www.kmmotos.com/products/arnes-electrico-kmf-zx150l",
+    "referencia": "Arnes Eléctrico KMF ZX150L",
+    "referencial": true
+  },
+  "SPR126": {
+    "archivo": "spr126.webp",
+    "fuente": "https://www.kmmotos.com/products/catarina-boxer-platina-ax100-ct100-38t-1",
+    "referencia": "Catarina BOXER/PLATINA/AX100/CT100 38T",
+    "referencial": true
+  },
+  "SPR175": {
+    "archivo": "spr175.webp",
+    "fuente": "https://www.kmmotos.com/products/kit-de-traccion-arrastre-ft150-cg150-bujes-38t-15t-428h-124l-powerdrag",
+    "referencia": "Kit de Traccion(arrastre) FT150/CG150/BUJES 38T-15T/428H-124L Powerdrag",
+    "referencial": true
+  },
+  "SPR209": {
+    "archivo": "spr209.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-cg125-428h-132l-42t-15t-vini/",
+    "referencia": "KIT ARRASTRE CG125 428H-132L/42T/15T vini",
+    "referencial": true
+  },
+  "SPR255": {
+    "archivo": "spr255.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-pulsar135-428h-130l-42t-15t-vini/",
+    "referencia": "KIT ARRASTRE PULSAR135 428H-130L/42T/15T vini",
+    "referencial": true
+  },
+  "SPR268": {
+    "archivo": "spr255.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-pulsar135-428h-130l-42t-15t-vini/",
+    "referencia": "KIT ARRASTRE PULSAR135 428H-130L/42T/15T vini",
+    "referencial": true
+  },
+  "SPR309": {
+    "archivo": "spr209.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-cg125-428h-132l-42t-15t-vini/",
+    "referencia": "KIT ARRASTRE CG125 428H-132L/42T/15T vini",
+    "referencial": true
+  },
+  "SPR310": {
+    "archivo": "spr310.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-fz16-428h-130l-40t-14t-vini/",
+    "referencia": "KIT ARRASTRE FZ16 428H-130L/40T/14T vini",
+    "referencial": true
+  },
+  "SPR311": {
+    "archivo": "spr311.webp",
+    "fuente": "https://importadoracolmotos.com/producto/kit-arrastre-xr150l-428h-130l-49t-17t-vini/",
+    "referencia": "KIT ARRASTRE XR150L 428H-130L/49T/17T vini",
+    "referencial": true
+  },
+  "TEN021": {
+    "archivo": "ten021.webp",
+    "fuente": "https://www.kmmotos.com/products/tensor-automatico-pulsar-136",
+    "referencia": "Tensor Automatico Pulsar 135",
+    "referencial": true
+  },
+  "TPO075": {
+    "archivo": "tpo075.webp",
+    "fuente": "https://www.kmmotos.com/products/tapon-de-tanque-hj125",
+    "referencia": "Tapon de Tanque HJ125",
+    "referencial": true
+  },
+  "VAL-CG125": {
+    "archivo": "val089.webp",
+    "fuente": "https://www.kmmotos.com/products/valvulas-de-admicion-y-escape-hj125-cg125-ft125-std-xenkai",
+    "referencia": "VALVULAS DE ADMICION Y ESCAPE HJ125/CG125/FT125/STD XENKAI",
+    "referencial": true
+  },
+  "VAL016": {
+    "archivo": "val016.webp",
+    "fuente": "https://importadoracolmotos.com/producto/guias-valvulas-cg200-racing-vini/",
+    "referencia": "GUIAS VALVULAS CG200 RACING vini",
+    "referencial": true
+  },
+  "VAL079": {
+    "archivo": "val079.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-ax4-con-sellos-vini/",
+    "referencia": "VALVULA JGO AX4 CON SELLOS vini",
+    "referencial": false
+  },
+  "VAL088": {
+    "archivo": "val088.webp",
+    "fuente": "https://importadoracolmotos.com/producto/guias-valvulas-cg125-150-250-vini/",
+    "referencia": "GUIAS VALVULAS CG125/150/250 vini",
+    "referencial": true
+  },
+  "VAL089": {
+    "archivo": "val089.webp",
+    "fuente": "https://www.kmmotos.com/products/valvulas-de-admicion-y-escape-hj125-cg125-ft125-std-xenkai",
+    "referencia": "VALVULAS DE ADMICION Y ESCAPE HJ125/CG125/FT125/STD XENKAI",
+    "referencial": true
+  },
+  "VAL090": {
+    "archivo": "val090.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-cg150-xy150-vini/",
+    "referencia": "VALVULA JGO CG150/XY150 vini",
+    "referencial": false
+  },
+  "VAL091": {
+    "archivo": "val090.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-cg150-xy150-vini/",
+    "referencia": "VALVULA JGO CG150/XY150 vini",
+    "referencial": true
+  },
+  "VAL092": {
+    "archivo": "val145.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-cg250-pl-34-28-5-5-5-vini/",
+    "referencia": "VALVULA JGO CG250 (PL/34-28.5-5.5) vini",
+    "referencial": true
+  },
+  "VAL097": {
+    "archivo": "val097.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-pulsar135-4-pzas-pl-20-17-5-4-5-vini/",
+    "referencia": "VALVULA JGO PULSAR135 (4 PZAS) PL/20-17.5-4.5 vini",
+    "referencial": false
+  },
+  "VAL134": {
+    "archivo": "val134.webp",
+    "fuente": "https://www.kmmotos.com/products/valvulas-de-motor-bajaj-discover-125-st-4-valvulas",
+    "referencia": "Válvulas de Motor Bajaj Discover 125 ST (4 Valvulas)",
+    "referencial": true
+  },
+  "VAL145": {
+    "archivo": "val145.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-cg250-pl-34-28-5-5-5-vini/",
+    "referencia": "VALVULA JGO CG250 (PL/34-28.5-5.5) vini",
+    "referencial": true
+  },
+  "VAL147": {
+    "archivo": "val147.webp",
+    "fuente": "https://www.kmmotos.com/products/valvulas-de-admicion-y-escape-gy6-125",
+    "referencia": "Válvulas de Admicion y Escape GY6-125",
+    "referencial": true
+  },
+  "VAL148": {
+    "archivo": "val148.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-pulsar180-pl-30-26-4-5-vini/",
+    "referencia": "VALVULA JGO PULSAR180 PL/30-26-4.5 vini",
+    "referencial": false
+  },
+  "VAL149": {
+    "archivo": "val147.webp",
+    "fuente": "https://www.kmmotos.com/products/valvulas-de-admicion-y-escape-gy6-125",
+    "referencia": "Válvulas de Admicion y Escape GY6-125",
+    "referencial": true
+  },
+  "VAL150": {
+    "archivo": "val150.webp",
+    "fuente": "https://importadoracolmotos.com/producto/valvula-jgo-cb1-vini/",
+    "referencia": "VALVULA JGO CB1 vini",
+    "referencial": false
+  },
+  "VAL178": {
+    "archivo": "val147.webp",
+    "fuente": "https://www.kmmotos.com/products/valvulas-de-admicion-y-escape-gy6-125",
+    "referencia": "Válvulas de Admicion y Escape GY6-125",
+    "referencial": true
+  },
+  "VAR016": {
+    "archivo": "var016.webp",
+    "fuente": "https://www.kmmotos.com/products/varilla-de-motor-xm200-gyb",
+    "referencia": "Varilla de Motor XM200 Gyb",
+    "referencial": true
+  },
+  "VAR017": {
+    "archivo": "var016.webp",
+    "fuente": "https://www.kmmotos.com/products/varilla-de-motor-xm200-gyb",
+    "referencia": "Varilla de Motor XM200 Gyb",
+    "referencial": true
+  },
+  "VAR022": {
+    "archivo": "var022.webp",
+    "fuente": "https://importadoracolmotos.com/producto/varilla-freno-cg125-vini/",
+    "referencia": "VARILLA FRENO CG125 vini",
+    "referencial": false
+  },
+  "VAR023": {
+    "archivo": "var023.webp",
+    "fuente": "https://www.walmart.com.mx/ip/accesorios-y-herramientas/varilla-de-freno-trasero-para-moto-ybr125-kinlley-kinlley-std/00750302957201",
+    "referencia": "Varilla de freno trasero Yamaha YBR125",
+    "referencial": true
+  },
+  "YOG-P000993": {
+    "archivo": "yog-p000993.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P000993",
+    "referencial": false
+  },
+  "YOG-P002764": {
+    "archivo": "yog-p002764.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P002764",
+    "referencial": false
+  },
+  "YOG-P004724": {
+    "archivo": "yog-p004724.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P004724",
+    "referencial": false
+  },
+  "YOG-P004727": {
+    "archivo": "yog-p004727.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P004727",
+    "referencial": false
+  },
+  "YOG-P005167": {
+    "archivo": "yog-p005167.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P005167",
+    "referencial": false
+  },
+  "YOG-P005340": {
+    "archivo": "yog-p005340.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P005340",
+    "referencial": false
+  },
+  "YOG-P009235": {
+    "archivo": "yog-p009235.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P009235",
+    "referencial": false
+  },
+  "YOG-P016691": {
+    "archivo": "yog-p016691.webp",
+    "fuente": "https://motocentro.com.ni/wp-content/uploads/2025/03/LOW-CATALOGO-2025-YOG-1.pdf",
+    "referencia": "P016691",
+    "referencial": false
+  },
+  "ZAP-CG125": {
+    "archivo": "fri045.webp",
+    "fuente": "https://www.kmmotos.com/products/fricciones-de-freno-gxt200-hj125-7-gn125",
+    "referencia": "Fricciones de Freno GXT200/HJ125-7/GN125",
+    "referencial": true
+  },
+  "ZAP-YBR125": {
+    "archivo": "zap-ybr125.webp",
+    "fuente": "https://www.kmmotos.com/products/zapatas-de-freno-ybr-gxt200-hj125-gn125-en125-crux-xtz-dt175-5",
+    "referencia": "Zapatas de Freno YBR/GXT200/HJ125/GN125/EN125/CRUX/XTZ/DT175",
+    "referencial": true
+  }
+}

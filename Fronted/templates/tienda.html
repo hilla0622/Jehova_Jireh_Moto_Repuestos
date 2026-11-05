@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/tienda.css') }}?v=1.12">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tienda.css') }}?v=1.14">
 </head>
 
 <body>
@@ -188,36 +188,13 @@
             <div class="card product-card" data-category="{{ p.categoria if p.categoria else 'General' }}"
                 data-compatibility="{{ p.modelo_compatible or '' }}" data-fitment-source="{{ p.compatibilidad_fuente or '' }}"{% if p.stock_actual <= 0 %} data-por-consultar{% endif %}{% if p.xr150_referencia %} data-xr150-referencia{% endif %}>
                 <div class="product-image">
-                    <img src="{% if 'Pastillas' in p.nombre %}{{ url_for('static', filename='img/pastillas_freno.jpg') }}
-          {% elif p.nombre == 'AMORTIGUADOR AKT TT150-180 - GENESIS SX200 VINI' %}{{ url_for('static', filename='img/amortiguador.jpg') }}
-          {% elif p.nombre == 'AMORTIGUADORES GN125H VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxgPug4ihG6bEACQNFYUh67uDjRuKzsLPCfeHAvhyUYQ&s=10
-          {% elif p.nombre == 'AMORTIGUADORES PULSAR 135-DISCOVER VINI' %}https://http2.mlstatic.com/D_NQ_NP_636126-MCO105563192083_012026-O.webp
-          {% elif p.nombre == 'ANILLOS DE PISTON AG200 A MEDIDA 0.25 VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRF4ruRgmDC246RkA4jqBHMLt8oGD10ef83bjKAHg-b8A&s=10
-          {% elif p.nombre == 'ANILLOS DE PISTON AG200 A MEDIDA 0.50 VINI' or p.nombre == 'ANILLOS DE PISTON AG200 A MEDIDA 0.50 VIN' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRF4ruRgmDC246RkA4jqBHMLt8oGD10ef83bjKAHg-b8A&s=10
-          {% elif p.nombre == 'ANILLOS DE PISTON AG200-UM200-RAYBAR200 (67MM*15MM) STD VINI' %}https://importadoracolmotos.com/wp-content/uploads/2023/03/786460141272-2.jpg
-          {% elif p.nombre == 'ANILLOS DE PISTON CG150 STD VINI' %}https://www.kmmotos.com/cdn/shop/files/KM-FA0009.png?v=1751085339
-          {% elif p.nombre == 'ANILLOS DE PISTON CG200-WY200 63.5 MM STD VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPyGjY3DlvH542NxaGn40dkrTaPEVqOUjYV_AJcwBIzw&s
-          {% elif p.nombre == 'ANILLOS DE PISTON GXT200-DR200 66MM STD VINI' %}https://www.kmmotos.com/cdn/shop/files/KM-CA0023.png?v=1752372388
-          {% elif p.nombre == 'ANILLOS DE PISTON GY200 69MM-198CM STD VINI' %}https://www.kmmotos.com/cdn/shop/files/KM-CA0022.png?v=1747533896
-          {% elif p.nombre == 'ANILLOS DE PISTON PULSAR 135-XCD125-PLATINA125 STD VINI' %}https://www.kmmotos.com/cdn/shop/files/9905602002159.png?v=1746790697&width=1920
-          {% elif p.nombre == 'ANILLOS DE PISTON PULSAR 180 UG3-UG4 STD VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCZ4eMWxX-RwYcHONIl5xSAaWRH278uz5d2tysrrZnlA&s=10
-          {% elif p.nombre == 'ANILLOS DE PISTON PULSAR NS200 STD VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNmdKAc_9J6iDx_9LB-h16gGJyLIeK2uxC8Aj6gZAMJw&s=10
-          {% elif p.nombre == 'ARBOL DE LEVAS AKT CR5 180 VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnBbcH3oTuNfwEqh49fgoMY712sdLHADbH9eWmGFecDQ&s=10
-          {% elif 'ARBOL DE LEVAS CG-GY200 NO BALANZA COMPLETA' in p.nombre %}https://m.media-amazon.com/images/I/61yNk53rVYL._AC_UF894,1000_QL80_.jpg
-          {% elif p.nombre == 'ARBOL DE LEVAS PULSAR 135 VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSkGwYBJ1OGYPMzebGpY6vLw5unHSwnFYz8oUSOcReq-A&s=10
-          {% elif p.nombre == 'ARBOL DE LEVAS SCOOTER 125-150 VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSMx0rx2hXfYrx0XEF8nx7ciNIbB-HIYNNeOxibhjHnOQ&s=10
-          {% elif p.nombre == 'ARBOL DE LEVAS WY200-JH150 MOTOR CADENA BUSHING VINI' %}https://http2.mlstatic.com/D_NQ_NP_920320-CBT104073022219_012026-O.webp
-          {% elif p.nombre == 'ASIENTO CG RACING MODIFIC AZUL VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtYoAJSnCj59yDyyxI-DFrQn16pLktzXvU_90OZPvD6uINcnzzRJp21gvR&s=10
-          {% elif p.nombre == 'ASIENTO CG RACING MODIFIED VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSDJzjJb6ztsMeH6vZkbanEY_Xb-7tiCE1s-dx0RbtXZyJ2JGfCZ4Ju5jNg&s=10
-          {% elif 'Kit' in p.nombre or 'Arrastre' in p.nombre %}{{ url_for('static', filename='img/kit_arrastre.jpg') }}
-          {% elif 'Aceite' in p.nombre %}{{ url_for('static', filename='img/aceite_motul.jpg.png') }}
-          {% elif 'Bater' in p.nombre %}{{ url_for('static', filename='img/bateria_gel.jpg') }}
-          {% elif 'Buj' in p.nombre %}{{ url_for('static', filename='img/bujia_ngk.jpg') }}
-          {% elif p.categoria == 'Frenos' %}{{ url_for('static', filename='img/frenos.jpg') }}
-          {% elif p.categoria == 'Llantas' %}{{ url_for('static', filename='img/llantas.jpg') }}
-          {% elif p.categoria == 'Motor' or p.categoria == 'Transmisión' or p.categoria == 'Eléctrico' %}{{ url_for('static', filename='img/motor.jpg') }}
-          {% else %}{{ url_for('static', filename='img/portada_logo.jpg') }}{% endif %}" alt="{{ p.nombre }}"
+                    {% if p.foto %}
+                    <img src="{{ url_for('static', filename='img/repuestos/' ~ p.foto.archivo) }}"
+                        alt="{{ 'Referencia visual de ' if p.foto.referencial else '' }}{{ p.nombre }}"
                         loading="lazy" decoding="async">
+                    {% else %}
+                    <span class="product-image-placeholder">Foto pendiente</span>
+                    {% endif %}
                 </div>
                 <span class="card-category">{{ p.categoria if p.categoria else 'General' }}</span>
                 <h3 class="card-title">{{ p.nombre }}</h3>

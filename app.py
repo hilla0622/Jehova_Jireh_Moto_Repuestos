@@ -1,8 +1,11 @@
+import json
 import math
+import mimetypes
 import os
 import pyodbc
 from datetime import datetime, timezone, timedelta
 from functools import wraps
+from pathlib import Path
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from calculos_rrhh import calcular_nomina_empleado
@@ -17,8 +20,12 @@ from reportes_service import (
 def obtener_fecha_hoy_nicaragua():
     return datetime.now(timezone(timedelta(hours=-6))).date().isoformat()
 
+mimetypes.add_type('image/webp', '.webp')
 app = Flask(__name__, template_folder='Fronted/templates', static_folder='Fronted/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_super_secure')
+
+with (Path(app.static_folder) / 'img' / 'repuestos' / 'catalogo.json').open(encoding='utf-8') as archivo:
+    FOTOS_REPUESTOS = json.load(archivo)
 
 # ==============================================================================
 # CONFIGURACIÓN DE BASE DE DATOS SQL SERVER
@@ -150,7 +157,9 @@ def tienda():
     productos = execute_query(query_productos, referencias_consultables, fetchall=True)
     categorias = [{'nombre': nombre} for nombre in sorted({p['categoria'] for p in productos if p['categoria']})]
     for producto in productos:
-        producto['xr150_referencia'] = producto['codigo_sku'] in REFERENCIAS_XR150
+        sku = producto['codigo_sku']
+        producto['xr150_referencia'] = sku in REFERENCIAS_XR150
+        producto['foto'] = FOTOS_REPUESTOS.get((sku or '').strip().upper())
 
     respuesta = app.make_response(render_template(
         'tienda.html', productos=productos, categorias=categorias,

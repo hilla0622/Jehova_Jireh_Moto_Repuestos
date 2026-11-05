@@ -472,7 +472,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.querySelectorAll('.filter-btn').forEach(button => {
+    const categoryToggle = document.getElementById('category-menu-toggle');
+    const categoryMenu = document.getElementById('category-menu');
+
+    function fitCategoryMenu() {
+        if (!categoryMenu.hidden) {
+            const top = categoryMenu.getBoundingClientRect().top;
+            categoryMenu.style.setProperty('--category-menu-top', `${top}px`);
+        }
+    }
+
+    function setCategoryMenuOpen(open) {
+        categoryMenu.hidden = !open;
+        categoryToggle.setAttribute('aria-expanded', String(open));
+        fitCategoryMenu();
+    }
+
+    categoryToggle.addEventListener('click', () => setCategoryMenuOpen(categoryMenu.hidden));
+    window.addEventListener('resize', fitCategoryMenu);
+    document.addEventListener('click', event => {
+        if (!categoryMenu.hidden && !categoryToggle.parentElement.contains(event.target)) {
+            setCategoryMenuOpen(false);
+        }
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !categoryMenu.hidden) {
+            setCategoryMenuOpen(false);
+            categoryToggle.focus();
+        }
+    });
+
+    categoryMenu.querySelectorAll('.filter-btn').forEach(button => {
         button.addEventListener('click', event => {
             event.preventDefault();
             unmatchedOnly = false;
@@ -481,6 +511,8 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedZone = category === 'all' ? 'all' : null;
             if (category === 'all') compatibility.checked = false;
             filterCatalog();
+            setCategoryMenuOpen(false);
+            catalogTitle.focus({preventScroll: true});
             catalogTitle.scrollIntoView();
         });
     });

@@ -67,7 +67,6 @@ async function cargarDatosConciliacion(descartar = false) {
         mensajeConciliacion(data.solo_lectura ? 'Este mes tiene conciliaciones posteriores y está protegido. Consultá sus movimientos y diferencias; la edición está deshabilitada.' : data.conciliacion_guardada && !data.extracto ? 'Este corte se guardó con el método anterior, por saldos. Sus diferencias se conservaron. Completá el extracto para revisar movimiento por movimiento.' : 'Empezá con los saldos y movimientos del extracto. Los registros de la empresa ya están cargados.');
         renderPartidasTransito();
         renderComparacionConciliacion();
-        if (typeof cargarReclasificaciones === 'function') cargarReclasificaciones();
     } catch (e) {
         if (solicitud !== solicitudConciliacion) return;
         concEl('conc-estado-guardado').textContent = 'No se pudo cargar';

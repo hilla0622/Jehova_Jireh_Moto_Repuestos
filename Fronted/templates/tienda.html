@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/tienda.css') }}?v=1.14">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tienda.css') }}?v=1.15">
 </head>
 
 <body>
@@ -25,8 +25,9 @@
             <div class="nav-links">
                 <a href="#" onclick="window.scrollTo(0,0);">Inicio</a>
                 <div class="dropdown">
-                    <a href="#" class="dropbtn">Repuestos ▾</a>
-                    <div class="dropdown-content">
+                    <button type="button" class="dropbtn" id="category-menu-toggle"
+                        aria-expanded="false" aria-controls="category-menu">Repuestos <span aria-hidden="true">▾</span></button>
+                    <div class="dropdown-content" id="category-menu" hidden>
                         <a href="#" class="filter-btn" data-filter="all">Ver Todos</a>
                         {% if categorias %}
                         {% for c in categorias %}
@@ -42,8 +43,7 @@
                 <!-- Botón de Registro -->
                 <a href="{{ url_for('registro') }}" class="btn-login"
                     style="text-decoration: none; margin-right: 0.5rem;">Registrarse</a>
-                <!-- Botón de Login que lleva a la pantalla original -->
-                <a href="{{ url_for('login') }}" class="btn-login" style="text-decoration: none;">Iniciar Sesión</a>
+                <a href="{{ url_for('elegir_acceso') }}" class="btn-login" style="text-decoration: none;">Iniciar Sesión</a>
                 {% else %}
                 <!-- Icono de Perfil -->
                 <a href="{{ url_for('perfil') }}" class="profile-icon" style="text-decoration: none; width: 40px; height: 40px; background: var(--accent-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; margin-right: 1rem;" title="Mi Perfil">
@@ -305,7 +305,7 @@
 
 
 
-    <script src="{{ url_for('static', filename='js/tienda.js') }}?v=2.15"></script>
+    <script src="{{ url_for('static', filename='js/tienda.js') }}?v=2.16"></script>
 </body>
 
 </html>

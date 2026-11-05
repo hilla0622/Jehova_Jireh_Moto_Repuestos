@@ -1505,48 +1505,12 @@
                         </div>
                     </div>
 
-                    <!-- CONTENIDO: CONCILIACIÓN BANCARIA Y RECLASIFICACIONES (RF97 - RF99) -->
                     <div id="fin-conciliacion" class="fin-tab-content" style="display: none;">
                         <div class="card"><div class="card-body" style="padding: 1.5rem;">
                             {% include 'conciliacion_bancaria.html' %}
-
-                                <!-- SECCIÓN: RECLASIFICACIONES Y AUDITORÍA DE FLUJO (RF97, RF99) -->
-                                <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                                        <div>
-                                            <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                                                <i class="ph-bold ph-shield-check" style="color: #059669;"></i> Bitácora de Reclasificaciones y Auditoría Contable (RF97, RF99)
-                                            </h4>
-                                            <span style="font-size: 0.8rem; color: var(--text-muted);">
-                                                Historial de reclasificaciones operativas de compras, ventas y asientos manuales efectuadas por el Contador
-                                            </span>
-                                        </div>
-                                        <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalReclasificacion()">
-                                            <i class="ph-bold ph-arrows-clockwise"></i> Nueva Reclasificación
-                                        </button>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="data-table" style="font-size: 0.85rem;">
-                                            <thead>
-                                                <tr>
-                                                    <th>Fecha Registro</th>
-                                                    <th>Asiento / Ref</th>
-                                                    <th>Módulo Origen</th>
-                                                    <th>Act. Anterior</th>
-                                                    <th>Act. Nueva</th>
-                                                    <th>Motivo / Justificación Técnica</th>
-                                                    <th>Auditor / Usuario</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="conc-tbody-reclasificaciones">
-                                                <tr><td colspan="7" class="text-center text-muted">Cargando bitácora de auditoría...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        </div></div>
                     </div>
+
                 </section>
                 {% endif %}
 
@@ -3006,65 +2970,6 @@
     </div>
 
     <!-- MODAL: AGREGAR PARTIDA PENDIENTE EN TRÁNSITO (RF98) -->
-    <!-- MODAL: REGISTRAR RECLASIFICACIÓN CONTABLE (RF97, RF99) -->
-    <div class="modal" id="modal-reclasificacion">
-        <div class="modal-content" style="max-width: 550px;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white;">
-                <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem; color: white;">
-                    <i class="ph-bold ph-arrows-clockwise"></i> Reclasificar Operación de Flujo
-                </h3>
-                <button type="button" class="modal-close" onclick="cerrarModalReclasificacion()" style="color: white;">&times;</button>
-            </div>
-            <form id="form-reclasificacion" onsubmit="guardarReclasificacion(event)">
-                <div class="modal-body" style="padding: 1.5rem;">
-                    <div class="grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                        <div class="form-group">
-                            <label style="font-weight: bold; font-size: 0.85rem;">ID Asiento Contable:</label>
-                            <input type="number" id="reclass-asiento-id" class="form-control" placeholder="Ej: 4">
-                        </div>
-                        <div class="form-group">
-                            <label style="font-weight: bold; font-size: 0.85rem;">Módulo de Origen:</label>
-                            <select id="reclass-origen" class="form-control">
-                                <option value="COMPRA">Compras de Repuestos</option>
-                                <option value="VENTA">Ventas Comerciales</option>
-                                <option value="ASIENTO_MANUAL">Asiento Contable Manual</option>
-                                <option value="ACTIVO_FIJO">Activo Fijo / Taller</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                        <div class="form-group">
-                            <label style="font-weight: bold; font-size: 0.85rem;">Actividad Anterior:</label>
-                            <select id="reclass-act-anterior" class="form-control">
-                                <option value="Operacion">Actividad de Operación</option>
-                                <option value="Inversion">Actividad de Inversión</option>
-                                <option value="Financiamiento">Actividad de Financiamiento</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label style="font-weight: bold; font-size: 0.85rem; color: #059669;">Nueva Actividad:</label>
-                            <select id="reclass-act-nueva" class="form-control" style="border-color: #059669; font-weight: bold;">
-                                <option value="Inversion">Actividad de Inversión</option>
-                                <option value="Financiamiento">Actividad de Financiamiento</option>
-                                <option value="Operacion">Actividad de Operación</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label style="font-weight: bold; font-size: 0.85rem;">Motivo Técnico / Criterio del Contador:</label>
-                        <textarea id="reclass-motivo" class="form-control" rows="3" placeholder="Detalle la justificación contable bajo NIIF para PYMES (ej. Operación atípica reclasificada a Inversión por venta de mobiliario usado)" required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
-                    <button type="button" class="btn btn-secondary" onclick="cerrarModalReclasificacion()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" style="background: #2563eb; border-color: #1d4ed8;">
-                        <i class="ph-bold ph-shield-check"></i> Registrar en Auditoría
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- User Role Context -->
     <script>
         window.CURRENT_USER_ROLE = "{{ usuario.rol }}";
@@ -3184,7 +3089,8 @@
                             Saldo acumulado de vacaciones: <strong id="mov-emp-saldo-vac" style="color:var(--primary);">0.00</strong> días disponibles.
                         </div>
                         <div id="mov-alerta-saldo" style="display:none; margin-top:0.4rem; padding:0.5rem 0.8rem; background:rgba(239,68,68,0.12); border-left:3px solid #ef4444; border-radius:4px; font-size:0.8rem; color:#ef4444;">
-                            ⚠️ Los días solicitados superan el saldo acumulado disponible de este trabajador.
+                            <i class="ph-bold ph-warning-circle" aria-hidden="true"></i>
+                            <span>Los días solicitados superan el saldo acumulado disponible de este trabajador.</span>
                         </div>
                     </div>
                     <div class="form-group">
@@ -3195,10 +3101,10 @@
                             </a>
                         </div>
                         <select id="mov-tipo" class="form-control" required onchange="validarSaldoVacaciones()">
-                            <option value="VACACIONES">🏖️ Vacaciones</option>
-                            <option value="PERMISO_CON_GOCE">✅ Permiso con Goce de Salario</option>
-                            <option value="PERMISO_SIN_GOCE">❌ Permiso sin Goce de Salario</option>
-                            <option value="FALTA">⚠️ Falta Injustificada</option>
+                            <option value="VACACIONES">Vacaciones</option>
+                            <option value="PERMISO_CON_GOCE">Permiso con Goce de Salario</option>
+                            <option value="PERMISO_SIN_GOCE">Permiso sin Goce de Salario</option>
+                            <option value="FALTA">Falta Injustificada</option>
                         </select>
                         <div id="mov-tipo-badge-info" style="margin-top:0.4rem; padding:0.45rem 0.8rem; border-radius:6px; font-size:0.8rem; line-height:1.4;"></div>
                     </div>
@@ -4658,10 +4564,10 @@
                     return;
                 }
                 const tipoLabel = {
-                    VACACIONES: '🏖️ Vacaciones',
-                    PERMISO_CON_GOCE: '✅ Permiso c/Goce',
-                    PERMISO_SIN_GOCE: '❌ Permiso s/Goce',
-                    FALTA: '⚠️ Falta Injustificada'
+                    VACACIONES: '<i class="ph-bold ph-calendar-blank" aria-hidden="true"></i> Vacaciones',
+                    PERMISO_CON_GOCE: '<i class="ph-bold ph-check-circle" aria-hidden="true"></i> Permiso c/Goce',
+                    PERMISO_SIN_GOCE: '<i class="ph-bold ph-minus-circle" aria-hidden="true"></i> Permiso s/Goce',
+                    FALTA: '<i class="ph-bold ph-warning-circle" aria-hidden="true"></i> Falta Injustificada'
                 };
                 tbody.innerHTML = _movimientosCache.map(m => {
                     let extraBadge = '';
@@ -4841,7 +4747,7 @@
                 }
                 if (dias > saldo) {
                     if (alerta) {
-                        alerta.textContent = `⚠️ Saldo insuficiente: ${emp?.nombre_completo} cuenta con ${saldo.toFixed(2)} días disponibles y solicitó ${dias} días.`;
+                        alerta.querySelector('span').textContent = `Saldo insuficiente: ${emp?.nombre_completo} cuenta con ${saldo.toFixed(2)} días disponibles y solicitó ${dias} días.`;
                         alerta.style.display = 'block';
                     }
                     if (btnSubmit) btnSubmit.disabled = true;
@@ -5500,14 +5406,14 @@
     {% include 'rrhh_control_modales.html' %}
 
     <!-- Script Principal SPA del Sistema -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=6.4"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=6.7"></script>
     <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.3"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
     <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=6.0"></script>
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
-    <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=3.0"></script>
+    <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=3.2"></script>
     <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>
-    <script src="{{ url_for('static', filename='js/conciliacion.js') }}?v=3.0"></script>
+    <script src="{{ url_for('static', filename='js/conciliacion.js') }}?v=3.1"></script>
     <!-- Script Módulo Tributario y Declaración DGI Formulario 106 (RF129 - RF139) -->
     <script src="{{ url_for('static', filename='js/fiscal.js') }}?v=2.3"></script>
     <script src="{{ url_for('static', filename='js/fiscal_analisis.js') }}?v=2.0"></script>

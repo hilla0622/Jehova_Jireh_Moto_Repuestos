@@ -30,8 +30,26 @@
                 </div>
                 <h1>Jehová Jireh</h1>
                 <p>Masatepe • Moto Repuestos</p>
-                <span class="sub-badge"><i class="ph-bold ph-shield-check"></i> Sistema de Gestión</span>
+                <span class="sub-badge"><i class="ph-bold {{ 'ph-user' if cliente_web else 'ph-shield-check' }}"></i>
+                    {{ 'Elige cómo ingresar' if elegir_acceso else 'Acceso de clientes' if cliente_web else 'Acceso del personal' if solo_personal else 'Acceso para clientes y personal' }}
+                </span>
             </div>
+
+            {% if elegir_acceso %}
+            <nav class="login-form" aria-label="Tipo de acceso">
+                <a href="{{ url_for('login_cliente') }}" class="btn btn-primary btn-block" style="text-decoration: none;">
+                    <i class="ph-bold ph-user" aria-hidden="true"></i> Soy cliente
+                </a>
+                <a href="{{ url_for('login_personal') }}" class="btn btn-secondary btn-block" style="text-decoration: none;">
+                    <i class="ph-bold ph-shield-check" aria-hidden="true"></i> Soy del personal
+                </a>
+            </nav>
+            {% else %}
+            {% if cliente_web %}
+            {% for mensaje in get_flashed_messages() %}
+            <p role="status">{{ mensaje }}</p>
+            {% endfor %}
+            {% endif %}
 
             {% if error %}
             <div class="alert alert-error">
@@ -40,19 +58,21 @@
             </div>
             {% endif %}
 
-            <form action="{{ url_for('login') }}" method="POST" class="login-form">
+            <form action="{{ url_for('login_cliente' if cliente_web else 'login_personal' if solo_personal else 'login') }}" method="POST" class="login-form">
                 <div class="form-group">
                     <label for="username">
-                        <i class="ph-bold ph-user"></i> Usuario
+                        <i class="ph-bold ph-user"></i> {{ 'Correo electrónico' if cliente_web else 'Usuario del personal' if solo_personal else 'Usuario o correo electrónico' }}
                     </label>
-                    <input type="text" id="username" name="username" placeholder="Ingresa tu usuario (ej. admin)" required autofocus>
+                    <input type="{{ 'email' if cliente_web else 'text' }}" id="username" name="username"
+                        placeholder="{{ 'tu@correo.com' if cliente_web else 'Ingresa tu usuario' if solo_personal else 'Correo de cliente o usuario del personal' }}"
+                        autocomplete="username" required autofocus>
                 </div>
 
                 <div class="form-group">
                     <label for="password">
                         <i class="ph-bold ph-lock-key"></i> Contraseña
                     </label>
-                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                    <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block">
@@ -60,36 +80,21 @@
                     <i class="ph-bold ph-arrow-right"></i>
                 </button>
             </form>
+            {% endif %}
 
-            <div class="demo-accounts">
-                <div class="demo-title">
-                    <i class="ph-bold ph-key"></i>
-                    <span>Cuentas Rápidas de Prueba (Haz Clic):</span>
-                </div>
-                <div class="demo-buttons">
-                    <button type="button" class="btn-demo" onclick="fillLogin('admin', '123')">
-                        <strong>👑 Admin (Gilda Pérez)</strong> (Acceso Total)
-                    </button>
-                    <button type="button" class="btn-demo" onclick="fillLogin('vendedor', '123')">
-                        <strong>🛒 Vendedor</strong> (POS y Ventas)
-                    </button>
-                    <button type="button" class="btn-demo" onclick="fillLogin('inventario', '123')">
-                        <strong>📦 Inventario</strong> (Stock/Compras)
-                    </button>
-                    <button type="button" class="btn-demo" onclick="fillLogin('contador', '123')">
-                        <strong>📊 Contador</strong> (Granada - Reportes)
-                    </button>
-                </div>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                {% if not elegir_acceso %}
+                <p><a href="{{ url_for('elegir_acceso') }}">Elegir otro tipo de acceso</a></p>
+                {% endif %}
+                {% if not solo_personal %}
+                <p>¿Todavía no tienes cuenta de cliente? <a href="{{ url_for('registro') }}">Regístrate</a></p>
+                {% endif %}
+                <p><a href="{{ url_for('tienda') }}">Volver a la tienda</a></p>
             </div>
         </div>
     </div>
 
     <script>
-        function fillLogin(user, pass) {
-            document.getElementById('username').value = user;
-            document.getElementById('password').value = pass;
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const themeBtn = document.getElementById('theme-toggle');
             const themeIcon = document.getElementById('theme-icon');

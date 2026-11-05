@@ -6,7 +6,7 @@ import pyodbc
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from calculos_rrhh import calcular_nomina_empleado
 from rrhh_service import ROLES_RRHH, limites_periodo, dias_en_periodo, fecha, parametros_calculo
@@ -97,8 +97,13 @@ def execute_query(query, params=(), fetchone=False, fetchall=False, commit=False
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session:
+        user = session.get('user')
+        if not user:
             return redirect(url_for('login'))
+        if user.get('rol') == 'Cliente':
+            if request.path.startswith('/api/'):
+                return jsonify(error='Acceso reservado al personal.'), 403
+            return redirect(url_for('tienda'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -137,9 +142,11 @@ def inicio():
     return render_template('index.html', usuario=session.get('user'))
 
 @app.route('/perfil')
-@login_required
 def perfil():
-    return render_template('perfil.html', usuario=session.get('user'))
+    usuario = session.get('user')
+    if not usuario:
+        return redirect(url_for('login_cliente'))
+    return render_template('perfil.html', usuario=usuario)
 
 @app.route('/')
 def tienda():
@@ -171,11 +178,14 @@ def tienda():
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        nombre_completo = request.form.get('nombre_completo')
-        email = request.form.get('email')
-        password = request.form.get('password')
+        nombre_completo = request.form.get('nombre_completo', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
         telefono = request.form.get('telefono', '')
         direccion = request.form.get('direccion', '')
+
+        if not nombre_completo or not email or not password.strip():
+            return render_template('registro.html', error='Completa el nombre, el correo y la contraseña.'), 400
 
         # Verificar si el correo ya está registrado
         check_query = "SELECT id FROM clientes WHERE email = ?"
@@ -194,21 +204,31 @@ def registro():
         """
         try:
             execute_query(insert_query, params=(nombre_completo, email, password_hash, telefono, direccion), commit=True)
-            # Redirigir al login con éxito (podríamos usar flash messages, pero por ahora en la URL o render)
-            return render_template('login.html', error='¡Registro exitoso! Por favor inicia sesión con tu nueva cuenta.')
+            flash('Cuenta creada. Inicia sesión con tu correo y contraseña.')
+            return redirect(url_for('login_cliente'))
         except Exception as e:
             return render_template('registro.html', error='Error al registrar. Por favor intenta de nuevo.')
 
     return render_template('registro.html')
 
+@app.route('/acceso')
+def elegir_acceso():
+    return render_template('login.html', elegir_acceso=True)
+
+
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+@app.route('/clientes/login', methods=['GET', 'POST'], endpoint='login_cliente', defaults={'tipo_acceso': 'cliente'})
+@app.route('/personal/login', methods=['GET', 'POST'], endpoint='login_personal', defaults={'tipo_acceso': 'personal'})
+def login(tipo_acceso='general'):
+    cliente_web = tipo_acceso == 'cliente'
+    solo_personal = tipo_acceso == 'personal'
     if request.method == 'POST':
         data = request.form if request.form else request.get_json(silent=True)
         if not data:
             data = {}
         username = data.get('username', '').strip()
-        password = data.get('password', '').strip()
+        password = data.get('password', '')
+        es_ajax = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
         # 1. Validación como Empleado/Admin en la base de datos SQL Server
         query = """
@@ -217,7 +237,7 @@ def login():
             INNER JOIN roles r ON u.rol_id = r.id
             WHERE u.username = ? AND u.password_hash = ? AND u.activo = 1
         """
-        usuario = execute_query(query, (username, password), fetchone=True)
+        usuario = None if cliente_web else execute_query(query, (username, password.strip()), fetchone=True)
         
         if usuario:
             # Consultar permisos asignados al rol en la tabla permisos (si existe)
@@ -268,15 +288,15 @@ def login():
             except Exception as e:
                 print(f"[Fase 1] Advertencia al registrar sesión / ultimo_acceso: {e}")
 
-            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if es_ajax:
                 return jsonify({"success": True, "redirect": url_for('inicio')})
             return redirect(url_for('inicio'))
             
         # 2. Validación como Cliente Web
         query_cliente = "SELECT id, email, nombre_completo, password_hash, direccion FROM clientes WHERE email = ?"
-        cliente = execute_query(query_cliente, (username,), fetchone=True)
+        cliente = None if solo_personal else execute_query(query_cliente, (username,), fetchone=True)
         
-        if cliente and check_password_hash(cliente['password_hash'], password):
+        if cliente and cliente['password_hash'] and check_password_hash(cliente['password_hash'], password):
             session['user'] = {
                 'id': cliente['id'],
                 'username': cliente['email'],
@@ -284,17 +304,20 @@ def login():
                 'rol': 'Cliente',
                 'direccion': cliente.get('direccion', '') or ''
             }
-            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if es_ajax:
                 return jsonify({"success": True, "redirect": url_for('tienda')})
             return redirect(url_for('tienda'))
 
-        # Si falla en ambas tablas
-        error_msg = "Usuario o contraseña incorrectos."
-        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        error_msg = {
+            'cliente': 'Correo o contraseña incorrectos.',
+            'personal': 'Usuario o contraseña incorrectos.',
+            'general': 'Usuario, correo o contraseña incorrectos.',
+        }[tipo_acceso]
+        if es_ajax:
             return jsonify({"success": False, "error": error_msg}), 401
-        return render_template('login.html', error=error_msg)
+        return render_template('login.html', error=error_msg, cliente_web=cliente_web, solo_personal=solo_personal)
 
-    return render_template('login.html')
+    return render_template('login.html', cliente_web=cliente_web, solo_personal=solo_personal)
 
 @app.route('/logout')
 def logout():

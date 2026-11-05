@@ -1738,7 +1738,7 @@ function renderTicketComprobante(v, esNuevaVenta = false) {
             </div>
 
             <div style="text-align: center; font-size: 0.75rem; color: #64748b; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 0.5rem;">
-                ¡Gracias por su compra en Jehová Jireh! 🙏 <br>
+                ¡Gracias por su compra en Jehová Jireh!<br>
                 Conserve este comprobante para cualquier reclamo.
             </div>
         </div>
@@ -1915,7 +1915,7 @@ function imprimirTicketActual() {
     </div>
 
     <div class="footer">
-        ¡Gracias por su compra en Jehová Jireh! 🙏<br>
+        ¡Gracias por su compra en Jehová Jireh!<br>
         Conserve este comprobante para cualquier reclamo.
     </div>
 </body>

@@ -39,7 +39,7 @@ def preview():
     end = html.rfind('</section>', start, html.index('<!-- TAB FISCAL', start)) + len('</section>')
     section = html[start:end].replace('id="tab-finanzas" class="tab-content"', 'id="tab-finanzas" class="tab-content active"')
     main = (Path(app.static_folder) / 'js/main.js').read_text(encoding='utf-8')
-    switch = main[main.index('function switchFinanzasTab('):main.index('async function cargarDatosFinanzas()')]
+    switch = main[main.index('function obtenerFechaHoyLocal()'):main.index('async function loadCatalogoCuentas()')]
     resultado = '''<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/static/css/styles.css"><link rel="stylesheet" href="/static/css/conciliacion.css">
     <style>body{display:block;padding:20px}.tab-content{display:block!important}.section-header{flex-wrap:wrap}.subtabs-container{flex-wrap:wrap}</style></head><body>''' + section + '''
     <script src="/static/js/flujo_efectivo.js"></script><script src="/static/js/flujo_controles.js"></script><script src="/static/js/conciliacion.js"></script>

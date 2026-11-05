@@ -498,9 +498,16 @@ function switchVentasSubtab(subtab, btn) {
 // MODALES
 // ==============================================================================
 
-function openModal(modalId) {
+async function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+        if (modalId === 'modal-asiento' && !window.cuentasDisponibles) {
+            await loadCatalogoCuentas();
+            if (!window.cuentasDisponibles) {
+                alert('No se pudo cargar el catálogo de cuentas. Intente nuevamente.');
+                return;
+            }
+        }
         modal.classList.add('active');
         modal.style.display = 'flex';
         if (modalId === 'modal-asiento' && typeof prepareAsientoModal === 'function') {
@@ -532,7 +539,7 @@ async function guardarCuenta(e) {
         if (resp.ok) {
             closeModal('modal-cuenta');
             document.getElementById('form-cuenta').reset();
-            cargarDatosFinanzas();
+            loadCatalogoCuentas();
         } else {
             alert("Error: " + result.error);
         }
@@ -561,7 +568,7 @@ async function eliminarCuenta(id) {
         
         if (resp.ok) {
             mostrarToast('Cuenta eliminada exitosamente.', 'success');
-            cargarDatosFinanzas();
+            loadCatalogoCuentas();
         } else {
             mostrarMensaje({ titulo: 'Error al eliminar', texto: result.error || 'No se pudo eliminar la cuenta.', icono: 'error' });
         }
@@ -3897,35 +3904,31 @@ function switchFinanzasTab(subtab, btn) {
     if (view) {
         view.style.display = 'block';
         view.classList.add('active');
-    }
-
-    if (subtab === 'fin-flujo' && typeof loadFlujoEfectivo === 'function') {
-        loadFlujoEfectivo();
-    } else if (subtab === 'fin-conciliacion' && typeof cargarDatosConciliacion === 'function') {
-        cargarDatosConciliacion();
-    } else if (subtab === 'fin-resultados' && typeof loadEstadoResultados === 'function') {
-        loadEstadoResultados();
-    } else if (subtab === 'fin-balance' && typeof loadBalanceGeneral === 'function') {
-        loadBalanceGeneral();
-    } else if (subtab === 'fin-asientos' && typeof loadAsientosContables === 'function') {
-        loadAsientosContables();
+        cargarDatosFinanzas();
     }
 }
 
 async function cargarDatosFinanzas() {
-    try {
-        inicializarFechasFinanzas(false);
-        const tareas = [
-            loadCatalogoCuentas(),
-            loadAsientosContables(),
-            loadEstadoResultados(),
-            loadBalanceGeneral()
-        ];
-        if (typeof loadFlujoEfectivo === 'function') tareas.push(loadFlujoEfectivo());
-        if (typeof cargarDatosConciliacion === 'function') tareas.push(cargarDatosConciliacion());
-        await Promise.all(tareas);
-    } catch (e) {
-        console.error("Error al cargar datos financieros:", e);
+    inicializarFechasFinanzas(false);
+    switch (document.querySelector('#tab-finanzas .fin-tab-content.active')?.id) {
+        case 'fin-catalogo':
+            return loadCatalogoCuentas();
+        case 'fin-asientos':
+            return loadAsientosContables();
+        case 'fin-mayor':
+            if (document.getElementById('mayor-cuenta').value) return cargarLibroMayor();
+            if (!window.cuentasDisponibles) return loadCatalogoCuentas();
+            break;
+        case 'fin-resultados':
+            return loadEstadoResultados();
+        case 'fin-balance':
+            return loadBalanceGeneral();
+        case 'fin-flujo':
+            if (typeof loadFlujoEfectivo === 'function') return loadFlujoEfectivo();
+            break;
+        case 'fin-conciliacion':
+            if (typeof cargarDatosConciliacion === 'function') return cargarDatosConciliacion();
+            break;
     }
 }
 
@@ -3937,14 +3940,12 @@ async function loadCatalogoCuentas() {
         const tbody = document.getElementById('tbody-cuentas');
         if (!tbody) return;
         
-        tbody.innerHTML = '';
         if (data.error) {
             tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500">${data.error}</td></tr>`;
             return;
         }
         
-        tbody.innerHTML = data.map(cta => {
-            return `
+        tbody.innerHTML = data.map(cta => `
                 <tr>
                     <td style="font-weight:600;">${cta.codigo}</td>
                     <td>${cta.nombre}</td>
@@ -3956,8 +3957,7 @@ async function loadCatalogoCuentas() {
                         </button>
                     </td>`}
                 </tr>
-            `;
-        }).join('');
+            `).join('');
         
         // Cargar para el select del modal de asiento
         window.cuentasDisponibles = data;
@@ -3965,8 +3965,10 @@ async function loadCatalogoCuentas() {
         // Populate Libro Mayor select
         const mayorSelect = document.getElementById('mayor-cuenta');
         if (mayorSelect) {
+            const cuentaSeleccionada = mayorSelect.value;
             mayorSelect.innerHTML = '<option value="">-- Seleccione una cuenta --</option>' + 
                 data.map(c => `<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`).join('');
+            if (data.some(c => String(c.id) === cuentaSeleccionada)) mayorSelect.value = cuentaSeleccionada;
         }
     } catch (e) {
         console.error(e);
@@ -3991,7 +3993,6 @@ async function loadAsientosContables() {
         const container = document.getElementById('container-asientos');
         if (!container) return;
         
-        container.innerHTML = '';
         if (data.error) {
             container.innerHTML = `<p class="text-red-500">${data.error}</p>`;
             return;
@@ -4002,12 +4003,11 @@ async function loadAsientosContables() {
             return;
         }
         
+        const formatNum = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format;
         container.innerHTML = data.map(a => {
             let movsHtml = '';
             let totalDebe = 0;
             let totalHaber = 0;
-            
-            let formatNum = (val) => parseFloat(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             
             a.movimientos.forEach(m => {
                 totalDebe += m.debe;

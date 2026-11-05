@@ -619,18 +619,37 @@ def api_producto_editar(prod_id):
 @login_required
 def api_movimientos():
     if request.method == 'GET':
+        paginado = 'page' in request.args
+        try:
+            pagina = max(1, int(request.args.get('page', 1)))
+        except ValueError:
+            return jsonify(error='Página inválida.'), 400
+        params = []
         query = """
             SELECT m.id, m.fecha, p.codigo_sku AS producto_codigo, p.nombre AS producto_nombre,
                    m.tipo_movimiento AS tipo, m.cantidad, m.motivo, u.nombre_completo AS usuario
             FROM movimientos_inventario m
             INNER JOIN productos p ON m.producto_id = p.id
             INNER JOIN usuarios u ON m.usuario_id = u.id
-            ORDER BY m.fecha DESC
         """
-        movs = execute_query(query, fetchall=True)
+        termino = request.args.get('q', '').strip()
+        if termino:
+            termino = termino.replace('[', '[[]').replace('%', '[%]').replace('_', '[_]')
+            query += " WHERE (p.codigo_sku LIKE ? OR p.nombre LIKE ? OR m.tipo_movimiento LIKE ? OR m.motivo LIKE ?)"
+            params.extend(['%' + termino + '%'] * 4)
+        query += ' ORDER BY m.fecha DESC, m.id DESC'
+        if paginado:
+            query += ' OFFSET ? ROWS FETCH NEXT 51 ROWS ONLY'
+            params.append((pagina - 1) * 50)
+        movs = execute_query(query, tuple(params), fetchall=True)
+        hay_mas = len(movs) > 50
+        if paginado:
+            movs = movs[:50]
         for m in movs:
             if hasattr(m['fecha'], 'strftime'):
                 m['fecha'] = m['fecha'].strftime('%Y-%m-%d %H:%M:%S')
+        if paginado:
+            return jsonify(items=movs, page=pagina, has_more=hay_mas)
         return jsonify(movs)
 
     if request.method == 'POST':
@@ -862,6 +881,12 @@ def cantidades_venta(items):
 @login_required
 def api_ventas():
     if request.method == 'GET':
+        paginado = 'page' in request.args
+        try:
+            pagina = max(1, int(request.args.get('page', 1)))
+        except ValueError:
+            return jsonify(error='Página inválida.'), 400
+        params = []
         query_v = """
             SELECT v.id, v.codigo_venta, 
                    COALESCE(c.nombre_completo, v.nombre_cliente_invitado) AS cliente, 
@@ -870,16 +895,34 @@ def api_ventas():
             FROM ventas v
             LEFT JOIN clientes c ON v.cliente_id = c.id
             LEFT JOIN usuarios u ON v.usuario_id = u.id
-            ORDER BY v.id DESC
         """
-        ventas = execute_query(query_v, fetchall=True)
+        if paginado:
+            query_v += " WHERE (v.codigo_venta IS NULL OR v.codigo_venta NOT LIKE 'WEB-%')"
+        termino = request.args.get('q', '').strip()
+        if paginado and termino:
+            termino = termino.replace('[', '[[]').replace('%', '[%]').replace('_', '[_]')
+            query_v += " AND (v.codigo_venta LIKE ? OR COALESCE(c.nombre_completo, v.nombre_cliente_invitado, 'Invitado') LIKE ? OR u.nombre_completo LIKE ?)"
+            params.extend(['%' + termino + '%'] * 3)
+        orden = 'ASC' if request.args.get('order') == 'asc' else 'DESC'
+        if paginado:
+            query_v += f" ORDER BY v.fecha_venta {orden}, v.id {orden}"
+        else:
+            query_v += ' ORDER BY v.id DESC'
+        if paginado:
+            query_v += ' OFFSET ? ROWS FETCH NEXT 51 ROWS ONLY'
+            params.append((pagina - 1) * 50)
+        ventas = execute_query(query_v, tuple(params), fetchall=True)
+        hay_mas = len(ventas) > 50
+        if paginado:
+            ventas = ventas[:50]
         detalles_por_venta = {}
         if ventas:
             for detalle in execute_query("""
                 SELECT d.venta_id, p.id AS producto_id, p.nombre AS producto_nombre,
                        d.cantidad, d.precio_unitario, d.subtotal
-                FROM detalle_ventas d INNER JOIN productos p ON d.producto_id=p.id ORDER BY d.id
-            """, fetchall=True):
+                FROM detalle_ventas d INNER JOIN productos p ON d.producto_id=p.id
+            """ + (" WHERE d.venta_id IN (" + ",".join("?" for _ in ventas) + ")" if paginado else "") + " ORDER BY d.id",
+                tuple(v["id"] for v in ventas) if paginado else (), fetchall=True):
                 venta_id = detalle.pop('venta_id')
                 detalle['precio_unitario'] = float(detalle['precio_unitario'])
                 detalle['subtotal'] = float(detalle['subtotal'])
@@ -891,6 +934,8 @@ def api_ventas():
             
             v['detalles'] = detalles_por_venta.get(v['id'], [])
             
+        if paginado:
+            return jsonify(items=ventas, page=pagina, has_more=hay_mas)
         return jsonify(ventas)
 
     if request.method == 'POST':
@@ -1252,6 +1297,12 @@ def confirmar_pedido_web(pedido_id):
 @login_required
 def api_pedidos_web():
     """Consulta de pedidos web con sus detalles para el panel administrativo"""
+    paginado = 'page' in request.args
+    try:
+        pagina = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        return jsonify(error='Página inválida.'), 400
+    params = []
     query = """
         SELECT p.id, p.codigo, p.cliente_id, 
                COALESCE(c.nombre_completo, p.nombre_cliente, 'Cliente Invitado') AS cliente,
@@ -1259,16 +1310,28 @@ def api_pedidos_web():
                p.telefono, p.email, p.direccion_entrega
         FROM pedidos_web p
         LEFT JOIN clientes c ON p.cliente_id = c.id
-        ORDER BY p.id DESC
     """
-    pedidos = execute_query(query, fetchall=True)
+    termino = request.args.get('q', '').strip()
+    if paginado and termino:
+        termino = termino.replace('[', '[[]').replace('%', '[%]').replace('_', '[_]')
+        query += " WHERE (p.codigo LIKE ? OR COALESCE(c.nombre_completo, p.nombre_cliente, 'Cliente Invitado') LIKE ? OR p.email LIKE ? OR p.telefono LIKE ? OR p.direccion_entrega LIKE ? OR COALESCE(p.formaEntrega, 'Retiro en Tienda') LIKE ?)"
+        params.extend(['%' + termino + '%'] * 6)
+    query += ' ORDER BY p.id DESC'
+    if paginado:
+        query += ' OFFSET ? ROWS FETCH NEXT 51 ROWS ONLY'
+        params.append((pagina - 1) * 50)
+    pedidos = execute_query(query, tuple(params), fetchall=True)
+    hay_mas = len(pedidos) > 50
+    if paginado:
+        pedidos = pedidos[:50]
     detalles_por_pedido = {}
     if pedidos:
         for detalle in execute_query("""
             SELECT dp.pedido_id, dp.id, dp.producto_id, prod.nombre AS producto_nombre, prod.codigo_sku,
                    dp.cantidad, dp.precioUnitario, dp.subtotal
-            FROM detalle_pedidos_web dp INNER JOIN productos prod ON dp.producto_id=prod.id ORDER BY dp.id
-        """, fetchall=True):
+            FROM detalle_pedidos_web dp INNER JOIN productos prod ON dp.producto_id=prod.id
+        """ + (" WHERE dp.pedido_id IN (" + ",".join("?" for _ in pedidos) + ")" if paginado else "") + " ORDER BY dp.id",
+            tuple(p["id"] for p in pedidos) if paginado else (), fetchall=True):
             pedido_id = detalle.pop('pedido_id')
             detalle['precioUnitario'] = float(detalle['precioUnitario'])
             detalle['precio_unitario'] = detalle['precioUnitario']
@@ -1285,6 +1348,8 @@ def api_pedidos_web():
         ped['forma_pago'] = ped['metodo']
         ped['vendedor'] = 'Tienda Online'
         
+    if paginado:
+        return jsonify(items=pedidos, page=pagina, has_more=hay_mas)
     return jsonify(pedidos)
 
 @app.route('/api/pedidos_web/<int:p_id>/anular', methods=['POST'])

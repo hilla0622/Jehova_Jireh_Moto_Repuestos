@@ -243,8 +243,8 @@ function switchTab(tabId) {
         if (tabId === 'tab-inventario') loadInventario();
         if (tabId === 'tab-ventas') {
             loadPOSProducts();
-            loadHistorialVentas();
-            loadPedidosWeb();
+            if (document.getElementById('subtab-historial-ventas')?.classList.contains('active')) loadHistorialVentas();
+            if (document.getElementById('subtab-pedidos-web')?.classList.contains('active')) loadPedidosWeb();
             verificarEstadoCaja();
         }
         if (tabId === 'tab-compras') loadComprasYProveedores();
@@ -625,7 +625,7 @@ async function loadDashboardStats() {
         put('stat-total-productos', '—'); put('stat-stock-bajo', '—');
     }
     if (ventas) {
-        ventasCache = ventas;
+        ventasCache = [...ventas.filter(v => !ventasCache.some(c => c.id === v.id)), ...ventasCache];
         const completadas = ventas.filter(v => v.estado === 'Completada');
         put('stat-total-ventas', `$${formatMoneda(completadas.reduce((sum, v) => sum + Number(v.total || 0), 0), '')}`);
         put('stat-conteo-ventas', `${formatCantidad(completadas.length)} ventas completadas`);
@@ -851,13 +851,36 @@ async function guardarEdicionProducto(e) {
 }
 
 // --- KARDEX / MOVIMIENTOS ---
-async function loadMovimientos() {
+let movimientosPagina = 1;
+let movimientosController;
+let movimientosBusquedaTimer;
+async function loadMovimientos(pagina = 1) {
+    clearTimeout(movimientosBusquedaTimer);
+    movimientosController?.abort();
+    const controller = new AbortController();
+    movimientosController = controller;
+    const estado = document.getElementById('movimientos-estado');
+    const anterior = document.getElementById('movimientos-anterior');
+    const siguiente = document.getElementById('movimientos-siguiente');
+    estado.textContent = 'Cargando movimientos…';
+    anterior.disabled = siguiente.disabled = true;
     try {
-        const res = await fetch('/api/movimientos');
-        const movimientos = await res.json();
-        movimientosCache = movimientos;
-        renderMovimientosTable(movimientos);
+        const q = document.getElementById('filter-movimientos').value;
+        const res = await fetch(`/api/movimientos?${new URLSearchParams({page: pagina, q})}`, {signal: controller.signal});
+        if (!res.ok) throw new Error('No se pudieron cargar los movimientos.');
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+        movimientosPagina = data.page;
+        movimientosCache = data.items;
+        renderMovimientosTable(data.items);
+        estado.textContent = `Página ${data.page} · ${data.items.length} movimientos`;
+        anterior.disabled = data.page <= 1;
+        siguiente.disabled = !data.has_more;
     } catch (err) {
+        if (err.name === 'AbortError') return;
+        estado.textContent = 'No se pudieron cargar los movimientos. Volvé a abrir Kardex para reintentar.';
+        movimientosCache = [];
+        renderMovimientosTable([]);
         console.error('Error al cargar movimientos:', err);
     }
 }
@@ -875,8 +898,7 @@ function renderMovimientosTable(movs) {
         return;
     }
 
-    const reversed = [...movs].reverse();
-    tbody.innerHTML = reversed.map(m => {
+    tbody.innerHTML = movs.map(m => {
         const isEntrada = ['ENTRADA', 'COMPRA', 'INICIAL'].some(k => m.tipo.toUpperCase().includes(k));
         const badgeColor = isEntrada ? 'background: rgba(16, 185, 129, 0.15); color: var(--accent-green);' : 'background: rgba(239, 68, 68, 0.15); color: var(--accent-red);';
         const sign = isEntrada ? '+' : '-';
@@ -905,14 +927,9 @@ function renderMovimientosTable(movs) {
 }
 
 function filterMovimientosTable(query) {
-    const q = query.toLowerCase();
-    const filtrados = movimientosCache.filter(m => 
-        m.producto_codigo.toLowerCase().includes(q) || 
-        m.producto_nombre.toLowerCase().includes(q) || 
-        m.tipo.toLowerCase().includes(q) || 
-        m.motivo.toLowerCase().includes(q)
-    );
-    renderMovimientosTable(filtrados);
+    movimientosController?.abort();
+    clearTimeout(movimientosBusquedaTimer);
+    movimientosBusquedaTimer = setTimeout(() => loadMovimientos(1), 300);
 }
 
 function toggleMotivoStockAlert() {
@@ -1229,17 +1246,53 @@ async function procesarVentaPOS() {
 }
 
 // --- HISTORIAL DE VENTAS (POS) ---
-async function loadHistorialVentas() {
+const paginasVentas = {
+    ventas: {page: 1, endpoint: '/api/ventas', filtro: 'filter-historial-ventas'},
+    pedidos: {page: 1, endpoint: '/api/pedidos_web', filtro: 'filter-pedidos-web'}
+};
+async function cargarPaginaVentas(tipo, pagina = 1) {
+    const state = paginasVentas[tipo];
+    clearTimeout(state.timer);
+    state.controller?.abort();
+    const controller = new AbortController();
+    state.controller = controller;
+    const estado = document.getElementById(`${tipo}-estado`);
+    const anterior = document.getElementById(`${tipo}-anterior`);
+    const siguiente = document.getElementById(`${tipo}-siguiente`);
+    if (!estado) return;
+    estado.textContent = 'Cargando…';
+    anterior.disabled = siguiente.disabled = true;
+    const render = tipo === 'ventas' ? renderHistorialVentasTable : renderPedidosWebTable;
     try {
-        const res = await fetch('/api/ventas');
-        const ventas = await res.json();
-        ventasCache = ventas;
-        
-        filterHistorialVentasTable(document.getElementById('filter-historial-ventas')?.value || '');
+        const params = new URLSearchParams({page: pagina, q: document.getElementById(state.filtro)?.value || ''});
+        if (tipo === 'ventas') params.set('order', document.getElementById('orden-historial-ventas')?.value || 'desc');
+        const res = await fetch(`${state.endpoint}?${params}`, {signal: controller.signal});
+        if (!res.ok) throw new Error('No se pudo cargar la lista.');
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+        state.page = data.page;
+        if (tipo === 'ventas') ventasCache = data.items;
+        else pedidosWebCache = data.items;
+        render(data.items);
+        estado.textContent = `Página ${data.page} · ${data.items.length} registros`;
+        anterior.disabled = data.page <= 1;
+        siguiente.disabled = !data.has_more;
     } catch (err) {
-        console.error('Error al cargar ventas:', err);
+        if (err.name === 'AbortError') return;
+        if (tipo === 'ventas') ventasCache = [];
+        else pedidosWebCache = [];
+        render([]);
+        estado.textContent = 'No se pudo cargar. Volvé a abrir la sección para reintentar.';
+        console.error(err);
     }
 }
+function buscarPaginaVentas(tipo) {
+    const state = paginasVentas[tipo];
+    state.controller?.abort();
+    clearTimeout(state.timer);
+    state.timer = setTimeout(() => cargarPaginaVentas(tipo, 1), 300);
+}
+function loadHistorialVentas(pagina = 1) { return cargarPaginaVentas('ventas', pagina); }
 
 function renderHistorialVentasTable(ventas) {
     const tbody = document.getElementById('tbody-historial-ventas');
@@ -1272,30 +1325,12 @@ function renderHistorialVentasTable(ventas) {
     `).join('');
 }
 
-function filterHistorialVentasTable(query) {
-    const q = query.toLowerCase();
-    const fisicas = ventasCache.filter(v => !v.codigo_venta || !v.codigo_venta.startsWith('WEB-'));
-    const filtrados = fisicas.filter(v => 
-        (v.codigo_venta && v.codigo_venta.toLowerCase().includes(q)) || 
-        (v.cliente && v.cliente.toLowerCase().includes(q)) || 
-        (v.vendedor && v.vendedor.toLowerCase().includes(q))
-    );
-    renderHistorialVentasTable(filtrados);
-}
+function filterHistorialVentasTable(query) { buscarPaginaVentas('ventas'); }
 
 // --- GESTIÓN DE PEDIDOS WEB (TABLA pedidos_web) ---
 let pedidosWebCache = [];
 
-async function loadPedidosWeb() {
-    try {
-        const res = await fetch('/api/pedidos_web');
-        const pedidos = await res.json();
-        pedidosWebCache = pedidos;
-        renderPedidosWebTable(pedidos);
-    } catch (err) {
-        console.error('Error al cargar pedidos web:', err);
-    }
-}
+function loadPedidosWeb(pagina = 1) { return cargarPaginaVentas('pedidos', pagina); }
 
 function renderPedidosWebTable(pedidos) {
     const tbody = document.getElementById('tbody-pedidos-web');
@@ -1354,18 +1389,7 @@ function renderPedidosWebTable(pedidos) {
     }).join('');
 }
 
-function filterPedidosWebTable(query) {
-    const q = query.toLowerCase();
-    const filtrados = pedidosWebCache.filter(p => 
-        (p.codigo && p.codigo.toLowerCase().includes(q)) || 
-        (p.cliente && p.cliente.toLowerCase().includes(q)) ||
-        (p.email && p.email.toLowerCase().includes(q)) ||
-        (p.telefono && p.telefono.toLowerCase().includes(q)) ||
-        (p.direccion_entrega && p.direccion_entrega.toLowerCase().includes(q)) ||
-        (p.formaEntrega && p.formaEntrega.toLowerCase().includes(q))
-    );
-    renderPedidosWebTable(filtrados);
-}
+function filterPedidosWebTable(query) { buscarPaginaVentas('pedidos'); }
 
 function verComprobantePedidoWeb(pedidoId) {
     const pedido = pedidosWebCache.find(p => p.id === pedidoId);
@@ -3919,8 +3943,8 @@ async function loadCatalogoCuentas() {
             return;
         }
         
-        data.forEach(cta => {
-            tbody.innerHTML += `
+        tbody.innerHTML = data.map(cta => {
+            return `
                 <tr>
                     <td style="font-weight:600;">${cta.codigo}</td>
                     <td>${cta.nombre}</td>
@@ -3933,7 +3957,7 @@ async function loadCatalogoCuentas() {
                     </td>`}
                 </tr>
             `;
-        });
+        }).join('');
         
         // Cargar para el select del modal de asiento
         window.cuentasDisponibles = data;
@@ -3978,7 +4002,7 @@ async function loadAsientosContables() {
             return;
         }
         
-        data.forEach(a => {
+        container.innerHTML = data.map(a => {
             let movsHtml = '';
             let totalDebe = 0;
             let totalHaber = 0;
@@ -3998,7 +4022,7 @@ async function loadAsientosContables() {
                 `;
             });
             
-            container.innerHTML += `
+            return `
                 <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; background: var(--bg-color);">
                     <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
                         <strong>Asiento #${a.id} | ${a.fecha}</strong>
@@ -4020,7 +4044,7 @@ async function loadAsientosContables() {
                     </table>
                 </div>
             `;
-        });
+        }).join('');
     } catch (e) {
         console.error(e);
     }

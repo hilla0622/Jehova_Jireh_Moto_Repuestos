@@ -233,6 +233,11 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem;">
+                                    <button type="button" id="movimientos-anterior" class="btn btn-secondary" disabled onclick="loadMovimientos(movimientosPagina - 1)">Anterior</button>
+                                    <span id="movimientos-estado" role="status" aria-live="polite"></span>
+                                    <button type="button" id="movimientos-siguiente" class="btn btn-secondary" disabled onclick="loadMovimientos(movimientosPagina + 1)">Siguiente</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -385,6 +390,11 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem;">
+                                <button type="button" id="ventas-anterior" class="btn btn-secondary" disabled onclick="cargarPaginaVentas('ventas', paginasVentas.ventas.page - 1)">Anterior</button>
+                                <span id="ventas-estado" role="status" aria-live="polite"></span>
+                                <button type="button" id="ventas-siguiente" class="btn btn-secondary" disabled onclick="cargarPaginaVentas('ventas', paginasVentas.ventas.page + 1)">Siguiente</button>
+                            </div>
                         </div>
                     </div>
 
@@ -416,6 +426,11 @@
                                         <!-- Render dinámico desde tabla pedidos_web -->
                                     </tbody>
                                 </table>
+                            </div>
+                            <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem;">
+                                <button type="button" id="pedidos-anterior" class="btn btn-secondary" disabled onclick="cargarPaginaVentas('pedidos', paginasVentas.pedidos.page - 1)">Anterior</button>
+                                <span id="pedidos-estado" role="status" aria-live="polite"></span>
+                                <button type="button" id="pedidos-siguiente" class="btn btn-secondary" disabled onclick="cargarPaginaVentas('pedidos', paginasVentas.pedidos.page + 1)">Siguiente</button>
                             </div>
                         </div>
                     </div>
@@ -5406,10 +5421,10 @@
     {% include 'rrhh_control_modales.html' %}
 
     <!-- Script Principal SPA del Sistema -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=6.7"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=6.10"></script>
     <script src="{{ url_for('static', filename='js/rrhh_control.js') }}?v=1.3"></script>
     <!-- Script Módulo Corte V: Reportes y Recursos Humanos -->
-    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=6.0"></script>
+    <script src="{{ url_for('static', filename='js/corte_v.js') }}?v=6.1"></script>
     <!-- Script Módulo Estados Financieros: Flujo de Efectivo y Conciliación (RF96-RF102) -->
     <script src="{{ url_for('static', filename='js/flujo_efectivo.js') }}?v=3.2"></script>
     <script src="{{ url_for('static', filename='js/flujo_controles.js') }}?v=2.0"></script>

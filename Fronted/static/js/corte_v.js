@@ -2519,7 +2519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Si Reportes ya está activo o al hacer clic en él
     document.querySelectorAll('[data-tab="tab-reportes"]').forEach(btn => {
         btn.addEventListener('click', () => {
-            setTimeout(ejecutarConsultaReportes, 200);
+            // La consulta principal ya se ejecuta desde switchTab en main.js.
             setTimeout(cargarEstadisticasDevoluciones, 250);
         });
     });

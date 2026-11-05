@@ -308,12 +308,312 @@ body {
     flex: 1;
 }
 
+.store-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.store-details > div {
+    display: grid;
+    gap: 0.35rem;
+    padding: 1rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    background: var(--bg-card);
+}
+
+.store-details span,
+.catalog-intro {
+    color: var(--text-muted);
+}
+
+.store-details a {
+    color: #fdba74;
+    justify-self: start;
+}
+
+.moto-explorer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr);
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+    padding: clamp(1rem, 4vw, 2rem);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    background: radial-gradient(ellipse at 75% 45%, #364863, #111b2d 72%);
+}
+
+.moto-explorer[hidden],
+.moto-diagram[hidden],
+.product-card[hidden] {
+    display: none;
+}
+
+.moto-explorer-copy {
+    display: grid;
+    justify-items: start;
+    gap: 0.75rem;
+}
+
+.moto-explorer p,
+#catalog-empty {
+    color: var(--text-muted);
+}
+
+.moto-explorer a {
+    color: #fdba74;
+}
+
+.moto-compatibility {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 44px;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid #64748b;
+    border-radius: 0.65rem;
+    background: #0f172a;
+    color: var(--text-light);
+    cursor: pointer;
+}
+
+.moto-compatibility input {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: none;
+    accent-color: #fdba74;
+}
+
+.moto-zone-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.moto-zone-list button,
+.moto-pin,
+.moto-arrow {
+    min-height: 44px;
+    border: 1px solid #64748b;
+    background: #0f172a;
+    color: var(--text-light);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.moto-zone-list button {
+    padding: 0.4rem 0.7rem;
+    border-radius: 0.65rem;
+}
+
+.moto-zone-list button:hover,
+.moto-pin:hover,
+.moto-arrow:hover {
+    border-color: #fdba74;
+    color: #fdba74;
+}
+
+.moto-explorer button[aria-pressed="true"] {
+    background: #fdba74;
+    color: #0f172a;
+    border-color: #fdba74;
+}
+
+.moto-explorer :focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+}
+
+.moto-carousel {
+    width: 100%;
+    max-width: 780px;
+    justify-self: center;
+    text-align: center;
+}
+
+.moto-stage {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(0.25rem, 1vw, 0.75rem);
+}
+
+.moto-arrow {
+    width: 44px;
+    border-radius: 50%;
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.moto-diagram {
+    position: relative;
+    isolation: isolate;
+}
+
+.moto-diagram:not([hidden]) {
+    animation: moto-enter 300ms ease-out both;
+}
+
+.moto-diagram::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 5% 8%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, var(--moto-light), transparent 70%);
+    opacity: 0.36;
+}
+
+@keyframes moto-enter {
+    from { opacity: 0; translate: var(--moto-entry, 0) 0; }
+    to { opacity: 1; translate: 0 0; }
+}
+
+.moto-carousel #moto-model-name {
+    margin-top: 0.6rem;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.moto-dots {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.35rem;
+}
+
+.moto-dots button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    min-width: 0;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.moto-dots button::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+    background: #94a3b8;
+    transition: width 180ms ease, background 180ms ease;
+}
+
+.moto-explorer .moto-dots button[aria-pressed="true"] {
+    background: transparent;
+}
+
+.moto-dots button[aria-pressed="true"]::after {
+    width: 22px;
+    background: #fdba74;
+}
+
+.moto-render {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 12px 12px rgb(0 0 0 / 35%));
+}
+
+.moto-pin {
+    position: absolute;
+    top: var(--y);
+    left: var(--x);
+    transform: translate(-50%, -50%);
+    width: 44px;
+    border: 2px solid #fb923c;
+    border-radius: 50%;
+    background: rgb(15 23 42 / 88%);
+    box-shadow: 0 0 0 4px rgb(15 23 42 / 45%), 0 3px 10px rgb(0 0 0 / 50%);
+    transition: box-shadow 180ms ease, background 180ms ease;
+}
+
+.moto-pin span {
+    position: absolute;
+    right: 50%;
+    bottom: calc(100% + 6px);
+    transform: translateX(50%);
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #fdba74;
+    border-radius: 6px;
+    background: #0f172a;
+    color: #f8fafc;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.moto-pin[data-zone="frenos"] span {
+    right: 0;
+    transform: none;
+}
+
+.moto-pin:is(:hover, :focus-visible, [aria-pressed="true"]) {
+    z-index: 1;
+    box-shadow: 0 0 0 6px rgb(251 146 60 / 35%), 0 0 26px 12px rgb(249 115 22 / 58%);
+}
+
+.moto-pin:is(:hover, :focus-visible, [aria-pressed="true"]) span {
+    visibility: visible;
+}
+
+#explora-moto,
+#catalogo {
+    scroll-margin-top: 9rem;
+}
+
+@media (max-width: 760px) {
+    .moto-explorer {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .moto-carousel {
+        grid-row: 1;
+    }
+
+    .moto-stage {
+        position: relative;
+        display: block;
+    }
+
+    .moto-arrow {
+        position: absolute;
+        z-index: 1;
+        top: 43%;
+        transform: translateY(-50%);
+    }
+
+    .moto-arrow:first-child {
+        left: 0;
+    }
+
+    .moto-arrow:last-child {
+        right: 0;
+    }
+}
+
+@media (max-width: 580px) {
+    .store-details {
+        grid-template-columns: 1fr;
+    }
+}
+
 .catalog-title {
-    margin-bottom: 2rem;
+    margin-bottom: 0.65rem;
     font-size: 2rem;
     border-bottom: 2px solid var(--accent-color);
     display: inline-block;
     padding-bottom: 0.5rem;
+}
+
+.catalog-intro {
+    margin-bottom: 1.5rem;
 }
 
 .grid {
@@ -339,6 +639,28 @@ body {
     border-color: var(--accent-color);
 }
 
+.product-image {
+    height: 160px;
+    margin: -1.5rem -1.5rem 1rem;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 2px solid var(--accent-color);
+    background: #fff;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 220ms ease-out;
+}
+
+@media (hover: hover) {
+    .card:hover .product-image img {
+        transform: scale(1.05);
+    }
+}
+
 .card-category {
     font-size: 0.8rem;
     color: var(--accent-color);
@@ -352,6 +674,11 @@ body {
     font-weight: 600;
     margin-bottom: 1rem;
     flex: 1;
+}
+
+.product-fitment {
+    color: #fdba74;
+    font-size: 0.83rem;
 }
 
 .card-footer {
@@ -378,6 +705,10 @@ body {
     cursor: pointer;
     font-weight: 600;
     transition: background 0.3s ease;
+}
+
+.btn-consulta {
+    text-decoration: none;
 }
 
 .btn-add:hover {
@@ -538,6 +869,15 @@ body {
     font-size: 1rem;
 }
 
+select.form-control {
+    color-scheme: dark;
+}
+
+select.form-control option {
+    background-color: #1e293b;
+    color: #f8fafc;
+}
+
 .form-control:focus {
     outline: none;
     border-color: var(--accent-color);
@@ -607,9 +947,26 @@ body {
     transform: scale(1.08);
 }
 
-.slide-content > * {
-    opacity: 0;
-    transform: translateY(30px);
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+.hero-actions a {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.hero-secondary {
+    padding: 0.7rem 1rem;
+    border: 1px solid #94a3b8;
+    border-radius: 8px;
+    background: #0f172acc;
+    color: #f8fafc;
 }
 
 .slide.active .slide-content .slide-subtitle {
@@ -624,11 +981,19 @@ body {
     animation: fadeInUp 0.8s forwards 0.6s;
 }
 
-.slide.active .slide-content .btn-info {
-    animation: fadeInUp 0.8s forwards 0.8s;
+.slide.active .slide-content > .btn-info {
+    animation: fadeInUp 0.45s both 0.25s;
+}
+
+.slide.active .hero-actions {
+    animation: fadeInUp 0.45s both 0.2s;
 }
 
 @keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
     to {
         opacity: 1;
         transform: translateY(0);
@@ -636,3 +1001,25 @@ body {
 }
 
 .slide-bg { z-index: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+    .slide,
+    .slide-bg,
+    .moto-pin,
+    .moto-dots button::after,
+    .product-image img,
+    .card {
+        transition: none;
+    }
+
+    .hero-slider .slide.active .slide-content > *,
+    .moto-diagram:not([hidden]) {
+        animation: none;
+    }
+
+    .slide.active .slide-bg,
+    .card:hover,
+    .card:hover .product-image img {
+        transform: none;
+    }
+}

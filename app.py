@@ -25,7 +25,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'jehova_jireh_secret_key_2026_supe
 # ==============================================================================
 # Cambia 'DB_SERVER' según tu servidor SQL Server o usa el nombre local automáticamente.
 DB_SERVER = os.environ.get('DB_SERVER', os.environ.get('COMPUTERNAME', r'.'))
-DB_NAME = 'jehova_jireh_db'
+DB_NAME = os.environ.get('DB_NAME', 'jehova_jireh_db')
+if DB_NAME == 'jehova_jireh_feria_demo':
+    app.config['SESSION_COOKIE_NAME'] = 'jehova_jireh_feria_session'
 
 def get_db_connection():
     # Intenta con el servidor configurado y realiza fallback automático si es necesario
@@ -109,6 +111,19 @@ def role_required(*roles_permitidos):
 # ==============================================================================
 # RUTAS DE VISTAS (RENDER TEMPLATES)
 # ==============================================================================
+REFERENCIAS_XR150 = (
+    'OD-XR150-FILTRO', 'OD-XR150-MORDAZA', 'OD-XR150-CABLEVEL', 'OD-XR150-CDI',
+    'OD-XR150-RECT', 'OD-XR150-ESPEJO', 'OD-XR150-TAPON', 'YOG-P016691',
+    'YOG-P005340', 'YOG-P004724',
+)
+REFERENCIAS_CONSULTABLES = (
+    'OD-XR150-FILTRO', 'OD-XR150-MORDAZA', 'OD-XR150-CABLEVEL',
+    'OD-XR150-CDI', 'OD-XR150-RECT', 'OD-XR150-ESPEJO',
+    'OD-XR150-TAPON', 'YOG-P016691', 'YOG-P005340', 'YOG-P004724',
+    'OD-NS200-FILTRO', 'OD-NS200-CABLECL', 'OD-YBR125-MORDAZA',
+    'YOG-P004727', 'YOG-P009235', 'YOG-P002764', 'YOG-P005167', 'YOG-P000993',
+)
+
 @app.route('/dashboard')
 @login_required
 def inicio():
@@ -121,25 +136,28 @@ def perfil():
 
 @app.route('/')
 def tienda():
-    # Obtener los productos reales de la base de datos
-    query_productos = """
-        SELECT p.id, p.nombre, p.precio_venta, p.stock_actual, c.nombre AS categoria 
+    referencias_consultables = REFERENCIAS_CONSULTABLES
+    marcadores = ', '.join('?' for _ in referencias_consultables)
+    query_productos = f"""
+        SELECT p.id, p.codigo_sku, p.nombre, p.precio_venta, p.stock_actual,
+               p.modelo_compatible, p.compatibilidad_fuente, c.nombre AS categoria
         FROM productos p 
         LEFT JOIN categorias c ON p.categoria_id = c.id 
-        WHERE (p.activo = 1 OR p.activo IS NULL) AND p.stock_actual > 0
+        WHERE (p.activo = 1 OR p.activo IS NULL)
+          AND (p.stock_actual > 0 OR p.codigo_sku IN ({marcadores}))
+        ORDER BY CASE WHEN p.stock_actual > 0 THEN 0 ELSE 1 END, p.id
     """
-    productos = execute_query(query_productos, fetchall=True)
+    productos = execute_query(query_productos, referencias_consultables, fetchall=True)
+    categorias = [{'nombre': nombre} for nombre in sorted({p['categoria'] for p in productos if p['categoria']})]
+    for producto in productos:
+        producto['xr150_referencia'] = producto['codigo_sku'] in REFERENCIAS_XR150
 
-    # Obtener las categorías que tienen al menos un producto activo
-    query_categorias = """
-        SELECT DISTINCT c.nombre AS nombre
-        FROM productos p
-        INNER JOIN categorias c ON p.categoria_id = c.id
-        WHERE (p.activo = 1 OR p.activo IS NULL) AND p.stock_actual > 0
-    """
-    categorias = execute_query(query_categorias, fetchall=True)
-
-    return render_template('tienda.html', productos=productos, categorias=categorias)
+    respuesta = app.make_response(render_template(
+        'tienda.html', productos=productos, categorias=categorias,
+        feria_demo=DB_NAME == 'jehova_jireh_feria_demo'))
+    # El precio y las existencias deben consultarse de nuevo al abrir el catálogo.
+    respuesta.headers['Cache-Control'] = 'no-store'
+    return respuesta
 
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():

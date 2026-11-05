@@ -31,11 +31,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Slider Logic ---
     const slides = document.querySelectorAll('.slide');
+    const hero = document.querySelector('.hero-slider');
+    const slideToggle = document.getElementById('toggle-slides');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let currentSlide = 0;
+    let autoplay = !reducedMotion.matches;
     
     function showSlide(index) {
-        slides.forEach(s => s.classList.remove('active'));
-        slides[index].classList.add('active');
+        slides.forEach((slide, position) => {
+            const active = position === index;
+            slide.classList.toggle('active', active);
+            slide.inert = !active;
+        });
     }
     
     function nextSlide() {
@@ -51,8 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('next-slide').addEventListener('click', nextSlide);
     document.getElementById('prev-slide').addEventListener('click', prevSlide);
     
-    // Auto slide every 5 seconds
-    setInterval(nextSlide, 5000);
+    function updateSlideToggle() {
+        slideToggle.textContent = autoplay ? 'Ⅱ' : '▶';
+        slideToggle.setAttribute('aria-label', autoplay ? 'Pausar la portada' : 'Reproducir la portada');
+    }
+
+    slideToggle.addEventListener('click', () => {
+        autoplay = !autoplay;
+        updateSlideToggle();
+    });
+    reducedMotion.addEventListener('change', event => {
+        autoplay = !event.matches;
+        updateSlideToggle();
+    });
+    showSlide(0);
+    updateSlideToggle();
+    setInterval(() => {
+        if (autoplay && !document.hidden && !hero.matches(':hover, :focus-within')) nextSlide();
+    }, 6500);
 
     // --- Actions ---
     function updateCartUI() {
@@ -66,14 +89,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="cart-item">
                     <div class="cart-item-info">
                         <h4>${item.name}</h4>
-                        <div class="cart-item-price">$${item.price.toFixed(2)}</div>
+                        <div class="cart-item-price">C$${item.price.toFixed(2)}</div>
                     </div>
                     <button class="close-cart" onclick="removeFromCart(${index})" style="font-size:1rem">&times;</button>
                 </div>
             `;
         });
         
-        cartTotal.innerText = `$${total.toFixed(2)}`;
+        cartTotal.innerText = `C$${total.toFixed(2)}`;
     }
 
     window.addToCart = function(id, name, price, stock) {
@@ -207,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let itemsHtml = lastOrder.items.map(item => `
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">$${item.price.toFixed(2)}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">C$${item.price.toFixed(2)}</td>
             </tr>
         `).join('');
 
@@ -265,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${itemsHtml}
                         <tr>
                             <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 16px;">TOTAL A PAGAR:</td>
-                            <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 16px; color: #f97316;">$${lastOrder.total.toFixed(2)}</td>
+                            <td style="padding: 15px 10px; text-align: right; font-weight: bold; font-size: 16px; color: #f97316;">C$${lastOrder.total.toFixed(2)}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -296,21 +319,186 @@ document.addEventListener('DOMContentLoaded', () => {
             checkoutModal.classList.remove('active');
         });
     }
-});
+    const zoneCategories = {
+        frenos: ['Llantas', 'Frenos', 'Llantas y Cámaras', 'Sistema de Frenos'],
+        motor: ['Motor', 'Motor y Partes Internas', 'Carburación y Combustible'],
+        controles: ['Eléctrico', 'Sistema Eléctrico y Encendido', 'Cables y Controles'],
+        transmision: ['Transmisión', 'Transmisión y Embrague']
+    };
+    // Algunos repuestos se buscan por una zona distinta a su categoría comercial.
+    const zonePartNames = {
+        frenos: /\bcables? de frenos?\b/i,
+        motor: /\bbuj[ií]as?\b/i,
+        controles: /\b(?:retrovisor(?:es)?|manetas?|puños?|manubrios?)\b/i
+    };
+    const explorer = document.querySelector('.moto-explorer');
+    const zoneButtons = explorer.querySelectorAll('[data-zone]');
+    const cards = document.querySelectorAll('.product-card');
+    const results = document.getElementById('moto-results');
+    const empty = document.getElementById('catalog-empty');
+    const catalogTitle = document.getElementById('catalogo');
+    const motoViews = explorer.querySelectorAll('[data-moto-view]');
+    const motoDots = explorer.querySelectorAll('[data-moto-index]');
+    const compatibility = document.getElementById('moto-compatibility');
+    const compatibilityLabel = document.getElementById('moto-compatibility-label');
+    const motoModelName = document.getElementById('moto-model-name');
+    const defaultEmpty = document.getElementById('catalog-default-empty');
+    const catalogModels = {
+        ns200: /(?:bajaj[ -]*)?(?:pulsar[ -]*)?ns[ -]*200/,
+        cg150: /(?:honda[ -]*)?cg[ -]*150/,
+        ybr125: /(?:yamaha[ -]*)?ybr[ -]*125/,
+        xr150l: /(?:honda[ -]*)?xr[ -]*150[ -]*l/,
+        pulsar135: /(?:bajaj[ -]*)?pulsar[ -]*135(?:[ -]*ls)?/,
+        cg125: /(?:honda[ -]*)?cg[ -]*125/,
+        gxt200: /gxt[ -]*200/,
+        gn125: /(?:suzuki[ -]*)?gn[ -]*125(?:[ -]*h)?/,
+        tt150: /(?:akt[ -]*)?(?:tt[ -]*150|150[ -]*tt)/
+    };
+    const modelMatchers = Object.fromEntries(Object.entries(catalogModels).map(([id, model]) => [
+        id, {
+            registered: new RegExp(`^${model.source}$`, 'i'),
+            mentioned: new RegExp(`\\b${model.source}\\b`, 'i')
+        }
+    ]));
+    if (explorer.hasAttribute('data-feria-demo')) {
+        modelMatchers.xr150l.mentioned = /\b(?:honda[ -]*)?xr[ -]*150(?:[ -]*l)?\b/i;
+    }
+    const cardDetails = Array.from(cards, card => {
+        const name = card.querySelector('.card-title').textContent;
+        const models = card.dataset.compatibility.split(/[/,;|\n]+/).map(value => value.trim()).filter(Boolean);
+        const matches = new Map();
+        motoViews.forEach(({dataset: {modelId}}) => {
+            const matcher = modelMatchers[modelId];
+            if (models.some(model => matcher.registered.test(model))) {
+                matches.set(modelId, card.dataset.fitmentSource === 'Nombre del catálogo' ? 'catalog' : 'registered');
+            }
+            else if (models.length === 0 && matcher.mentioned.test(name)) matches.set(modelId, 'mentioned');
+            else if (modelId === 'xr150l' && card.hasAttribute('data-xr150-referencia') &&
+                     (models.length === 0 || models.includes('XR150'))) {
+                matches.set(modelId, 'reference');
+            }
+        });
+        return {card, name, matches, fitment: card.querySelector('.product-fitment')};
+    });
+    const unmatchedButton = document.getElementById('moto-unmatched');
+    let motoIndex = 0;
+    let categories = null;
+    let selectedZone = 'all';
+    let unmatchedOnly = false;
 
+    function updateModelLabels() {
+        const {modelName} = motoViews[motoIndex].dataset;
+        motoModelName.textContent = modelName;
+        compatibilityLabel.textContent = `Buscar repuestos para ${modelName}`;
+    }
 
-    // --- Filter Logic ---
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const filter = btn.getAttribute('data-filter');
-            document.querySelectorAll('.product-card').forEach(card => {
-                if (filter === 'all' || card.getAttribute('data-category') === filter) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-            document.querySelector('.catalog-container').scrollIntoView({behavior: 'smooth'});
+    function showMoto(index) {
+        const direction = Math.sign(index - motoIndex);
+        const nextIndex = (index + motoViews.length) % motoViews.length;
+        if (nextIndex === motoIndex) return;
+        motoViews[motoIndex].hidden = true;
+        motoDots[motoIndex].setAttribute('aria-pressed', 'false');
+        motoIndex = nextIndex;
+        const view = motoViews[motoIndex];
+        view.style.setProperty('--moto-entry', `${direction * 22}px`);
+        view.hidden = false;
+        motoDots[motoIndex].setAttribute('aria-pressed', 'true');
+        updateModelLabels();
+        if (compatibility.checked) filterCatalog();
+    }
+
+    explorer.querySelectorAll('[data-moto-step]').forEach(button => {
+        button.addEventListener('click', () => showMoto(motoIndex + Number(button.dataset.motoStep)));
+    });
+
+    motoDots.forEach((button, index) => {
+        button.addEventListener('click', () => showMoto(index));
+    });
+
+    function filterCatalog(animate = true) {
+        const {modelId, modelName} = motoViews[motoIndex].dataset;
+        let count = 0;
+        cardDetails.forEach(({card, name, fitment, matches}) => {
+            const inSelection = categories === null || categories.includes(card.dataset.category)
+                || Boolean(zonePartNames[selectedZone]?.test(name));
+            const match = matches.get(modelId);
+            const visible = unmatchedOnly ? matches.size === 0 : inSelection && (!compatibility.checked || Boolean(match));
+            card.hidden = !visible;
+            fitment.hidden = !visible || !compatibility.checked;
+            if (!fitment.hidden) {
+                fitment.textContent = match === 'registered'
+                    ? 'Compatibilidad registrada en el catálogo'
+                    : match === 'catalog'
+                        ? 'Modelo indicado en el catálogo · Confirma año y versión'
+                    : match === 'reference'
+                        ? 'Referencia para XR150 · Confirma la versión de tu moto'
+                        : 'El nombre menciona el modelo · Confirma la versión antes de comprar';
+            }
+            if (visible && animate && !reducedMotion.matches && count < 6) {
+                card.getAnimations().filter(animation => animation.id === 'catalog-entry')
+                    .forEach(animation => animation.cancel());
+                card.animate([{opacity: 0.55, translate: '0 8px'}, {opacity: 1, translate: '0 0'}],
+                    {id: 'catalog-entry', duration: 220, delay: count * 22, easing: 'ease-out'});
+            }
+            count += Number(visible);
+        });
+        zoneButtons.forEach(button => {
+            button.setAttribute('aria-pressed', String(button.dataset.zone === selectedZone));
+        });
+        const scope = categories === null ? 'en el catálogo' : 'en esta selección';
+        const countText = `${count} ${count === 1 ? 'repuesto' : 'repuestos'}`;
+        const noMatches = `Sin coincidencias disponibles para ${modelName} ${scope}.`;
+        results.textContent = unmatchedOnly ? `${countText} fuera de los modelos del carrusel` : compatibility.checked
+            ? (count === 0 ? noMatches : `${countText} encontrados para ${modelName} ${scope}`)
+            : `${countText} ${scope} · Compatibilidad sin filtrar`;
+        unmatchedButton.setAttribute('aria-pressed', String(unmatchedOnly));
+        catalogTitle.textContent = unmatchedOnly ? 'Repuestos fuera del carrusel' : 'Nuestro Catálogo';
+        const filtered = unmatchedOnly || categories !== null || compatibility.checked;
+        empty.hidden = count > 0 || !filtered;
+        if (!empty.hidden) {
+            empty.textContent = unmatchedOnly ? 'Todos los repuestos disponibles tienen alguna coincidencia en el carrusel.' : compatibility.checked
+                ? `${noMatches} Puedes probar otra zona o desactivar el filtro de compatibilidad.`
+                : 'No hay repuestos en esta selección. Prueba otra zona.';
+        }
+        if (defaultEmpty) defaultEmpty.hidden = filtered;
+    }
+
+    zoneButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            unmatchedOnly = false;
+            selectedZone = button.dataset.zone;
+            categories = zoneCategories[selectedZone] ?? null;
+            filterCatalog();
         });
     });
+
+    document.querySelectorAll('.filter-btn').forEach(button => {
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            unmatchedOnly = false;
+            const category = button.dataset.filter;
+            categories = category === 'all' ? null : [category];
+            selectedZone = category === 'all' ? 'all' : null;
+            if (category === 'all') compatibility.checked = false;
+            filterCatalog();
+            catalogTitle.scrollIntoView();
+        });
+    });
+
+    compatibility.addEventListener('change', () => {
+        unmatchedOnly = false;
+        filterCatalog();
+    });
+    unmatchedButton.addEventListener('click', () => {
+        unmatchedOnly = !unmatchedOnly;
+        compatibility.checked = false;
+        categories = null;
+        selectedZone = unmatchedOnly ? null : 'all';
+        filterCatalog();
+        catalogTitle.focus();
+        catalogTitle.scrollIntoView();
+    });
+    updateModelLabels();
+    filterCatalog(false);
+    explorer.hidden = false;
+});

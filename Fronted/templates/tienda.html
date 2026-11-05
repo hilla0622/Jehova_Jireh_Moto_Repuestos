@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tienda en Línea - Jenova Jireh</title>
     <!-- Google Fonts para tipografía Premium -->
-    <link href="https://fonts.googleapis.css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/tienda.css') }}?v=1.1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tienda.css') }}?v=1.12">
 </head>
 
 <body>
@@ -65,12 +65,16 @@
                 <div class="slide-bg"
                     style="background-image: url('{{ url_for('static', filename='img/portada_logo.jpg') }}');"></div>
                 <div class="slide-content">
-                    <h1
-                        style="font-size: 2.5rem; line-height: 1.2; max-width: 900px; margin: 0 auto; text-shadow: 2px 2px 10px rgba(0,0,0,0.8);">
-                        Tienda de repuestos para motos.<br>¡Nuestro prestigio es la calidad!</h1>
+                    <p class="slide-subtitle">Jehová Jireh · Masatepe</p>
+                    <h1>Repuestos para tu moto</h1>
+                    <p class="slide-expert">Encuentra la pieza por zona y haz tu pedido para retirar en tienda.</p>
+                    <div class="hero-actions">
+                        <a class="btn-info" href="#explora-moto">Explorar la moto</a>
+                        <a class="hero-secondary" href="#catalogo">Ver catálogo</a>
+                    </div>
                 </div>
             </div>
-            <div class="slide">
+            <div class="slide" inert>
                 <div class="slide-bg"
                     style="background-image: url('{{ url_for('static', filename='img/llantas.jpg') }}');"></div>
                 <div class="slide-content">
@@ -81,7 +85,7 @@
                         style="text-decoration: none; display: inline-block;">Mayor Información</a>
                 </div>
             </div>
-            <div class="slide">
+            <div class="slide" inert>
                 <div class="slide-bg"
                     style="background-image: url('{{ url_for('static', filename='img/frenos.jpg') }}');"></div>
                 <div class="slide-content">
@@ -94,20 +98,96 @@
             </div>
         </div>
         <div class="slider-controls">
-            <button id="prev-slide">&lt;</button>
-            <button id="next-slide">&gt;</button>
+            <button type="button" id="prev-slide" aria-label="Oferta anterior">‹</button>
+            <button type="button" id="toggle-slides" aria-label="Pausar la portada">Ⅱ</button>
+            <button type="button" id="next-slide" aria-label="Siguiente oferta">›</button>
         </div>
     </header>
 
-    <!-- Catálogo de Productos (Sin fotos) -->
+    <!-- Explorador y catálogo -->
     <main class="catalog-container">
-        <h2 class="catalog-title">Nuestro Catálogo</h2>
+        {% if feria_demo %}
+        <aside class="store-details" aria-label="Demostración de feria">
+            <div><strong>Demostración de feria</strong><span>Las existencias nuevas son simuladas.</span></div>
+        </aside>
+        {% endif %}
+        <aside class="store-details" aria-label="Cómo comprar">
+            <div><strong>Consulta el catálogo</strong><span>Explora por zona o categoría.</span></div>
+            <div><strong>Retiro en Masatepe</strong><span>Haz tu pedido en línea y paga al retirar.</span></div>
+            <div><strong>¿Dudas sobre una pieza?</strong><a href="https://wa.me/50581857270" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="#25d366" aria-hidden="true" focusable="false" style="vertical-align: middle; margin-right: 6px;"><path d="M20.52 3.48A11.89 11.89 0 0 0 12.05 0C5.47 0 .11 5.35.1 11.93c0 2.1.55 4.15 1.6 5.96L0 24l6.26-1.64a11.94 11.94 0 0 0 5.79 1.48h.01C18.63 23.84 24 18.49 24 11.91a11.85 11.85 0 0 0-3.48-8.43ZM12.06 21.82h-.01a9.9 9.9 0 0 1-5.04-1.38l-.36-.21-3.72.98.99-3.63-.24-.37a9.9 9.9 0 0 1-1.52-5.28c0-5.47 4.46-9.92 9.93-9.92a9.86 9.86 0 0 1 7.02 2.91 9.86 9.86 0 0 1 2.9 7.02c0 5.47-4.46 9.92-9.95 9.92Zm5.45-7.43c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.09 4.49.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z"/></svg>Escríbenos por WhatsApp ↗</a></div>
+        </aside>
+        <section class="moto-explorer" id="explora-moto" aria-labelledby="moto-title"{% if feria_demo %} data-feria-demo{% endif %} hidden>
+            <div class="moto-explorer-copy">
+                <h2 id="moto-title">Explora la moto</h2>
+                <p>Cambia de moto con las flechas y toca la zona donde va tu repuesto.</p>
+                <div class="moto-zone-list" role="group" aria-label="Zonas de la moto">
+                    <button type="button" data-zone="frenos">1. Ruedas y frenos</button>
+                    <button type="button" data-zone="motor">2. Motor</button>
+                    <button type="button" data-zone="controles">3. Manubrio y luces</button>
+                    <button type="button" data-zone="transmision">4. Transmisión</button>
+                    <button type="button" data-zone="all" aria-pressed="true">Todas las zonas</button>
+                </div>
+                <label class="moto-compatibility">
+                    <input type="checkbox" id="moto-compatibility" autocomplete="off">
+                    <span id="moto-compatibility-label"></span>
+                </label>
+                <p id="moto-results" role="status"></p>
+                <a href="#catalogo">Ir a los resultados ↓</a>
+                <button type="button" class="moto-compatibility" id="moto-unmatched" aria-pressed="false">
+                    Ver repuestos fuera del carrusel
+                </button>
+            </div>
+            {% set motos = [
+                ('ns200', 'Bajaj Pulsar NS200', '#3b82f6', [(86, 76), (58, 57), (64, 17), (28, 80)]),
+                ('cg150', 'CG150', '#ef4444', [(84, 75), (56, 55), (61, 18), (33, 74)]),
+                ('ybr125', 'Yamaha YBR125', '#64748b', [(84, 76), (56, 56), (62, 19), (23, 68)]),
+                ('xr150l', 'Honda XR150L', '#cbd5e1', [(84, 76), (56, 57), (61, 17), (24, 68)]),
+                ('pulsar135', 'Bajaj Pulsar 135', '#e11d48', [(85, 76), (57, 57), (62, 17), (29, 68)]),
+                ('cg125', 'CG125', '#4ade80', [(84, 75), (55, 55), (60, 16), (30, 68)]),
+                ('gxt200', 'GXT200', '#a3e635', [(83, 76), (55, 55), (60, 16), (27, 70)]),
+                ('gn125', 'Suzuki GN125 / GN125H', '#60a5fa', [(85, 77), (56, 56), (58, 18), (27, 70)]),
+                ('tt150', 'AKT TT150', '#f87171', [(82, 77), (54, 55), (57, 17), (27, 72)])
+            ] %}
+            {% set zonas = [('frenos', 'Ruedas y frenos'), ('motor', 'Motor'),
+                ('controles', 'Manubrio y luces'), ('transmision', 'Transmisión')] %}
+            <div class="moto-carousel" role="group" aria-label="Selector de moto">
+                <div class="moto-stage">
+                    <button type="button" class="moto-arrow" data-moto-step="-1" aria-label="Moto anterior">‹</button>
+                    <div class="moto-views">
+                        {% for id, nombre, luz, puntos in motos %}
+                        <div class="moto-diagram" data-moto-view data-model-id="{{ id }}" data-model-name="{{ nombre }}"
+                            style="--moto-light: {{ luz }}"
+                            role="group" aria-label="Zonas de {{ nombre }}"{% if not loop.first %} hidden{% endif %}>
+                            <img class="moto-render" src="{{ url_for('static', filename='img/moto-' ~ id ~ '.webp') }}"
+                                alt="" width="1440" height="810" loading="lazy" decoding="async">
+                            {% for zona, etiqueta in zonas %}
+                            {% set x, y = puntos[loop.index0] %}
+                            <button type="button" class="moto-pin" data-zone="{{ zona }}" aria-label="{{ etiqueta }}"
+                                style="--x: {{ x }}%; --y: {{ y }}%">{{ loop.index }}<span aria-hidden="true">{{ etiqueta }}</span></button>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="moto-arrow" data-moto-step="1" aria-label="Siguiente moto">›</button>
+                </div>
+                <p id="moto-model-name" role="status">{{ motos[0][1] }}</p>
+                <div class="moto-dots" role="group" aria-label="Elegir ilustración">
+                    {% for id, nombre, luz, puntos in motos %}
+                    <button type="button" data-moto-index="{{ loop.index0 }}" aria-label="Mostrar {{ nombre }}"
+                        aria-pressed="{{ 'true' if loop.first else 'false' }}"></button>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <h2 class="catalog-title" id="catalogo" tabindex="-1">Nuestro Catálogo</h2>
+        <p class="catalog-intro">Pide los repuestos en stock para retirar en Masatepe o consulta por las otras referencias.</p>
+        <p id="catalog-empty" hidden></p>
         <div class="grid">
             {% if productos %}
             {% for p in productos %}
-            <div class="card product-card" data-category="{{ p.categoria if p.categoria else 'General' }}">
-                <div
-                    style="height: 160px; margin: -1.5rem -1.5rem 1rem -1.5rem; overflow: hidden; border-radius: 12px 12px 0 0; background: #ffffff;">
+            <div class="card product-card" data-category="{{ p.categoria if p.categoria else 'General' }}"
+                data-compatibility="{{ p.modelo_compatible or '' }}" data-fitment-source="{{ p.compatibilidad_fuente or '' }}"{% if p.stock_actual <= 0 %} data-por-consultar{% endif %}{% if p.xr150_referencia %} data-xr150-referencia{% endif %}>
+                <div class="product-image">
                     <img src="{% if 'Pastillas' in p.nombre %}{{ url_for('static', filename='img/pastillas_freno.jpg') }}
           {% elif p.nombre == 'AMORTIGUADOR AKT TT150-180 - GENESIS SX200 VINI' %}{{ url_for('static', filename='img/amortiguador.jpg') }}
           {% elif p.nombre == 'AMORTIGUADORES GN125H VINI' %}https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxgPug4ihG6bEACQNFYUh67uDjRuKzsLPCfeHAvhyUYQ&s=10
@@ -137,19 +217,26 @@
           {% elif p.categoria == 'Llantas' %}{{ url_for('static', filename='img/llantas.jpg') }}
           {% elif p.categoria == 'Motor' or p.categoria == 'Transmisión' or p.categoria == 'Eléctrico' %}{{ url_for('static', filename='img/motor.jpg') }}
           {% else %}{{ url_for('static', filename='img/portada_logo.jpg') }}{% endif %}" alt="{{ p.nombre }}"
-                        style="width: 100%; height: 100%; object-fit: contain; border-bottom: 2px solid var(--accent-color);">
+                        loading="lazy" decoding="async">
                 </div>
                 <span class="card-category">{{ p.categoria if p.categoria else 'General' }}</span>
                 <h3 class="card-title">{{ p.nombre }}</h3>
+                <p class="product-fitment" hidden></p>
                 <div class="card-footer">
-                    <span class="price">${{ "%.2f"|format(p.precio_venta) }}</span>
+                    {% if p.stock_actual > 0 %}
+                    <span class="price">C${{ "%.2f"|format(p.precio_venta) }}</span>
                     <button class="btn-add"
                         onclick="addToCart({{ p.id }}, '{{ p.nombre | replace("'", "\\'") }}', {{ p.precio_venta }}, {{ p.stock_actual }})">Agregar</button>
+                    {% else %}
+                    {% set consulta = 'Hola, quisiera consultar si tienen disponible ' ~ p.nombre ~ ' (' ~ p.codigo_sku ~ ').' %}
+                    <a class="btn-add btn-consulta" href="https://wa.me/50581857270?{{ {'text': consulta}|urlencode }}"
+                        target="_blank" rel="noopener">Consultar disponibilidad</a>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
             {% else %}
-            <p style="color: var(--text-muted); grid-column: 1 / -1; text-align: center;">No hay repuestos disponibles
+            <p id="catalog-default-empty" style="color: var(--text-muted); grid-column: 1 / -1; text-align: center;">No hay repuestos disponibles
                 en este momento.</p>
             {% endif %}
         </div>
@@ -167,7 +254,7 @@
         <div class="cart-footer">
             <div class="total-row">
                 <span>Total:</span>
-                <span id="cart-total">$0.00</span>
+                <span id="cart-total">C$0.00</span>
             </div>
             <button class="btn-checkout" id="btn-checkout-cart">Proceder al Pago</button>
         </div>
@@ -241,7 +328,7 @@
 
 
 
-    <script src="{{ url_for('static', filename='js/tienda.js') }}?v=2.3"></script>
+    <script src="{{ url_for('static', filename='js/tienda.js') }}?v=2.15"></script>
 </body>
 
 </html>

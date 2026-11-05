@@ -3636,9 +3636,9 @@ async function loadUsuarios() {
         const tbody = document.getElementById('tbody-usuarios');
         if (!tbody) return;
 
-        tbody.innerHTML = usuarios.map(u => `
+        tbody.innerHTML = usuarios.map((u, index) => `
             <tr>
-                <td><strong>#${u.id}</strong></td>
+                <td><strong>${index + 1}</strong></td>
                 <td>${u.nombre}</td>
                 <td><code>${u.username}</code></td>
                 <td>
